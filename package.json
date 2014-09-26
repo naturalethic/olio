@@ -1,0 +1,27 @@
+{
+  "name": "olio",
+  "version": "0.0.1",
+  "directories": {
+    "lib": "./lib",
+    "bin": "./bin"
+  },
+  "files": [
+    "lib",
+    "bin"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/naturalethic/olio"
+  },
+  "dependencies": {
+    "LiveScript": "naturalethic/LiveScript#generators",
+    "bluebird": "",
+    "chokidar": "",
+    "colors": "",
+    "glob": "",
+    "koa": "",
+    "optimist": "",
+    "pg": "",
+    "prelude-ls": ""
+  }
+}
