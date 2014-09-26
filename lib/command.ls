@@ -26,10 +26,6 @@ global <<< do
   promisify:     bluebird.promisify
   promisify-all: bluebird.promisify-all
 
-global.spawn = (command) ->
-    words = filter (-> it != ''), command.split(' ')
-    process.spawn-sync (head words), (tail words), { stdio: 'inherit' }
-
 # Require this configuration file.  It also proves `cwd` is an olio project root.
 if !fs.exists-sync './olio.ls'
   error "You must provide a file named 'olio.ls' in your project root"
@@ -49,7 +45,6 @@ delete olio.options.$0
 # -----------------------------------------------------------------------------
 # End global assignments.
 # -----------------------------------------------------------------------------
-
 
 # Load both built-in and project tasks.  Project tasks will mask built-ins of the same name.
 [ "#__dirname/../task/*.ls", "task/*.ls" ]
@@ -73,6 +68,7 @@ if olio.options.watch
       process.spawn-sync (head process.argv), (tail process.argv), { stdio: 'inherit' }
 else if olio.options.supervised
   task[olio.command]!
+  # Always include the olio module in the watch list.
   chokidar.watch [ fs.realpath-sync "#__dirname/.." ] ++ (task.watch or []), persistent: true, ignore-initial: true .on 'all', (event, path) ->
     info "Change detected in '#path'..."
     process.exit!
