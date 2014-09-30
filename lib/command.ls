@@ -29,9 +29,10 @@ global <<< do
 # Require this configuration file.  It also proves `cwd` is an olio project root.
 if !fs.exists-sync './olio.ls'
   error "You must provide a file named 'olio.ls' in your project root"
+  process.exit!
 
 global.olio =
-  db:      require './db'
+  pg:      require './pg'
   api:     require './api'
   config:  require "#{process.cwd!}/olio"
   task:    {}
@@ -47,10 +48,11 @@ delete olio.options.$0
 # -----------------------------------------------------------------------------
 
 # Load both built-in and project tasks.  Project tasks will mask built-ins of the same name.
-[ "#__dirname/../task/*.ls", "task/*.ls" ]
+[ "#__dirname/../task/*.ls", "#{process.cwd!}/task/*.ls" ]
 |> each ->
   glob.sync it
-  |> each -> olio.task[fs.path.basename(it, '.ls')] = require it
+  |> each ->
+    olio.task[fs.path.basename(it, '.ls')] = require it
 
 # Print list of tasks if none given as command, or task does not exist.
 if !olio.command or !olio.task[olio.command]
