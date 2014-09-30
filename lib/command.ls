@@ -26,10 +26,19 @@ global <<< do
   promisify:     bluebird.promisify
   promisify-all: bluebird.promisify-all
 
-# Require this configuration file.  It also proves `cwd` is an olio project root.
+global.exec = ->
+  try
+    process.exec-sync it
+  catch
+    false
+
+global.exit = (message) ->
+  error message.red
+  process.exit 1
+
+# Require a configuration file.  It also proves `cwd` is an olio project root.
 if !fs.exists-sync './olio.ls'
-  error "You must provide a file named 'olio.ls' in your project root"
-  process.exit!
+  exit "You must provide a file named 'olio.ls' in your project root"
 
 global.olio =
   pg:      require './pg'
