@@ -34,14 +34,14 @@ if !fs.exists-sync './olio.ls'
 global.olio =
   pg:      require './pg'
   api:     require './api'
-  config:  require "#{process.cwd!}/olio"
+  config:  require "#{process.cwd!}/olio.ls"
   task:    {}
   command: head optimist.argv._
   args:    tail optimist.argv._
-  options: optimist.argv
+  option:  optimist.argv
 
-delete olio.options._
-delete olio.options.$0
+delete olio.option._
+delete olio.option.$0
 
 # -----------------------------------------------------------------------------
 # End global assignments.
@@ -63,12 +63,12 @@ if !olio.command or !olio.task[olio.command]
 task = olio.task[olio.command]
 
 # Provide watch capability to all tasks.
-if olio.options.watch
+if olio.option.watch
     process.argv.replace '--watch', '--supervised'
     process.argv.shift!
     while true
       process.spawn-sync (head process.argv), (tail process.argv), { stdio: 'inherit' }
-else if olio.options.supervised
+else if olio.option.supervised
   task[olio.command]!
   # Always include the olio module in the watch list.
   chokidar.watch [ fs.realpath-sync "#__dirname/.." ] ++ (task.watch or []), persistent: true, ignore-initial: true .on 'all', (event, path) ->
