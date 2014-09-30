@@ -42,9 +42,7 @@ if !fs.exists-sync './olio.ls'
 
 global.olio =
   pg:      require './pg'
-  api:     require './api'
   config:  require "#{process.cwd!}/olio.ls"
-  task:    {}
   command: optimist.argv._
   option:  optimist.argv
 
@@ -56,16 +54,17 @@ delete olio.option.$0
 # -----------------------------------------------------------------------------
 
 # Load both built-in and project tasks.  Project tasks will mask built-ins of the same name.
+tasks = {}
 [ "#__dirname/../task/*.ls", "#{process.cwd!}/task/*.ls" ]
 |> each ->
   glob.sync it
   |> each ->
-    olio.task[fs.path.basename(it, '.ls')] = require it
+    tasks[fs.path.basename(it, '.ls')] = require it
 
 # Print list of tasks if none given as command, or task does not exist.
-if !task = olio.task[first olio.command]
+if !task = tasks[first olio.command]
   info 'Tasks:'
-  keys olio.task |> each -> info "  #it"
+  keys tasks |> each -> info "  #it"
   process.exit!
 
 # Provide watch capability to all tasks.

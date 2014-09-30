@@ -8,6 +8,9 @@ exec = (connection, statement, ...args) ->
   connection.query-async statement, args
   .then ->
     it.rows
+  .error ->
+    connection.error = it
+    throw it
 
 first = (connection, statement, ...args) ->
   exec connection, statement, ...args
@@ -71,5 +74,6 @@ export connect = (url) ->
       do
         exec:    (statement, ...args) -> exec(connection, statement, ...args)
         first:   (statement, ...args) -> exec(connection, statement, ...args).then -> it.length and it[0] or null
+        error:   -> connection.error
         release: release
         model:   model
