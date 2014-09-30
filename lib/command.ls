@@ -7,6 +7,7 @@ require! \path
 require! \optimist
 require! \chokidar
 require! \glob
+require! \co
 
 # -----------------------------------------------------------------------------
 # Global assignments.  Please keep all global assignments within this area.
@@ -25,6 +26,10 @@ global <<< do
   promise:       bluebird
   promisify:     bluebird.promisify
   promisify-all: bluebird.promisify-all
+
+global.require-dir = ->
+  it = "#{process.cwd!}/#it" if path.0 != '/'
+  pairs-to-obj (glob.sync("#it/*.ls") |> map -> [ fs.path.basename(it, '.ls'), require it ])
 
 global.exec = ->
   try
@@ -74,10 +79,10 @@ if olio.option.watch
     while true
       process.spawn-sync (head process.argv), (tail process.argv), { stdio: 'inherit' }
 else if olio.option.supervised
-  task[first olio.command]!
   # Always include the olio module in the watch list.
   chokidar.watch [ fs.realpath-sync "#__dirname/.." ] ++ (task.watch or []), persistent: true, ignore-initial: true .on 'all', (event, path) ->
     info "Change detected in '#path'..."
     process.exit!
+  (co task[first olio.command])!
 else
-  task[first olio.command]!
+  (co task[first olio.command])!

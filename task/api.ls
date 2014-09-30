@@ -1,3 +1,10 @@
+## TODO
+# token
+# session, persona, organization
+# script
+# params/data (camelized)
+
+
 require! \glob
 require! \koa
 

@@ -17,6 +17,7 @@
     "LiveScript": "naturalethic/LiveScript#generators",
     "bluebird": "",
     "chokidar": "",
+    "co": "^3.1.0",
     "colors": "",
     "glob": "",
     "koa": "",
