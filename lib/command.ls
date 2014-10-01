@@ -85,4 +85,5 @@ else if olio.option.supervised
     process.exit!
   (co task[first olio.command])!
 else
+  #task[first olio.command]!
   (co task[first olio.command])!

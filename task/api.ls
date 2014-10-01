@@ -25,14 +25,14 @@ apis = {}
 
 export watch = [ 'api', 'mid', "#__dirname/../mid" ]
 
-export api = ->
+export api = ->*
   olio.config.api ?= {}
   olio.config.api.port ?= 9010
   info "Starting api server on port #{olio.config.api.port}".green
   app = koa!
   keys mid |> each (m) ->
     app.use (next) ->*
-      if @_mid = mid[m].outgoing
+      if @_mid = mid[m].incoming
         yield @_mid
         delete @_mid
       yield next
