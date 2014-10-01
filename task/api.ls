@@ -9,19 +9,9 @@ require! \glob
 require! \koa
 
 # Load both built-in and project middleware.  Project middleware will mask built-ins of the same name.
-mid = {}
-[ "#__dirname/../mid/*.ls", "#{process.cwd!}/mid/*.ls" ]
-|> each ->
-  glob.sync it
-  |> each ->
-    mid[fs.path.basename(it, '.ls')] = require it
+mid = require-dir "#__dirname/../mid", "#{process.cwd!}/mid"
 
-apis = {}
-[ "#{process.cwd!}/api/*.ls" ]
-|> each ->
-  glob.sync it
-  |> each ->
-    apis[fs.path.basename(it, '.ls')] = require it
+apis = require-dir "#{process.cwd!}/api"
 
 export watch = [ 'api', 'mid', "#__dirname/../mid" ]
 

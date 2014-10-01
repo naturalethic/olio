@@ -28,7 +28,9 @@ global <<< do
   promisify-all: bluebird.promisify-all
 
 global.require-dir = ->
-  it = "#{process.cwd!}/#it" if path.0 != '/'
+  return fold1 (<<<), (& |> map -> require-dir it) if &.length > 1
+  it = "#{process.cwd!}/#it" if it.0 != '/'
+  it = fs.realpath-sync it
   pairs-to-obj (glob.sync("#it/*.ls") |> map -> [ fs.path.basename(it, '.ls'), require it ])
 
 global.exec = ->
@@ -59,12 +61,7 @@ delete olio.option.$0
 # -----------------------------------------------------------------------------
 
 # Load both built-in and project tasks.  Project tasks will mask built-ins of the same name.
-tasks = {}
-[ "#__dirname/../task/*.ls", "#{process.cwd!}/task/*.ls" ]
-|> each ->
-  glob.sync it
-  |> each ->
-    tasks[fs.path.basename(it, '.ls')] = require it
+tasks = require-dir "#__dirname/../task", "#{process.cwd!}/task"
 
 # Print list of tasks if none given as command, or task does not exist.
 if !task = tasks[first olio.command]
