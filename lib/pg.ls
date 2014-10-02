@@ -43,26 +43,23 @@ columns = (connection, table) ->
     columns[table] = it |> map -> it.attname
 
 wrap = (connection, table, record) ->
-  wrapper =
-    table: table
-    record: record
-  wrapper.set = (key, val) ->
-    shadow[key] = val
-    wrapper
-  wrapper.save = ->*
-  wrapper.relate = (target, qualities) ->*
-    join-table = camelize (sort [@table, target.table]).join('-')
-    source-id = (table == target.table and 'sourceId') or table + 'Id'
-    target-id = (table == target.table and 'targetId') or target.table + 'Id'
-    statement = """SELECT * FROM "#join-table" WHERE "#source-id" = ? AND "#target-id" = ?"""
-    join-record = yield first connection, statement, record.id, target.record.id
-    if not join-record
-      statement = """INSERT INTO "#join-table" ("#source-id", "#target-id") VALUES (?, ?) RETURNING *"""
-      join-record = yield first connection, statement, record.id, target.record.id
-    if qualities
-      statement = """UPDATE "#join-table" SET qualities = ? WHERE "#source-id" = ? AND "#target-id" = ?"""
-      join-record = yield first connection, statement, JSON.stringify(qualities), record.id, target.record.id
-    return target
+  wrapper = new Proxy {}, {
+    get: (target, name, receiver) ->
+      switch
+      | name[0] == '_'                => target[name]
+      | name in columns[table]        => record[name]
+      | record.properties             => record.properties[name]
+      | record.qualities              => record.qualities[name]
+      | otherwise                     => throw new Error 'Unknown property access'
+    set: (target, name, val, receiver) ->
+      switch
+      | name[0] == '_'                => target[name] = val
+      | name in columns[table]        => record[name] = val
+      | record.properties             => record.properties[name] = val
+      | record.qualities              => record.qualities[name]  = val
+      | otherwise                     => throw new Error 'Unknown property access'
+  }
+  wrapper._table = table
   wrapper
 
 setup-interface = (connection, release) ->
@@ -70,17 +67,17 @@ setup-interface = (connection, release) ->
   tables connection
   .then (tables) ->
     tables |> each (table) ->
-      model[table] = (arg) ->
-        (switch typeof! arg
-        | 'String' => first connection, """SELECT * FROM "#{camelize table}" WHERE id = ?""", arg
-        | 'Object' => exec connection, ("""SELECT * FROM "#{camelize table}" WHERE """ + (keys arg |> map -> "#{camelize it} = ?").join ' '), ...(values arg)
-        ).then ->
-          switch typeof! it
-          | 'Array'   => it |> map -> wrap connection, table, it
-          | otherwise => wrap connection, table, it
-      model[table].create = (record) ->*
+      # model[table] = (arg) ->
+      #   (switch typeof! arg
+      #   | 'String' => first connection, """SELECT * FROM "#{camelize table}" WHERE id = ?""", arg
+      #   | 'Object' => exec connection, ("""SELECT * FROM "#{camelize table}" WHERE """ + (keys arg |> map -> "#{camelize it} = ?").join ' '), ...(values arg)
+      #   ).then ->
+      #     switch typeof! it
+      #     | 'Array'   => it |> map -> wrap connection, table, it
+      #     | otherwise => wrap connection, table, it
+      model[table] = (record = {}) ->*
         cols = columns[table] |> filter -> record.has-own-property(it) or (it in [ 'qualities', 'properties' ])
-        statement = "INSERT INTO #table (#{cols.join(',')}) VALUES (#{(['?'] * cols.length).join(',')}) RETURNING *"
+        statement = """INSERT INTO #table ("#{cols.join('","')}") VALUES (#{(['?'] * cols.length).join(',')}) RETURNING *"""
         values = cols |> map ->
           return (record[it]) if it not in [ 'qualities', 'properties' ]
           extra = {}
@@ -95,11 +92,24 @@ setup-interface = (connection, release) ->
         columns connection, table
   .then ->
     do
-      exec:    (statement, ...args) -> exec(connection, statement, ...args)
-      first:   (statement, ...args) -> exec(connection, statement, ...args).then -> it.length and it[0] or null
-      error:   -> connection.error
       release: release
-      model:   model
+      model: model
+      error: -> connection.error
+      exec: (statement, ...args) -> exec(connection, statement, ...args)
+      first: (statement, ...args) -> exec(connection, statement, ...args).then -> it.length and it[0] or null
+      relate: (source, target, qualities) ->*
+        join-table = camelize (sort [source._table, target._table]).join('-')
+        source-id = (source._table == target._table and 'sourceId') or source._table + 'Id'
+        target-id = (source._table == target._table and 'targetId') or target._table + 'Id'
+        statement = """SELECT * FROM "#join-table" WHERE "#source-id" = ? AND "#target-id" = ?"""
+        join-record = yield first connection, statement, source.id, target.id
+        if not join-record
+          statement = """INSERT INTO "#join-table" ("#source-id", "#target-id") VALUES (?, ?) RETURNING *"""
+          join-record = yield first connection, statement, source.id, target.id
+        if qualities
+          statement = """UPDATE "#join-table" SET qualities = ? WHERE "#source-id" = ? AND "#target-id" = ?"""
+          join-record = yield first connection, statement, JSON.stringify(qualities), source.id, target.id
+        return target
 
 export connect-pool = (url) ->
   pg.connect-async url

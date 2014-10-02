@@ -8,6 +8,7 @@ require! \optimist
 require! \chokidar
 require! \glob
 require! \co
+require! \harmony-reflect
 
 # -----------------------------------------------------------------------------
 # Global assignments.  Please keep all global assignments within this area.
@@ -47,14 +48,13 @@ global.exit = (message) ->
 if !fs.exists-sync './olio.ls'
   exit "You must provide a file named 'olio.ls' in your project root"
 
+delete optimist.argv.$0
+
 global.olio =
   pg:      require './pg'
   config:  require "#{process.cwd!}/olio.ls"
-  command: optimist.argv._
-  option:  optimist.argv
-
-delete olio.option._
-delete olio.option.$0
+  command: delete optimist.argv._
+  option:  pairs-to-obj(obj-to-pairs(optimist.argv) |> map -> [camelize(it[0]), it[1]])
 
 # -----------------------------------------------------------------------------
 # End global assignments.
