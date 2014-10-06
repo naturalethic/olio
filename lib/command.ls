@@ -9,6 +9,7 @@ require! \chokidar
 require! \glob
 require! \co
 require! \harmony-reflect
+require! \LiveScript
 
 # -----------------------------------------------------------------------------
 # Global assignments.  Please keep all global assignments within this area.
@@ -27,6 +28,7 @@ global <<< do
   promise:       bluebird
   promisify:     bluebird.promisify
   promisify-all: bluebird.promisify-all
+  livescript:    LiveScript
 
 global.require-dir = ->
   return fold1 (<<<), (& |> map -> require-dir it) if &.length > 1

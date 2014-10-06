@@ -8,19 +8,16 @@
 require! \glob
 require! \koa
 
-# Load both built-in and project middleware.  Project middleware will mask built-ins of the same name.
-mid = require-dir "#__dirname/../mid", "#{process.cwd!}/mid"
-
-apis = require-dir "#{process.cwd!}/api"
-
-export watch = [ 'api', 'mid', "#__dirname/../mid" ]
+export watch = [ 'olio.ls', 'api', 'mid', "#__dirname/../mid" ]
 
 export api = ->*
   olio.config.api ?= {}
   olio.config.api.port ?= 9010
   info "Starting api server on port #{olio.config.api.port}".green
   app = koa!
-  keys mid |> each (m) ->
+  app.use require('koa-gzip')!
+  olio.config.api.mid |> each (m) ->
+    return if not mid[m]
     app.use (next) ->*
       if @_mid = mid[m].incoming
         yield @_mid
@@ -31,11 +28,16 @@ export api = ->*
         delete @_mid
   app.use (next) ->*
     segments = filter id, @url.split('/')
-    if apis[segments.0]
-      if @_api = apis[segments.0][segments.1]
-        try
-          yield @_api
+    if @_api = api[segments.0] and ((!segments.1 and api[segments.0][segments.0]) or api[segments.0][segments.1])
+      try
+        @body = yield @_api!
+      catch e
+        error e
     yield next
-  app.use ->*
-    @body = 'ok'
+  # app.use ->*
+  #   @body = 'ok'
   app.listen olio.config.api.port
+
+olio.api = api <<< require-dir "#{process.cwd!}/api"
+mid = require-dir "#__dirname/../mid", "#{process.cwd!}/mid"
+

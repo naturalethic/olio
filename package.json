@@ -22,6 +22,8 @@
     "glob": "",
     "harmony-reflect": "^1.1.0",
     "koa": "",
+    "koa-gzip": "^0.1.0",
+    "ng-annotate": "^0.10.1",
     "optimist": "",
     "pg": "",
     "prelude-ls": ""
