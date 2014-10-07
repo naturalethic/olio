@@ -29,18 +29,31 @@ global <<< do
   promisify:     bluebird.promisify
   promisify-all: bluebird.promisify-all
   livescript:    LiveScript
+  glob:          glob
 
 global.require-dir = ->
   return fold1 (<<<), (& |> map -> require-dir it) if &.length > 1
   it = "#{process.cwd!}/#it" if it.0 != '/'
+  return {} if not fs.exists-sync it
   it = fs.realpath-sync it
   pairs-to-obj (glob.sync("#it/*.ls") |> map -> [ fs.path.basename(it, '.ls'), require it ])
 
-global.exec = ->
-  try
-    process.exec-sync it
-  catch
-    false
+global.exec = (command, async) ->
+  if async
+    child = process.exec command
+    child.stdout.on 'data', -> process.stdout.write it
+    child.stderr.on 'data', -> process.stderr.write it
+  else
+    try
+      process.exec-sync command
+    catch
+      false
+
+global.spawn = ->
+  words = it.match(/[^"'\s]+|"[^"]+"|'[^'']+'/g)
+  child = process.spawn (head words), (tail words)
+  child.stdout.on 'data', -> process.stdout.write it
+  child.stderr.on 'data', -> process.stderr.write it
 
 global.exit = (message) ->
   error message.red
@@ -63,12 +76,20 @@ global.olio =
 # -----------------------------------------------------------------------------
 
 # Load both built-in and project tasks.  Project tasks will mask built-ins of the same name.
-tasks = require-dir "#__dirname/../task", "#{process.cwd!}/task"
+task-modules = require-dir "#__dirname/../task", "#{process.cwd!}/task"
 
 # Print list of tasks if none given as command, or task does not exist.
-if !task = tasks[first olio.command]
+if !(task-module = task-modules[olio.command.0])
   info 'Tasks:'
-  keys tasks |> each -> info "  #it"
+  keys task-modules |> each -> info "  #it"
+  process.exit!
+
+# Print list of subtasks if one is acceptable and none given as command, or subtask does not exist.
+if !(task = task-module[olio.command.1]) and !(task = task-module[olio.command.0])
+  info 'Subtasks:'
+  keys task-module
+  |> filter -> it != olio.command.0
+  |> each -> info "  #it"
   process.exit!
 
 # Provide watch capability to all tasks.
@@ -79,10 +100,9 @@ if olio.option.watch
       process.spawn-sync (head process.argv), (tail process.argv), { stdio: 'inherit' }
 else if olio.option.supervised
   # Always include the olio module in the watch list.
-  chokidar.watch [ fs.realpath-sync "#__dirname/.." ] ++ (task.watch or []), persistent: true, ignore-initial: true .on 'all', (event, path) ->
+  chokidar.watch [ fs.realpath-sync "#__dirname/.." ] ++ (task-module.watch or []), persistent: true, ignore-initial: true .on 'all', (event, path) ->
     info "Change detected in '#path'..."
     process.exit!
-  (co task[first olio.command])!
+  (co task)!
 else
-  #task[first olio.command]!
-  (co task[first olio.command])!
+  (co task)!
