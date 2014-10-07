@@ -9,7 +9,7 @@ window.cache =
 
 re-uuid = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/
 
-angular.module 'ORTHO-APPLICATION'
+angular.module 'NG-APPLICATION'
 .factory 'api', ($http) ->
   invoke = (module, name) ->
     (data) ->
@@ -26,7 +26,7 @@ angular.module 'ORTHO-APPLICATION'
       request.method                  = 'post'
       request.url                     = '/api/' + module
       request.url                    += '/' + name if name
-      debug "API[##count] > " + request.url.substr(5), data
+      console.info "API[##count] > " + request.url.substr(5), data
       request.transform-response      = (data) ->
         return JSON.parse data
       api.loading += 1
@@ -34,7 +34,7 @@ angular.module 'ORTHO-APPLICATION'
       .success (data, status, headers, config) ->
         api.loading -= 1
         cache.set 'token', headers('X-Token') if headers('X-Token')
-        debug "API[##count] < " + request.url.substr(5), data
+        console.info "API[##count] < " + request.url.substr(5), data
       .error (data, status, headers, config) ->
         api.loading -= 1
         cache.set 'token', headers('X-Token') if headers('X-Token')
@@ -52,7 +52,7 @@ angular.module 'ORTHO-APPLICATION'
 
 .run (api) ->
   api._ready = true
-''']
+'''.replace 'NG-APPLICATION', olio.config.app || 'app']
 
 keys olio.api
 |> map (module) ->
@@ -61,7 +61,8 @@ keys olio.api
 |> client-script.push
 client-script = ng-annotate(livescript.compile(flatten(client-script).join('\n')), add: true).src
 
-export incoming = (next) ->*
+export incoming = ->*
   if @url == '/script'
     @response.set 'Content-Type', 'application/javascript'
     @body = client-script
+    return true

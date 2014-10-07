@@ -42,22 +42,24 @@ columns = (connection, table) ->
   .then ->
     columns[table] = it |> map -> it.attname
 
-wrap = (connection, table, record) ->
-  wrapper = new Proxy {}, {
+wrap = (connection, table, target) ->
+  return null if not target
+  wrapper = new Proxy target, {
     get: (target, name, receiver) ->
       switch
-      | name[0] == '_'                => target[name]
-      | name in columns[table]        => record[name]
-      | record.properties             => record.properties[name]
-      | record.qualities              => record.qualities[name]
-      | otherwise                     => throw new Error 'Unknown property access'
+      | name[0] == '_'         => target[name]
+      | name in columns[table] => target[name]
+      | target.properties      => target.properties[name]
+      | target.qualities       => target.qualities[name]
+      | name == 'inspect'      => null
+      | otherwise              => throw new Error "[olio.pg get] Unknown property access: #name"
     set: (target, name, val, receiver) ->
       switch
-      | name[0] == '_'                => target[name] = val
-      | name in columns[table]        => record[name] = val
-      | record.properties             => record.properties[name] = val
-      | record.qualities              => record.qualities[name]  = val
-      | otherwise                     => throw new Error 'Unknown property access'
+      | name[0] == '_'         => target[name] = val
+      | name in columns[table] => target[name] = val
+      | target.properties      => target.properties[name] = val
+      | target.qualities       => target.qualities[name]  = val
+      | otherwise              => throw new Error "[olio.pg set] Unknown property access: #name"
   }
   wrapper._table = table
   wrapper
@@ -75,17 +77,24 @@ setup-interface = (connection, release) ->
       #     switch typeof! it
       #     | 'Array'   => it |> map -> wrap connection, table, it
       #     | otherwise => wrap connection, table, it
+      # Model function creates or loads records
       model[table] = (record = {}) ->*
-        cols = columns[table] |> filter -> record.has-own-property(it) or (it in [ 'qualities', 'properties' ])
-        statement = """INSERT INTO #table ("#{cols.join('","')}") VALUES (#{(['?'] * cols.length).join(',')}) RETURNING *"""
-        values = cols |> map ->
-          return (record[it]) if it not in [ 'qualities', 'properties' ]
-          extra = {}
-          keys record
-          |> filter -> it[0] != '_' and (it not in cols)
-          |> each   -> extra[it] = record[it]
-          JSON.stringify(extra)
-        return wrap(connection, table, (yield first connection, statement, values))
+        if typeof! record == 'String'
+          return wrap(connection, table, (yield first connection, """SELECT * FROM #table WHERE id = ?""", record))
+        else
+          cols = columns[table] |> filter -> record.has-own-property(it) or (it in [ 'qualities', 'properties' ])
+          if cols.length
+            statement = """INSERT INTO #table ("#{cols.join('","')}") VALUES (#{(['?'] * cols.length).join(',')}) RETURNING *"""
+          else
+            statement = """INSERT INTO #table DEFAULT VALUES RETURNING *"""
+          values = cols |> map ->
+            return (record[it]) if it not in [ 'qualities', 'properties' ]
+            extra = {}
+            keys record
+            |> filter -> it[0] != '_' and (it not in cols)
+            |> each   -> extra[it] = record[it]
+            JSON.stringify(extra)
+          return wrap(connection, table, (yield first connection, statement, values))
     # XXX: This should only need to be called once at db initialization
     promise.all do
       tables |> map (table) ->
@@ -110,6 +119,15 @@ setup-interface = (connection, release) ->
           statement = """UPDATE "#join-table" SET qualities = ? WHERE "#source-id" = ? AND "#target-id" = ?"""
           join-record = yield first connection, statement, JSON.stringify(qualities), source.id, target.id
         return target
+      related: (source, target-table) ->*
+        target-table = camelize target-table
+        join-table = camelize (sort [source._table, target-table]).join('-')
+        source-id = (source._table == target-table and 'sourceId') or source._table + 'Id'
+        target-id = (source._table == target-table and 'targetId') or target-table + 'Id'
+        statement = """SELECT qualities, "#target-table".* FROM "#join-table", "#target-table" WHERE "#join-table"."#target-id" = "#target-table".id AND "#source-id" = ?"""
+        records = yield exec connection, statement, source.id
+        return (records |> map -> wrap(connection, target-table, it))
+
 
 export connect-pool = (url) ->
   pg.connect-async url

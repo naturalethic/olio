@@ -20,9 +20,10 @@ export api = ->*
     return if not mid[m]
     app.use (next) ->*
       if @_mid = mid[m].incoming
-        yield @_mid
+        # Middleware should return true if they want to skip the rest of the middleware chain
+        skip = yield @_mid
         delete @_mid
-      yield next
+      yield next if not skip
       if @_mid = mid[m].outgoing
         yield @_mid
         delete @_mid
