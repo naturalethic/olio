@@ -12,7 +12,7 @@ export watch = [ 'olio.ls', 'api', 'mid', "#__dirname/../mid" ]
 
 export api = ->*
   olio.config.api ?= {}
-  olio.config.api.port ?= 9010
+  olio.config.api.port ?= 9001
   info "Starting api server on port #{olio.config.api.port}".green
   app = koa!
   app.use require('koa-gzip')!
