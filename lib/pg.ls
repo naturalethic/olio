@@ -14,7 +14,7 @@ exec = (connection, statement, ...args) ->
     connection.error = it
     throw it
 
-first = (connection, statement, ...args) ->
+exec-first = (connection, statement, ...args) ->
   exec connection, statement, ...args
   .then ->
     it.length and it[0] or null
@@ -42,45 +42,40 @@ columns = (connection, table) ->
   .then ->
     columns[table] = it |> map -> it.attname
 
-wrap = (connection, table, target) ->
-  return null if not target
-  wrapper = new Proxy target, {
+wrap = (table, record) ->
+  return null if not record
+  target = ^^record
+  target.toJSON = ->
+    obj = pairs-to-obj(columns[table] |> (filter -> it not in [ 'properties', 'qualities' ]) |> map -> [ it, record[it] ])
+    obj <<< record.properties or {}
+    obj <<< record.qualities  or {}
+    JSON.stringify obj
+  new Proxy target, do
     get: (target, name, receiver) ->
       switch
-      | name[0] == '_'         => target[name]
-      | name in columns[table] => target[name]
-      | target.properties      => target.properties[name]
-      | target.qualities       => target.qualities[name]
-      | name == 'inspect'      => null
-      | otherwise              => throw new Error "[olio.pg get] Unknown property access: #name"
+      | name == '_table'             => table
+      | name == '_record'            => record
+      | name in columns[table]       => record[name]
+      | target.has-own-property name => target[name]
+      | record.properties            => record.properties[name]
+      | record.qualities             => record.qualities[name]
+      | otherwise                    => target[name]
     set: (target, name, val, receiver) ->
       switch
-      | name[0] == '_'         => target[name] = val
-      | name in columns[table] => target[name] = val
-      | target.properties      => target.properties[name] = val
-      | target.qualities       => target.qualities[name]  = val
-      | otherwise              => throw new Error "[olio.pg set] Unknown property access: #name"
-  }
-  wrapper._table = table
-  wrapper
+      | name in columns[table] => record[name] = val
+      | record.properties      => record.properties[name] = val
+      | record.qualities       => record.qualities[name]  = val
+      | otherwise              => target[name] = val
 
 setup-interface = (connection, release) ->
   model = {}
   tables connection
   .then (tables) ->
     tables |> each (table) ->
-      # model[table] = (arg) ->
-      #   (switch typeof! arg
-      #   | 'String' => first connection, """SELECT * FROM "#{camelize table}" WHERE id = ?""", arg
-      #   | 'Object' => exec connection, ("""SELECT * FROM "#{camelize table}" WHERE """ + (keys arg |> map -> "#{camelize it} = ?").join ' '), ...(values arg)
-      #   ).then ->
-      #     switch typeof! it
-      #     | 'Array'   => it |> map -> wrap connection, table, it
-      #     | otherwise => wrap connection, table, it
       # Model function creates or loads records
       model[table] = (record = {}) ->*
         if typeof! record == 'String'
-          return wrap(connection, table, (yield first connection, """SELECT * FROM #table WHERE id = ?""", record))
+          return wrap(table, (yield exec-first connection, """SELECT * FROM #table WHERE id = ?""", record))
         else
           cols = columns[table] |> filter -> record.has-own-property(it) or (it in [ 'qualities', 'properties' ])
           if cols.length
@@ -94,7 +89,13 @@ setup-interface = (connection, release) ->
             |> filter -> it[0] != '_' and (it not in cols)
             |> each   -> extra[it] = record[it]
             JSON.stringify(extra)
-          return wrap(connection, table, (yield first connection, statement, values))
+          return wrap(table, (yield exec-first connection, statement, values))
+      model[table].find = (query = {}) ->*
+        records = yield exec connection, ("""SELECT * FROM "#{camelize table}" WHERE """ + (keys query |> map -> "#{camelize it} = ?").join ' AND '), ...(values query)
+        return (records |> map -> wrap(table, it))
+      model[table].first = (query = {}) ->*
+        record = yield exec-first connection, ("""SELECT * FROM "#{camelize table}" WHERE """ + (keys query |> map -> "#{camelize it} = ?").join ' AND '), ...(values query)
+        return (record and wrap(table, record)) or null
     # XXX: This should only need to be called once at db initialization
     promise.all do
       tables |> map (table) ->
@@ -103,21 +104,21 @@ setup-interface = (connection, release) ->
     do
       release: release
       model: model
-      error: -> connection.error
+      error: -> @_error = it if it; connection.error or @_error
       exec: (statement, ...args) -> exec(connection, statement, ...args)
-      first: (statement, ...args) -> exec(connection, statement, ...args).then -> it.length and it[0] or null
+      first: (statement, ...args) -> exec(connection, statement + ' LIMIT 1', ...args).then -> it.length and it[0] or null
       relate: (source, target, qualities) ->*
         join-table = camelize (sort [source._table, target._table]).join('-')
         source-id = (source._table == target._table and 'sourceId') or source._table + 'Id'
         target-id = (source._table == target._table and 'targetId') or target._table + 'Id'
         statement = """SELECT * FROM "#join-table" WHERE "#source-id" = ? AND "#target-id" = ?"""
-        join-record = yield first connection, statement, source.id, target.id
+        join-record = yield exec-first connection, statement, source.id, target.id
         if not join-record
           statement = """INSERT INTO "#join-table" ("#source-id", "#target-id") VALUES (?, ?) RETURNING *"""
-          join-record = yield first connection, statement, source.id, target.id
+          join-record = yield exec-first connection, statement, source.id, target.id
         if qualities
           statement = """UPDATE "#join-table" SET qualities = ? WHERE "#source-id" = ? AND "#target-id" = ?"""
-          join-record = yield first connection, statement, JSON.stringify(qualities), source.id, target.id
+          join-record = yield exec-first connection, statement, JSON.stringify(qualities), source.id, target.id
         return target
       related: (source, target-table) ->*
         target-table = camelize target-table
@@ -126,8 +127,12 @@ setup-interface = (connection, release) ->
         target-id = (source._table == target-table and 'targetId') or target-table + 'Id'
         statement = """SELECT qualities, "#target-table".* FROM "#join-table", "#target-table" WHERE "#join-table"."#target-id" = "#target-table".id AND "#source-id" = ?"""
         records = yield exec connection, statement, source.id
-        return (records |> map -> wrap(connection, target-table, it))
-
+        return (records |> map -> wrap(target-table, it))
+      save: (source) ->*
+        copy = {} <<< source._record
+        id = delete copy.id
+        yield exec connection, "UPDATE #{source._table} SET " + (keys copy |> map -> "\"#{camelize it}\" = ?").join(', ') + " WHERE id = ?", (values copy) ++ [ id ]
+        return source
 
 export connect-pool = (url) ->
   pg.connect-async url

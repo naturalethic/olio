@@ -26,18 +26,22 @@ angular.module 'NG-APPLICATION'
       request.method                  = 'post'
       request.url                     = '/api/' + module
       request.url                    += '/' + name if name
-      console.info "API[##count] > " + request.url.substr(5), data
+      console.info "API[#count] > "   + request.url.substr(5), data
       request.transform-response      = (data) ->
-        return JSON.parse data
+        try
+          return JSON.parse data
+        catch
+          data
       api.loading += 1
       $http request
       .success (data, status, headers, config) ->
         api.loading -= 1
         cache.set 'token', headers('X-Token') if headers('X-Token')
-        console.info "API[##count] < " + request.url.substr(5), data
+        console.info "API[#count] < #{request.url.substr(5)}", status, data
       .error (data, status, headers, config) ->
         api.loading -= 1
         cache.set 'token', headers('X-Token') if headers('X-Token')
+        console.info "API[#count] < #{request.url.substr(5)}", status, data
   invoke.count = 0
   api =
     loading: 0
