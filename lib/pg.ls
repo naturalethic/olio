@@ -49,7 +49,8 @@ wrap = (table, record) ->
   return null if not record
   target = ^^record
   target.toJSON = ->
-    obj = pairs-to-obj(columns[table] |> (filter -> it not in [ 'properties', 'qualities' ]) |> map -> [ it, record[it] ])
+    obj = pairs-to-obj(columns[table] |> (filter -> it not in [ 'id', 'properties', 'qualities' ]) |> map -> [ it, record[it] ])
+    obj[table + 'Id'] = record.id
     obj <<< record.properties or {}
     obj <<< record.qualities  or {}
     obj

@@ -1,9 +1,5 @@
 ## TODO
-# token
-# session, persona, organization
-# script
 # params/data (camelized)
-
 
 require! \glob
 require! \koa
@@ -38,8 +34,15 @@ export api = ->*
       info "DISPATCH #{@url}".blue
       try
         if @_api.to-string!index-of('function*') != 0
-          throw new Error "Legacy api: #{@url}"
-        result = yield @_api!
+          ortho-db = require fs.path.resolve './node_modules/ortho/lib/db'
+          ortho-db database: olio.config.pg.db
+          result = @_api { knex: ((table) -> ortho-db.knex camelize table), data: @in }, @response
+          if typeof! result != 'Number'
+            result = yield result
+          #info result
+          #throw new Error "Legacy api: #{@url}"
+        else
+          result = yield @_api!
         throw @pg.error! if @pg and @pg.error!
         if typeof! result == 'Number'
           @response.status = result

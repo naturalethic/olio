@@ -30,6 +30,7 @@ global <<< do
   promisify-all: bluebird.promisify-all
   livescript:    LiveScript
   glob:          glob
+  re-uuid:       /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/
 
 global.require-dir = ->
   return fold1 (<<<), (& |> map -> require-dir it) if &.length > 1
