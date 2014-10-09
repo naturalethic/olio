@@ -30,9 +30,8 @@ angular.module 'NG-APPLICATION'
       console.info "API[#count] > "   + request.url.substr(5), data
       request.transform-response      = (data) ->
         try
-          return JSON.parse data
-        catch
-          data
+          data = JSON.parse data
+        data
       api.loading += 1
       $http request
       .success (data, status, headers, config) ->

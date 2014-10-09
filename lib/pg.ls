@@ -52,7 +52,7 @@ wrap = (table, record) ->
     obj = pairs-to-obj(columns[table] |> (filter -> it not in [ 'properties', 'qualities' ]) |> map -> [ it, record[it] ])
     obj <<< record.properties or {}
     obj <<< record.qualities  or {}
-    JSON.stringify obj
+    obj
   target.inspect = -> record
   new Proxy target, do
     get: (target, name, receiver) ->
@@ -92,7 +92,7 @@ setup-interface = (connection, release) ->
             |> filter -> it[0] != '_' and (it not in cols)
             |> each   -> extra[it] = record[it]
             JSON.stringify(extra)
-          return wrap(table, (yield exec-first connection, statement, values))
+          return wrap(table, (yield exec connection, statement, values)[0])
       model[table].find = (query = {}) ->*
         statement = knex(table).select '*'
         keys query |> each -> (typeof! query[it] == 'Array' and statement.where-in it, query[it]) or statement.where it, query[it]
