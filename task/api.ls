@@ -7,6 +7,7 @@
 
 require! \glob
 require! \koa
+require! \inflection
 
 export watch = [ 'olio.ls', 'api', 'mid', "#__dirname/../mid" ]
 
@@ -33,8 +34,8 @@ export api = ->*
   app.use (next) ->*
     @in = @query <<< @request.body
     segments = filter id, @url.split('/')
-    if @_api = api[segments.0] and ((!segments.1 and api[segments.0][segments.0]) or api[segments.0][segments.1])
-      info "DISPATCH #{@url}".yellow
+    if @_api = (api[segments.0] and ((!segments.1 and api[segments.0][segments.0]) or api[segments.0][segments.1])) or (api[inflection.singularize segments.0] and api[inflection.singularize segments.0][segments.0])
+      info "DISPATCH #{@url}".blue
       try
         result = yield @_api!
         throw @pg.error! if @pg and @pg.error!

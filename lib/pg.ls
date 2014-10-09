@@ -1,4 +1,7 @@
 require! \pg
+require! \knex
+
+knex = knex client: 'pg'
 
 promisify-all pg
 promisify-all pg.Client.prototype
@@ -15,7 +18,7 @@ exec = (connection, statement, ...args) ->
     throw it
 
 exec-first = (connection, statement, ...args) ->
-  exec connection, statement, ...args
+  exec connection, statement + ' LIMIT 1', ...args
   .then ->
     it.length and it[0] or null
 
@@ -50,22 +53,22 @@ wrap = (table, record) ->
     obj <<< record.properties or {}
     obj <<< record.qualities  or {}
     JSON.stringify obj
+  target.inspect = -> record
   new Proxy target, do
     get: (target, name, receiver) ->
       switch
-      | name == '_table'             => table
-      | name == '_record'            => record
-      | name in columns[table]       => record[name]
-      | target.has-own-property name => target[name]
-      | record.properties            => record.properties[name]
-      | record.qualities             => record.qualities[name]
-      | otherwise                    => target[name]
+      | name == '_table'                                              => table
+      | name == '_record'                                             => record
+      | name in columns[table]                                        => record[name]
+      | record.properties and record.properties.has-own-property name => record.properties[name]
+      | record.qualities  and record.qualities.has-own-property name  => record.qualities[name]
+      | otherwise                                                     => target[name]
     set: (target, name, val, receiver) ->
       switch
-      | name in columns[table] => record[name] = val
-      | record.properties      => record.properties[name] = val
-      | record.qualities       => record.qualities[name]  = val
-      | otherwise              => target[name] = val
+      | name in columns[table]                                        => record[name] = val
+      | record.properties and record.properties.has-own-property name => record.properties[name] = val
+      | record.qualities  and record.qualities.has-own-property name  => record.qualities[name]  = val
+      | otherwise                                                     => target[name] = val
 
 setup-interface = (connection, release) ->
   model = {}
@@ -91,10 +94,14 @@ setup-interface = (connection, release) ->
             JSON.stringify(extra)
           return wrap(table, (yield exec-first connection, statement, values))
       model[table].find = (query = {}) ->*
-        records = yield exec connection, ("""SELECT * FROM "#{camelize table}" WHERE """ + (keys query |> map -> "#{camelize it} = ?").join ' AND '), ...(values query)
+        statement = knex(table).select '*'
+        keys query |> each -> (typeof! query[it] == 'Array' and statement.where-in it, query[it]) or statement.where it, query[it]
+        records = yield exec connection, statement.to-string!
         return (records |> map -> wrap(table, it))
       model[table].first = (query = {}) ->*
-        record = yield exec-first connection, ("""SELECT * FROM "#{camelize table}" WHERE """ + (keys query |> map -> "#{camelize it} = ?").join ' AND '), ...(values query)
+        statement = knex(table).select '*'
+        keys query |> each -> (typeof! query[it] == 'Array' and statement.where-in it, query[it]) or statement.where it, query[it]
+        record = yield exec-first connection, statement.to-string!
         return (record and wrap(table, record)) or null
     # XXX: This should only need to be called once at db initialization
     promise.all do
@@ -106,7 +113,7 @@ setup-interface = (connection, release) ->
       model: model
       error: -> @_error = it if it; connection.error or @_error
       exec: (statement, ...args) -> exec(connection, statement, ...args)
-      first: (statement, ...args) -> exec(connection, statement + ' LIMIT 1', ...args).then -> it.length and it[0] or null
+      first: (statement, ...args) -> exec-first(connection, statement, ...args)
       relate: (source, target, qualities) ->*
         join-table = camelize (sort [source._table, target._table]).join('-')
         source-id = (source._table == target._table and 'sourceId') or source._table + 'Id'

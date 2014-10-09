@@ -1,5 +1,6 @@
 require! \ng-annotate
 require! \zlib
+require! \inflection
 
 client-script = ['''
 window.cache =
@@ -61,7 +62,7 @@ angular.module 'NG-APPLICATION'
 keys olio.api
 |> map (module) ->
   keys olio.api[module]
-  |> map -> (module == it and "  api._add '#it'") or "  api._add '#module', '#it'"
+  |> map -> (module == it and "  api._add '#it'") or (inflection.pluralize(module) == it and "  api._add '#it'") or "  api._add '#module', '#it'"
 |> client-script.push
 client-script = ng-annotate(livescript.compile(flatten(client-script).join('\n')), add: true).src
 
