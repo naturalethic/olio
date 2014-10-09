@@ -37,6 +37,8 @@ export api = ->*
     if @_api = (api[segments.0] and ((!segments.1 and api[segments.0][segments.0]) or api[segments.0][segments.1])) or (api[inflection.singularize segments.0] and api[inflection.singularize segments.0][segments.0])
       info "DISPATCH #{@url}".blue
       try
+        if @_api.to-string!index-of('function*') != 0
+          throw new Error "Legacy api: #{@url}"
         result = yield @_api!
         throw @pg.error! if @pg and @pg.error!
         if typeof! result == 'Number'
