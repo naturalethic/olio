@@ -36,7 +36,46 @@ export api = ->*
         if @_api.to-string!index-of('function*') != 0
           ortho-db = require fs.path.resolve './node_modules/ortho/lib/db'
           ortho-db database: olio.config.pg.db
-          result = @_api { knex: ((table) -> ortho-db.knex camelize table), data: @in, session: @session }, @response
+          req =
+            knex: ((table) -> ortho-db.knex camelize table)
+            data: @in
+            session: @session
+          req.create = (table, properties = {}, other = {}) ->
+            req.knex table
+            .insert other <<< properties: properties
+            .returning '*'
+            .then -> it[0]
+          req.relate = (table, ids, qualities) ->
+            kds = keys ids
+            if not qualities
+              qualities = {}
+              if kds.length > 2
+                qualities <<< ids
+                delete qualities[kds[0]]
+                delete qualities[kds[1]]
+            ids = { ("#{kds[0]}Id"): ids[kds[0]].id, ("#{kds[1]}Id"): ids[kds[1]].id }
+            record = {} <<< ids <<< { qualities: qualities }
+            req.knex table
+            .where ids
+            .then ->
+              if it.length
+                req.knex table
+                .update record
+                .where ids
+              else
+                req.knex table
+                .insert record
+          req.update = (table, data) ->
+            req.knex table
+            .first db.primary-key data
+            .then ->
+              return 404 if not it
+              data.properties = it.properties <<< (data.properties || {}) if it.properties
+              data.qualities  = it.qualities  <<< (data.qualities  || {}) if it.qualities
+              req.knex table
+              .update db.table-ready data
+              .where db.primary-key data
+          result = @_api req, @response
           if typeof! result != 'Number'
             result = yield result
         else
