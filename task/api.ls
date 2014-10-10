@@ -39,8 +39,6 @@ export api = ->*
           result = @_api { knex: ((table) -> ortho-db.knex camelize table), data: @in }, @response
           if typeof! result != 'Number'
             result = yield result
-          #info result
-          #throw new Error "Legacy api: #{@url}"
         else
           result = yield @_api!
         throw @pg.error! if @pg and @pg.error!

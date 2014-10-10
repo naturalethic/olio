@@ -123,10 +123,10 @@ setup-interface = (connection, release) ->
         join-record = yield exec-first connection, statement, source.id, target.id
         if not join-record
           statement = """INSERT INTO "#join-table" ("#source-id", "#target-id") VALUES (?, ?) RETURNING *"""
-          join-record = yield exec-first connection, statement, source.id, target.id
+          yield exec connection, statement, source.id, target.id
         if qualities
           statement = """UPDATE "#join-table" SET qualities = ? WHERE "#source-id" = ? AND "#target-id" = ?"""
-          join-record = yield exec-first connection, statement, JSON.stringify(qualities), source.id, target.id
+          yield exec connection, statement, JSON.stringify(qualities), source.id, target.id
         return target
       related: (source, target-table) ->*
         target-table = camelize target-table

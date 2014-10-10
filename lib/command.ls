@@ -31,6 +31,7 @@ global <<< do
   livescript:    LiveScript
   glob:          glob
   re-uuid:       /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/
+  system-id:     -> "00000000-0000-0000-0000-00000000000#it"
 
 global.require-dir = ->
   return fold1 (<<<), (& |> map -> require-dir it) if &.length > 1
