@@ -36,7 +36,7 @@ export api = ->*
         if @_api.to-string!index-of('function*') != 0
           ortho-db = require fs.path.resolve './node_modules/ortho/lib/db'
           ortho-db database: olio.config.pg.db
-          result = @_api { knex: ((table) -> ortho-db.knex camelize table), data: @in }, @response
+          result = @_api { knex: ((table) -> ortho-db.knex camelize table), data: @in, session: @session }, @response
           if typeof! result != 'Number'
             result = yield result
         else
