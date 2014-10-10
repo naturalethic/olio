@@ -64,6 +64,8 @@ global.exit = (message) ->
 # Require a configuration file.  It also proves `cwd` is an olio project root.
 if !fs.exists-sync './olio.ls'
   exit "You must provide a file named 'olio.ls' in your project root"
+if !fs.exists-sync './ortho.ls'
+  exit "You must provide a file named 'ortho.ls' in your project root"
 
 delete optimist.argv.$0
 
@@ -72,6 +74,7 @@ global.olio =
   config:  require "#{process.cwd!}/olio.ls"
   command: delete optimist.argv._
   option:  pairs-to-obj(obj-to-pairs(optimist.argv) |> map -> [camelize(it[0]), it[1]])
+global.ortho = require "#{process.cwd!}/ortho.ls"
 
 # -----------------------------------------------------------------------------
 # End global assignments.
