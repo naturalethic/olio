@@ -67,12 +67,13 @@ if !fs.exists-sync './olio.ls'
 if !fs.exists-sync './ortho.ls'
   exit "You must provide a file named 'ortho.ls' in your project root"
 
-delete optimist.argv.$0
+
 
 global.olio =
   pg:      require './pg'
   config:  require "#{process.cwd!}/olio.ls"
-  command: delete optimist.argv._
+  command: delete optimist.argv.$0
+  task:    delete optimist.argv._
   option:  pairs-to-obj(obj-to-pairs(optimist.argv) |> map -> [camelize(it[0]), it[1]])
 global.ortho = require "#{process.cwd!}/ortho.ls"
 
@@ -83,26 +84,30 @@ global.ortho = require "#{process.cwd!}/ortho.ls"
 # Load both built-in and project tasks.  Project tasks will mask built-ins of the same name.
 task-modules = require-dir "#__dirname/../task", "#{process.cwd!}/task"
 
-# Print list of tasks if none given as command, or task does not exist.
-if !(task-module = task-modules[olio.command.0])
+# Print list of tasks if none given, or task does not exist.
+if !(task-module = task-modules[olio.task.0])
   info 'Tasks:'
   keys task-modules |> each -> info "  #it"
   process.exit!
 
-# Print list of subtasks if one is acceptable and none given as command, or subtask does not exist.
-if !(task = task-module[olio.command.1]) and !(task = task-module[olio.command.0])
+# Print list of subtasks if one is acceptable and none given, or subtask does not exist.
+if !(task = task-module[olio.task.1]) and !(task = task-module[olio.task.0])
   info 'Subtasks:'
   keys task-module
-  |> filter -> it != olio.command.0
+  |> filter -> it != olio.task.0
   |> each -> info "  #it"
   process.exit!
 
 # Provide watch capability to all tasks.
 if olio.option.watch
-    process.argv.replace '--watch', '--supervised'
     process.argv.shift!
+    process.argv.shift!
+    process.argv.replace '--watch', '--supervised'
     while true
-      process.spawn-sync (head process.argv), (tail process.argv), { stdio: 'inherit' }
+      child = process.spawn-sync fs.path.resolve('node_modules/.bin/olio'), process.argv, { stdio: 'inherit' }
+      if child.error
+        info child.error
+        process.exit!
 else if olio.option.supervised
   # Always include the olio module in the watch list.
   chokidar.watch [ fs.realpath-sync "#__dirname/.." ] ++ (task-module.watch or []), persistent: true, ignore-initial: true .on 'all', (event, path) ->
