@@ -15,20 +15,20 @@
   },
   "dependencies": {
     "LiveScript": "naturalethic/LiveScript#generators",
-    "bluebird": "",
-    "chokidar": "",
+    "bluebird": "https://registry.npmjs.org/bluebird/-/bluebird-2.3.5.tgz",
+    "chokidar": "^0.9.0",
     "co": "^3.1.0",
-    "colors": "",
-    "glob": "",
+    "colors": "^1.0.3",
+    "glob": "^4.0.6",
     "harmony-reflect": "^1.1.0",
     "inflection": "^1.5.1",
     "knex": "^0.7.3",
-    "koa": "",
+    "koa": "^0.12.2",
     "koa-bodyparser": "^1.0.1",
     "koa-gzip": "^0.1.0",
-    "ng-annotate": "^0.10.1",
-    "optimist": "",
-    "pg": "",
-    "prelude-ls": ""
+    "ng-annotate": "^0.10.2",
+    "optimist": "^0.6.1",
+    "pg": "^3.5.0",
+    "prelude-ls": "^1.1.1"
   }
 }
