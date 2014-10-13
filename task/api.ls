@@ -30,10 +30,12 @@ export api = ->*
   app.use require('koa-gzip')!
   app.use require('koa-bodyparser')!
   app.use (next) ->*
+    @in = @query <<< @request.body
     segments = filter id, @url.split('/')
     @api = (api[segments.0] and ((!segments.1 and api[segments.0][segments.0]) or api[segments.0][segments.1])) or (api[inflection.singularize segments.0] and api[inflection.singularize segments.0][segments.0])
     @unsecured = true if @api in unsecured
     @error = (code, message) -> new ApiError code, message
+    @required = (...p) ~> p |> each ~> throw @error 400, "Missing parameter: #it" if not @in.has-own-property camelize it
     yield next
   olio.config.api.mid |> each (m) ->
     return if not mid[m]
@@ -47,7 +49,6 @@ export api = ->*
         yield @_mid
         delete @_mid
   app.use (next) ->*
-    @in = @query <<< @request.body
     return if not @api
     info "DISPATCH #{@url}".blue
     try
@@ -107,7 +108,7 @@ export api = ->*
       @response.status = e.code or 500
       @pg.error e if @pg
       error e.stack.red
-      if e.code and m = (/at Object\.out\$\.\w+.(\w+) \[as api\].*\/(\w+)\.ls/.exec e.stack.split('\n')[2])
+      if e.code and m = (/at Object\.out\$\.\w+.(\w+) \[as api\].*\/(\w+)\.ls/.exec (e.stack.split('\n') |> filter -> /\[as api\]/.test it))
         @log.error "#{e.code} #{e.message} (#{m[2]}.#{m[1]})"
         @response.body = e.message
       else
