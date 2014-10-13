@@ -8,10 +8,11 @@ promisify-all pg.Client.prototype
 
 # XXX: harmony this stuff
 exec = (connection, statement, ...args) ->
+  statement = statement.to-string! if typeof! statement != 'String'
   args = args[0] if args.length == 1 and typeof! args[0] == 'Array'
   exec.i = 0
   statement = statement.replace /\?/g, -> exec.i += 1; '$' + exec.i
-  statement = statement.replace /\w+\-\w+/, -> "\"#{camelize it}\""
+  statement = statement.replace /\w+\-\w+/g, -> if camelized[it] then "\"#{camelized[it]}\"" else it
   connection.query-async statement, args
   .then ->
     it.rows
@@ -24,6 +25,8 @@ exec-first = (connection, statement, ...args) ->
   .then ->
     it.length and it[0] or null
 
+camelized = {}
+
 tables = (connection) ->
   exec connection, """
     SELECT table_name
@@ -32,7 +35,9 @@ tables = (connection) ->
     ORDER BY table_name;
   """
   .then ->
-    it |> map -> it.table_name
+    it |> map ->
+      camelized[dasherize it.table_name] = it.table_name if /\-/.test dasherize(it.table_name)
+      it.table_name
 
 columns = (connection, table) ->
   return promise.resolve(columns[table]) if columns[table]
@@ -45,7 +50,9 @@ columns = (connection, table) ->
     ORDER  BY attnum
   """
   .then ->
-    columns[table] = it |> map -> it.attname
+    columns[table] = it |> map ->
+      camelized[dasherize it.attname] = it.attname if /\-/.test dasherize(it.attname)
+      it.attname
 
 wrap = (table, record) ->
   return null if not record
@@ -99,18 +106,20 @@ setup-interface = (connection, release) ->
       model[table].find = (query = {}) ->*
         statement = knex(table).select '*'
         keys query |> each -> (typeof! query[it] == 'Array' and statement.where-in it, query[it]) or statement.where it, query[it]
-        records = yield exec connection, statement.to-string!
+        records = yield exec connection, statement
         return (records |> map -> wrap(table, it))
       model[table].first = (query = {}) ->*
         statement = knex(table).select '*'
         keys query |> each -> (typeof! query[it] == 'Array' and statement.where-in it, query[it]) or statement.where it, query[it]
-        record = yield exec-first connection, statement.to-string!
+        record = yield exec-first connection, statement
         return (record and wrap(table, record)) or null
     # XXX: This should only need to be called once at db initialization
     promise.all do
       tables |> map (table) ->
         columns connection, table
   .then ->
+    info camelized
+
     do
       release: release
       model: model
@@ -130,14 +139,23 @@ setup-interface = (connection, release) ->
           statement = """UPDATE "#join-table" SET qualities = ? WHERE "#source-id" = ? AND "#target-id" = ?"""
           yield exec connection, statement, JSON.stringify(qualities), source.id, target.id
         return target
-      related: (source, target-table) ->*
-        target-table = camelize target-table
-        join-table = camelize (sort [source._table, target-table]).join('-')
-        source-id = (source._table == target-table and 'sourceId') or source._table + 'Id'
-        target-id = (source._table == target-table and 'targetId') or target-table + 'Id'
-        statement = """SELECT qualities, "#target-table".* FROM "#join-table", "#target-table" WHERE "#join-table"."#target-id" = "#target-table".id AND "#source-id" = ?"""
-        records = yield exec connection, statement, source.id
-        return (records |> map -> wrap(target-table, it))
+      related: (source, target) ->*
+        source = { _table: source } if typeof! source == 'String'
+        target = { _table: target } if typeof! target == 'String'
+        join-table = camelize (sort [source._table, target._table]).join('-')
+        source-id = (source._table == target._table and 'sourceId') or source._table + 'Id'
+        target-id = (source._table == target._table and 'targetId') or target._table + 'Id'
+        statement = knex(join-table)
+        if source.id
+          statement.join target._table, "#join-table.#target-id", "#{target._table}.id"
+          statement.where (source-id): source.id
+          statement.select 'qualities', "#{target._table}.*"
+        else
+          statement.join source._table, "#join-table.#source-id", "#{source._table}.id"
+          statement.where (target-id): target.id
+          statement.select 'qualities', "#{source._table}.*"
+        records = yield exec connection, statement
+        return (records |> map -> wrap(target._table, it))
       save: (source) ->*
         copy = {} <<< source._record
         id = delete copy.id
