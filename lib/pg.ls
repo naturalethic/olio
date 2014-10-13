@@ -6,10 +6,12 @@ knex = knex client: 'pg'
 promisify-all pg
 promisify-all pg.Client.prototype
 
+# XXX: harmony this stuff
 exec = (connection, statement, ...args) ->
   args = args[0] if args.length == 1 and typeof! args[0] == 'Array'
   exec.i = 0
   statement = statement.replace /\?/g, -> exec.i += 1; '$' + exec.i
+  statement = statement.replace /\w+\-\w+/, -> "\"#{camelize it}\""
   connection.query-async statement, args
   .then ->
     it.rows
