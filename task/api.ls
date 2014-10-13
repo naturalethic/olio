@@ -109,6 +109,7 @@ export api = ->*
       error e.stack.red
       if e.code and m = (/at Object\.out\$\.\w+.(\w+) \[as api\].*\/(\w+)\.ls/.exec e.stack.split('\n')[2])
         @log.error "#{e.code} #{e.message} (#{m[2]}.#{m[1]})"
+        @response.body = e.message
       else
         @log.error e.message
 
