@@ -99,6 +99,7 @@ export api = ->*
           result = yield result
       else
         result = yield @api!
+      result ?= 200
       throw @pg.error! if @pg and @pg.error!
       if typeof! result == 'Number'
         @response.status = result
