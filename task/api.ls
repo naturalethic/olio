@@ -14,7 +14,7 @@ function ApiError @code, @message = ''
   Error.capture-stack-trace this, this.constructor
 util.inherits ApiError, Error
 
-export watch = [ 'olio.ls', 'api', 'mid', "#__dirname/../mid" ]
+export watch = [ 'olio.ls', 'api', 'mid', 'lib', "#__dirname/../mid" ]
 
 export api = ->*
   olio.api = api <<< require-dir "#{process.cwd!}/api"

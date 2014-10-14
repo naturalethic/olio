@@ -44,6 +44,9 @@ columns = (connection, table) ->*
 
 wrap = (table, record) ->
   return null if not record
+  # XXX: (postgresql-9.4) Shim because node-postgres isn't parsing these out for jsonb columns
+  # record.properties = JSON.parse record.properties if record.properties and typeof! record.properties == 'String'
+  # record.qualities  = JSON.parse record.qualities  if record.qualities  and typeof! record.qualities  == 'String'
   target = ^^record
   target.toJSON = ->
     obj = pairs-to-obj(columns[table] |> (filter -> it not in [ 'id', 'properties', 'qualities' ]) |> map -> [ it, record[it] ])

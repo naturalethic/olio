@@ -67,8 +67,6 @@ if !fs.exists-sync './olio.ls'
 if !fs.exists-sync './ortho.ls'
   exit "You must provide a file named 'ortho.ls' in your project root"
 
-
-
 global.olio =
   pg:      require './pg'
   config:  require "#{process.cwd!}/olio.ls"
@@ -76,6 +74,9 @@ global.olio =
   task:    delete optimist.argv._
   option:  pairs-to-obj(obj-to-pairs(optimist.argv) |> map -> [camelize(it[0]), it[1]])
 global.ortho = require "#{process.cwd!}/ortho.ls"
+
+# Load libraries
+olio <<< require-dir "#{process.cwd!}/lib"
 
 # -----------------------------------------------------------------------------
 # End global assignments.
