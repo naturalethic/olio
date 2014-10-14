@@ -133,13 +133,13 @@ setup-interface = (connection, release) ->*
         statement.where (source-id): source.id
         keys properties |> each -> statement.where-raw " #{target._table}.properties ->> '#it' = ?"
         keys qualities  |> each -> statement.where-raw " #join-table.qualities ->> '#it' = ?"
-        statement.select "qualities, #{target._table}.*"
+        statement.select "qualities", "#{target._table}.*"
       else
         statement.join source._table, "#join-table.#source-id", "#{source._table}.id"
         statement.where (target-id): target.id
         keys properties |> each -> statement.where-raw " #{source._table}.properties ->> '#it' = ?"
         keys qualities  |> each -> statement.where-raw " #join-table.qualities ->> '#it' = ?"
-        statement.select "qualities, #{source._table}.*"
+        statement.select "qualities", "#{source._table}.*"
       records = yield exec connection, statement, (values properties) ++ (values qualities)
       if source.id
         return (records |> map -> wrap(target._table, it))
