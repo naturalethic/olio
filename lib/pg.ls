@@ -121,7 +121,7 @@ setup-interface = (connection, release) ->*
         statement = """UPDATE "#join-table" SET qualities = ? WHERE "#source-id" = ? AND "#target-id" = ?"""
         yield exec connection, statement, JSON.stringify(qualities), source.id, target.id
       return target
-    related: (source, target) ->*
+    related: (source, target, properties = {}, qualities = {}) ->*
       source = { _table: source } if typeof! source == 'String'
       target = { _table: target } if typeof! target == 'String'
       join-table = camelize (sort [source._table, target._table]).join('-')
@@ -131,13 +131,20 @@ setup-interface = (connection, release) ->*
       if source.id
         statement.join target._table, "#join-table.#target-id", "#{target._table}.id"
         statement.where (source-id): source.id
-        statement.select 'qualities', "#{target._table}.*"
+        keys properties |> each -> statement.where-raw " #{target._table}.properties ->> '#it' = ?"
+        keys qualities  |> each -> statement.where-raw " #join-table.qualities ->> '#it' = ?"
+        statement.select "#{target._table}.*"
       else
         statement.join source._table, "#join-table.#source-id", "#{source._table}.id"
         statement.where (target-id): target.id
-        statement.select 'qualities', "#{source._table}.*"
-      records = yield exec connection, statement
-      return (records |> map -> wrap(target._table, it))
+        keys properties |> each -> statement.where-raw " #{source._table}.properties ->> '#it' = ?"
+        keys qualities  |> each -> statement.where-raw " #join-table.qualities ->> '#it' = ?"
+        statement.select "#{source._table}.*"
+      records = yield exec connection, statement, (values properties) ++ (values qualities)
+      if source.id
+        return (records |> map -> wrap(target._table, it))
+      else
+        return (records |> map -> wrap(source._table, it))
     save: (source) ->*
       copy = {} <<< source._record
       id = delete copy.id
