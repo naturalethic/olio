@@ -53,10 +53,10 @@ export api = ->*
     info "DISPATCH #{@url}".blue
     try
       if @api.to-string!index-of('function*') != 0
-        ortho-db = require fs.path.resolve './node_modules/ortho/lib/db'
-        ortho-db database: olio.config.pg.db
+        global.db = require fs.path.resolve './node_modules/ortho/lib/db'
+        db database: olio.config.pg.db
         req =
-          knex: ((table) -> ortho-db.knex camelize table)
+          knex: ((table) -> db.knex camelize table)
           data: @in
           session: @session
         req.create = (table, properties = {}, other = {}) ->
