@@ -119,11 +119,11 @@ setup-interface = (connection, release) ->*
       join-record = yield exec-first connection, statement, source.id, target.id
       if not join-record
         statement = """INSERT INTO "#join-table" ("#source-id", "#target-id") VALUES (?, ?) RETURNING *"""
-        yield exec connection, statement, source.id, target.id
+        join-record = first(yield exec connection, statement, source.id, target.id)
       if qualities
+        join-record.qualities <<< qualities
         statement = """UPDATE "#join-table" SET qualities = ? WHERE "#source-id" = ? AND "#target-id" = ?"""
-        yield exec connection, statement, JSON.stringify(qualities), source.id, target.id
-      return target
+        yield exec connection, statement, JSON.stringify(join-record.qualities), source.id, target.id
     related: (source, target, properties = {}, qualities = {}) ->*
       source = { _table: source } if typeof! source == 'String'
       target = { _table: target } if typeof! target == 'String'
@@ -148,7 +148,8 @@ setup-interface = (connection, release) ->*
         return (records |> map -> wrap(target._table, it))
       else
         return (records |> map -> wrap(source._table, it))
-    save: (source) ->*
+    save: (source, properties = {}) ->*
+      source._record.properties <<< Obj.compact properties
       copy = {} <<< source._record
       id = delete copy.id
       yield exec connection, "UPDATE #{source._table} SET " + (keys copy |> map -> "\"#{camelize it}\" = ?").join(', ') + " WHERE id = ?", (values copy) ++ [ id ]
