@@ -30,7 +30,7 @@ export api = ->*
   app.use require('koa-gzip')!
   app.use require('koa-bodyparser')!
   app.use (next) ->*
-    @in = pairs-to-obj (obj-to-pairs @query |> map -> [(camelize it.0), it.1]) <<< @request.body
+    @in = (pairs-to-obj (obj-to-pairs @query |> map -> [(camelize it.0), it.1])) <<< @request.body
     segments = filter id, @url.split('/')
     @api = (api[segments.0] and ((!segments.1 and api[segments.0][segments.0]) or api[segments.0][segments.1])) or (api[inflection.singularize segments.0] and api[inflection.singularize segments.0][segments.0])
     @unsecured = true if @api in unsecured
