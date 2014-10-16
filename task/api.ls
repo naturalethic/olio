@@ -17,6 +17,8 @@ util.inherits ApiError, Error
 export watch = [ 'olio.ls', 'api', 'mid', 'lib', "#__dirname/../mid" ]
 
 export api = ->*
+  global.db = require fs.path.resolve './node_modules/ortho/lib/db'
+  db database: olio.config.pg.db
   olio.api = api <<< require-dir "#{process.cwd!}/api"
   olio.config.api ?= {}
   olio.config.api.port ?= 9001
@@ -53,8 +55,6 @@ export api = ->*
     info "DISPATCH #{@url}".blue
     try
       if @api.to-string!index-of('function*') != 0
-        global.db = require fs.path.resolve './node_modules/ortho/lib/db'
-        db database: olio.config.pg.db
         req =
           knex: ((table) -> db.knex camelize table)
           data: @in
