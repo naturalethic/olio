@@ -106,10 +106,14 @@ export api = ->*
       else
         @body = result
     catch e
-      e = @error(e) if not e.stack
       @response.status = e.code or 500
       @pg.error e if @pg
-      error e.stack.red
+      if e.stack
+        error e.stack.red
+      else if e.message
+        error e.message.red
+      else
+        error JSON.stringify(e).red
       if e.code and m = (/at Object\.out\$\.\w+.(\w+) \[as api\].*\/(\w+)\.ls/.exec (e.stack.split('\n') |> filter -> /\[as api\]/.test it))
         @log.error "#{e.code} #{e.message} (#{m[2]}.#{m[1]})"
         @response.body = e.message
