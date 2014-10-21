@@ -20,7 +20,7 @@ exec-first = (connection, statement, ...args) ->*
 
 save = (connection, source, properties = {}) ->*
   source._record.properties <<< Obj.compact properties
-  delete source._record.properties.id
+  delete source._record.properties.id if source._record.properties
   copy = {} <<< source._record
   delete copy.qualities
   id = delete copy.id
