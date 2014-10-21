@@ -106,6 +106,7 @@ export api = ->*
       else
         @body = result
     catch e
+      e = @error(e) if not e.stack
       @response.status = e.code or 500
       @pg.error e if @pg
       error e.stack.red
