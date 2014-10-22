@@ -35,7 +35,10 @@ tables = (connection) ->*
     WHERE table_schema = 'public'
     ORDER BY table_name;
   """) |> map ->
-    camelized[dasherize it.table_name] = it.table_name if /\-/.test dasherize(it.table_name)
+    if /\-/.test dasherize(it.table_name)
+      camelized[dasherize it.table_name] = it.table_name
+    else
+      camelized["#{it.table_name}-id"] = "#{it.table_name}Id"
     it.table_name)
 
 columns = (connection, table) ->*
