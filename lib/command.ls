@@ -40,11 +40,15 @@ global.require-dir = ->
   it = fs.realpath-sync it
   pairs-to-obj (glob.sync("#it/*.ls") |> map -> [ fs.path.basename(it, '.ls'), require it ])
 
+global.ex = (command) -> exec command, true
 global.exec = (command, async) ->
   if async
-    child = process.exec command
-    child.stdout.on 'data', -> process.stdout.write it
-    child.stderr.on 'data', -> process.stderr.write it
+    data = []
+    return new Promise (resolve, reject) ->
+      child = process.exec command
+      child.stdout.on 'data', -> data.push it.to-string!; process.stdout.write it.green
+      child.stderr.on 'data', -> data.push it.to-string!; process.stderr.write it.red
+      child.on 'exit', -> resolve data.join('')
   else
     try
       process.exec-sync command
