@@ -59,6 +59,7 @@ export api = ->*
           knex: ((table) -> db.knex camelize table)
           data: @in
           session: @session
+        req.knex.raw = db.knex.raw
         req.create = (table, properties = {}, other = {}) ->
           req.knex table
           .insert other <<< properties: properties
