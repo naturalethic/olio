@@ -203,6 +203,11 @@ setup-interface = (connection, release) ->*
         return (records |> map -> wrap(source._table, it))
     save: (source, properties = {}) ->*
       yield save connection, source, properties
+    wrap: (table, records) ->
+      if typeof! records == 'Array'
+        records |> map -> wrap table, it
+      else
+        wrap table, records
 
 export connect-pool = (url) ->*
   [ connection, release ] = yield pg.connect-async url
