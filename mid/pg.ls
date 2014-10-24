@@ -1,5 +1,5 @@
 export incoming = ->*
-  @pg = yield olio.pg.connect-pool "postgres://postgres@localhost/#{olio.config.pg.db}"
+  @pg = yield olio.pg.connect-pool "postgres://postgres@#{olio.config.pg.host or 'localhost'}/#{olio.config.pg.db}"
   this <<< @pg.model
   this <<< @pg{exec, first, relate, related, save, wrap}
   yield @pg.exec 'BEGIN'
