@@ -62,7 +62,7 @@ global.spawn = ->
   child.stderr.on 'data', -> process.stderr.write it
 
 global.exit = (message) ->
-  error message.red
+  error new String(message).red if message
   process.exit 1
 
 # Require a configuration file.  It also proves `cwd` is an olio project root.
