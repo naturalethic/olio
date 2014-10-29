@@ -17,7 +17,7 @@ util.inherits ApiError, Error
 export watch = [ 'olio.ls', 'api', 'mid', 'lib', "#__dirname/../mid" ]
 
 export api = ->*
-  global.db = require fs.path.resolve './node_modules/ortho/lib/db'
+  global.db = require fs.path.resolve "#__dirname/../lib/db"
   db database: olio.config.pg.db
   olio.api = api <<< require-dir "#{process.cwd!}/api"
   olio.config.api ?= {}
