@@ -10,6 +10,7 @@ require! \glob
 require! \co
 require! \harmony-reflect
 require! \LiveScript
+require! \deepmerge
 
 # -----------------------------------------------------------------------------
 # Global assignments.  Please keep all global assignments within this area.
@@ -74,7 +75,7 @@ if !fs.exists-sync './host.ls'
 
 global.olio =
   pg:      require './pg'
-  config:  (require "#{process.cwd!}/olio.ls") <<< (require "#{process.cwd!}/host.ls")
+  config:  deepmerge (require "#{process.cwd!}/olio.ls"), (require "#{process.cwd!}/host.ls")
   command: delete optimist.argv.$0
   task:    delete optimist.argv._
   option:  pairs-to-obj(obj-to-pairs(optimist.argv) |> map -> [camelize(it[0]), it[1]])
