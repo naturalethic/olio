@@ -19,8 +19,12 @@ exec-first = (connection, statement, ...args) ->*
   return it.length and it[0] or null
 
 save = (connection, source, properties = {}) ->*
-  source._record.properties <<< Obj.compact properties
-  delete source._record.properties.id if source._record.properties
+  for key in keys properties
+    if key in columns[source._table]
+      source._record[key] = delete properties[key]
+  if source._record.properties
+    source._record.properties <<< Obj.compact properties
+    delete source._record.properties.id
   copy = {} <<< source._record
   delete copy.qualities
   id = delete copy.id
