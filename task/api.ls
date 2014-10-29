@@ -14,7 +14,7 @@ function ApiError @code, @message = ''
   Error.capture-stack-trace this, this.constructor
 util.inherits ApiError, Error
 
-export watch = [ 'olio.ls', 'api', 'mid', 'lib', "#__dirname/../mid" ]
+export watch = [ 'host.ls', 'olio.ls', 'api', 'mid', 'lib', "#__dirname/../mid" ]
 
 export api = ->*
   global.db = require fs.path.resolve "#__dirname/../lib/db"
