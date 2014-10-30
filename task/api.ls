@@ -52,6 +52,17 @@ export api = ->*
         delete @_mid
   app.use (next) ->*
     return if not @api
+    for name, lib of olio.lib
+      if typeof! lib == 'Function'
+        throw @error 'Library function clobbers existing property' if @[name]
+        @[name] = lib.bind this
+      @[name] ?= {}
+      if @pg
+        @[name] <<< @pg.model
+        @[name] <<< @pg{exec, first, relate, related, save, wrap}
+      for key, val of lib
+        throw @error 'Library function clobbers existing property' if @[name][key]
+        @[name][key] = val.bind @[name]
     info "DISPATCH #{@url}".blue
     try
       if @api.to-string!index-of('function*') != 0

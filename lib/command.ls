@@ -81,7 +81,7 @@ global.olio =
   option:  pairs-to-obj(obj-to-pairs(optimist.argv) |> map -> [camelize(it[0]), it[1]])
 
 # Load libraries
-olio <<< require-dir "#{process.cwd!}/lib"
+olio <<< olio.lib = require-dir "#{process.cwd!}/lib"
 
 # -----------------------------------------------------------------------------
 # End global assignments.
