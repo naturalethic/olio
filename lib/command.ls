@@ -83,6 +83,14 @@ global.olio =
 # Load libraries
 olio <<< olio.lib = require-dir "#{process.cwd!}/lib"
 
+if olio.config.log.identifier
+  global <<< do
+    log:   (...args) -> args.unshift "[#{olio.config.log.identifier}]"; console.log ...args
+    info:  (...args) -> args.unshift "[#{olio.config.log.identifier}]"; console.info ...args
+    warn:  (...args) -> args.unshift "[#{olio.config.log.identifier}]"; console.warn ...args
+    error: (...args) -> args.unshift "[#{olio.config.log.identifier}]"; console.error ...args
+
+
 # -----------------------------------------------------------------------------
 # End global assignments.
 # -----------------------------------------------------------------------------
