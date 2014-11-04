@@ -32,7 +32,10 @@ export api = ->*
   app.use require('koa-gzip')!
   app.use require('koa-bodyparser')!
   app.use (next) ->*
-    @in = (pairs-to-obj (obj-to-pairs @query |> map -> [(camelize it.0), it.1])) <<< @request.body
+    if typeof! @request.body == 'Array'
+      @in = @request.body |> map ~> (pairs-to-obj (obj-to-pairs @query |> map ~> [(camelize it.0), it.1])) <<< it
+    else
+      @in = (pairs-to-obj (obj-to-pairs @query |> map -> [(camelize it.0), it.1])) <<< @request.body
     segments = filter id, @url.split('/')
     @api = (api[segments.0] and ((!segments.1 and api[segments.0][segments.0]) or api[segments.0][segments.1])) or (api[inflection.singularize segments.0] and api[inflection.singularize segments.0][segments.0])
     @unsecured = true if @api in unsecured
@@ -106,11 +109,22 @@ export api = ->*
             req.knex table
             .update db.table-ready data
             .where db.primary-key data
-        result = @api req, @response
+        if typeof! req.data == 'Array'
+          result = yield promise.all(req.data |> map ~> @api(req{knex, session} <<< { data: it }))
+          info result
+        else
+          result = @api req, @response
         if typeof! result != 'Number'
           result = yield result
       else
-        result = yield @api!
+        if typeof! @in == 'Array'
+          data = @in
+          result = []
+          for item in data
+            @in = item
+            result.push(yield @api!)
+        else
+          result = yield @api!
       result ?= 200
       throw @pg.error! if @pg and @pg.error!
       if typeof! result == 'Number'
@@ -118,7 +132,7 @@ export api = ->*
       else
         @body = result
     catch e
-      @response.status = e.code or 500
+      @response.status = (e.code and /^\d\d\d$/.test e.code) or 500
       @pg.error e if @pg
       if e.stack
         error e.stack.red
