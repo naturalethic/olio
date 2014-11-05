@@ -66,8 +66,9 @@ keys olio.api
 |> client-script.push
 client-script = ng-annotate(livescript.compile(flatten(client-script).join('\n')), add: true).src
 
-export incoming = ->*
+module.exports = (next) ->*
   if @url == '/script'
     @response.set 'Content-Type', 'application/javascript'
     @body = client-script
-    return true
+  else
+    yield next

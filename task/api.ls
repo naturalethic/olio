@@ -57,16 +57,7 @@ export api = ->*
     @required = (...p) ~> p |> each ~> throw @error 400, "Missing parameter: #it" if not @in.has-own-property camelize it
     yield next
   olio.config.api.mid |> each (m) ->
-    return if not mid[m]
-    app.use (next) ->*
-      if @_mid = mid[m].incoming
-        # Middleware should return true if they want to skip the rest of the middleware chain
-        skip = yield @_mid
-        delete @_mid
-      yield next if not skip
-      if @_mid = mid[m].outgoing
-        yield @_mid
-        delete @_mid
+    app.use mid[m]
   app.use (next) ->*
     return if not @api
     yield @exec "set cfh.session = '#{@ses.id}'"
