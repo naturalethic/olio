@@ -26,6 +26,23 @@ export api = ->*
     |> map (f) -> api[m][f]
   |> flatten
   app = koa!
+  app.use (next) ->* # Main error handler
+    try
+      yield next
+    catch e
+      @response.status = (e.code and /^\d\d\d$/.test e.code and e.code) or 500
+      @pg.error e if @pg
+      if e.stack
+        error e.stack.red
+      else if e.message
+        error e.message.red
+      else
+        error JSON.stringify(e).red
+      if e.code and m = (/at Object\.out\$\.\w+.(\w+) \[as api\].*\/(\w+)\.ls/.exec (e.stack.split('\n') |> filter -> /\[as api\]/.test it))
+        @log.error "#{e.code} #{e.message} (#{m[2]}.#{m[1]})"
+        @response.body = e.message
+      else
+        @log.error e.message
   app.use require('koa-gzip')!
   app.use require('koa-bodyparser')!
   app.use (next) ->*
@@ -64,84 +81,69 @@ export api = ->*
         throw @error 'Library function clobbers existing property' if @[name][key]
         @[name][key] = val.bind @[name]
     info "DISPATCH #{@url}".blue
-    try
-      if @api.to-string!index-of('function*') != 0
-        req =
-          knex: ((table) -> db.knex camelize table)
-          data: @in
-          session: @session
-        req.knex.raw = db.knex.raw
-        req.create = (table, properties = {}, other = {}) ->
-          req.knex table
-          .insert other <<< properties: properties
-          .returning '*'
-          .then -> it[0]
-        req.relate = (table, ids, qualities) ->
-          kds = keys ids
-          if not qualities
-            qualities = {}
-            if kds.length > 2
-              qualities <<< ids
-              delete qualities[kds[0]]
-              delete qualities[kds[1]]
-          ids = { ("#{kds[0]}Id"): ids[kds[0]].id, ("#{kds[1]}Id"): ids[kds[1]].id }
-          record = {} <<< ids <<< { qualities: qualities }
-          req.knex table
-          .where ids
-          .then ->
-            if it.length
-              req.knex table
-              .update record
-              .where ids
-            else
-              req.knex table
-              .insert record
-        req.update = (table, data) ->
-          req.knex table
-          .first db.primary-key data
-          .then ->
-            return 404 if not it
-            data.properties = it.properties <<< (data.properties || {}) if it.properties
-            data.qualities  = it.qualities  <<< (data.qualities  || {}) if it.qualities
+    if @api.to-string!index-of('function*') != 0
+      req =
+        knex: ((table) -> db.knex camelize table)
+        data: @in
+        session: @session
+      req.knex.raw = db.knex.raw
+      req.create = (table, properties = {}, other = {}) ->
+        req.knex table
+        .insert other <<< properties: properties
+        .returning '*'
+        .then -> it[0]
+      req.relate = (table, ids, qualities) ->
+        kds = keys ids
+        if not qualities
+          qualities = {}
+          if kds.length > 2
+            qualities <<< ids
+            delete qualities[kds[0]]
+            delete qualities[kds[1]]
+        ids = { ("#{kds[0]}Id"): ids[kds[0]].id, ("#{kds[1]}Id"): ids[kds[1]].id }
+        record = {} <<< ids <<< { qualities: qualities }
+        req.knex table
+        .where ids
+        .then ->
+          if it.length
             req.knex table
-            .update db.table-ready data
-            .where db.primary-key data
-        if typeof! req.data == 'Array'
-          result = yield promise.all(req.data |> map ~> @api(req{knex, session} <<< { data: it }))
-          info result
-        else
-          result = @api req, @response
-        if typeof! result != 'Number'
-          result = yield result
+            .update record
+            .where ids
+          else
+            req.knex table
+            .insert record
+      req.update = (table, data) ->
+        req.knex table
+        .first db.primary-key data
+        .then ->
+          return 404 if not it
+          data.properties = it.properties <<< (data.properties || {}) if it.properties
+          data.qualities  = it.qualities  <<< (data.qualities  || {}) if it.qualities
+          req.knex table
+          .update db.table-ready data
+          .where db.primary-key data
+      if typeof! req.data == 'Array'
+        result = yield promise.all(req.data |> map ~> @api(req{knex, session} <<< { data: it }))
+        info result
       else
-        if typeof! @in == 'Array'
-          data = @in
-          result = []
-          for item in data
-            @in = item
-            result.push(yield @api!)
-        else
-          result = yield @api!
-      result ?= 200
-      throw @pg.error! if @pg and @pg.error!
-      if typeof! result == 'Number'
-        @response.status = result
+        result = @api req, @response
+      if typeof! result != 'Number'
+        result = yield result
+    else
+      if typeof! @in == 'Array'
+        data = @in
+        result = []
+        for item in data
+          @in = item
+          result.push(yield @api!)
       else
-        @body = result
-    catch e
-      @response.status = (e.code and /^\d\d\d$/.test e.code) or 500
-      @pg.error e if @pg
-      if e.stack
-        error e.stack.red
-      else if e.message
-        error e.message.red
-      else
-        error JSON.stringify(e).red
-      if e.code and m = (/at Object\.out\$\.\w+.(\w+) \[as api\].*\/(\w+)\.ls/.exec (e.stack.split('\n') |> filter -> /\[as api\]/.test it))
-        @log.error "#{e.code} #{e.message} (#{m[2]}.#{m[1]})"
-        @response.body = e.message
-      else
-        @log.error e.message
+        result = yield @api!
+    result ?= 200
+    throw @pg.error! if @pg and @pg.error!
+    if typeof! result == 'Number'
+      @response.status = result
+    else
+      @body = result
 
   app.listen olio.config.api.port
   info "Started api server on port #{olio.config.api.port}".green
