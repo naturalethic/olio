@@ -69,6 +69,7 @@ export api = ->*
         delete @_mid
   app.use (next) ->*
     return if not @api
+    yield @exec "set cfh.session = '#{@ses.id}'"
     for name, lib of olio.lib
       if typeof! lib == 'Function'
         throw @error 'Library function clobbers existing property' if @[name]
@@ -85,7 +86,7 @@ export api = ->*
       req =
         knex: ((table) -> db.knex camelize table)
         data: @in
-        session: @session
+        session: @ses
       req.knex.raw = db.knex.raw
       req.create = (table, properties = {}, other = {}) ->
         req.knex table
@@ -124,7 +125,6 @@ export api = ->*
           .where db.primary-key data
       if typeof! req.data == 'Array'
         result = yield promise.all(req.data |> map ~> @api(req{knex, session} <<< { data: it }))
-        info result
       else
         result = @api req, @response
       if typeof! result != 'Number'
