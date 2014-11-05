@@ -1,6 +1,3 @@
-## TODO
-# params/data (camelized)
-
 require! \glob
 require! \koa
 require! \inflection

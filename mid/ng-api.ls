@@ -42,6 +42,7 @@ angular.module 'NG-APPLICATION'
         api.loading -= 1
         cache.set 'token', headers('X-Token') if headers('X-Token')
         console.info "API[#count] < #{request.url.substr(5)}", status, data
+        state.go 'root' if status == 419
   invoke.count = 0
   api =
     loading: 0
