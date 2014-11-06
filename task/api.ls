@@ -66,6 +66,7 @@ export api = ->*
         throw @error 'Library function clobbers existing property' if @[name]
         @[name] = lib.bind this
       @[name] ?= {}
+      @[name].ses = @ses
       if @pg
         @[name] <<< @pg.model
         @[name] <<< @pg{exec, first, relate, related, save, wrap}
