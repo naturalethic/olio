@@ -33,16 +33,18 @@ angular.module 'NG-APPLICATION'
           data = JSON.parse data
         data
       api.loading += 1
-      if window.ga
-        ga('send', 'pageview', { page: request.url, dimension1: (cache.get('token') or '00000000-0000-0000-0000-000000000000') })
+      if state.analytics
+        ga 'send', 'pageview', page: request.url
       $http request
       .success (data, status, headers, config) ->
         api.loading -= 1
-        cache.set 'token', headers('X-Token') if headers('X-Token')
+        if headers('X-Token')
+          cache.set 'token', headers('X-Token')
         console.info "API[#count] < #{request.url.substr(5)}", status, data
       .error (data, status, headers, config) ->
         api.loading -= 1
-        cache.set 'token', headers('X-Token') if headers('X-Token')
+        if headers('X-Token')
+          cache.set 'token', headers('X-Token')
         console.info "API[#count] < #{request.url.substr(5)}", status, data
         state.go 'root' if status == 419
   invoke.count = 0
