@@ -33,6 +33,8 @@ angular.module 'NG-APPLICATION'
           data = JSON.parse data
         data
       api.loading += 1
+      if window.ga
+        ga('send', 'pageview', { page: request.url, dimension1: (cache.get('token') or '00000000-0000-0000-0000-000000000000') })
       $http request
       .success (data, status, headers, config) ->
         api.loading -= 1
