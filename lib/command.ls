@@ -99,17 +99,17 @@ if olio.config.log.identifier
 task-modules = require-dir "#__dirname/../task", "#{process.cwd!}/task"
 
 # Print list of tasks if none given, or task does not exist.
-if !(task-module = task-modules[olio.task.0])
+if !(task-module = task-modules[camelize olio.task.0])
   info 'Tasks:'
   keys task-modules |> each -> info "  #it"
   process.exit!
 
 # Print list of subtasks if one is acceptable and none given, or subtask does not exist.
-if !(task = task-module[olio.task.1]) and !(task = task-module[olio.task.0])
+if !(olio.task.1 and task = task-module[camelize olio.task.1]) and !(task = task-module[camelize olio.task.0])
   info 'Subtasks:'
   keys task-module
-  |> filter -> it != olio.task.0
-  |> each -> info "  #it"
+  |> filter -> it != camelize olio.task.0
+  |> each -> info "  #{dasherize it}"
   process.exit!
 
 # Provide watch capability to all tasks.
