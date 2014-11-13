@@ -31,6 +31,8 @@ global <<< do
   promisify-all: bluebird.promisify-all
   livescript:    LiveScript
   glob:          glob
+  read:          -> return '' if not exists it; fs.read-file-sync it .to-string!
+  exists:        -> fs.exists-sync it
   re-uuid:       /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/
   system-id:     -> "00000000-0000-0000-0000-00000000000#it"
 
@@ -66,24 +68,23 @@ global.exit = (message) ->
   error new String(message).red if message
   process.exit 1
 
-# Require a configuration file.  It also proves `cwd` is an olio project root.
-if !fs.exists-sync './olio.ls'
-  exit "You must provide a file named 'olio.ls' in your project root"
-if !fs.exists-sync './host.ls'
-  exit "You must provide a file named 'host.ls' in your project root"
-
-
 global.olio =
-  pg:      require './pg'
-  config:  deepmerge (require "#{process.cwd!}/olio.ls"), (require "#{process.cwd!}/host.ls")
   command: delete optimist.argv.$0
   task:    delete optimist.argv._
   option:  pairs-to-obj(obj-to-pairs(optimist.argv) |> map -> [camelize(it[0]), it[1]])
 
+# Require a configuration file.  It also proves `cwd` is an olio project root.
+if fs.exists-sync './olio.ls'
+  olio.config = (require "#{process.cwd!}/olio.ls")
+  if fs.exists-sync './host.ls'
+    olio.config = deepmerge olio.config, (require "#{process.cwd!}/olio.ls")
+else
+  exit "You must provide a file named 'olio.ls' in your project root"
+
 # Load libraries
 olio <<< olio.lib = require-dir "#{process.cwd!}/lib"
 
-if olio.config.log.identifier
+if olio.log and olio.config.log.identifier
   global <<< do
     log:   (...args) -> args.unshift "[#{olio.config.log.identifier}]"; console.log ...args
     info:  (...args) -> args.unshift "[#{olio.config.log.identifier}]"; console.info ...args
