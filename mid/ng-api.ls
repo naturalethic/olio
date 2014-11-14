@@ -27,7 +27,10 @@ angular.module 'NG-APPLICATION'
       request.method                  = 'post'
       request.url                     = '/api/' + module
       request.url                    += '/' + name if name
-      console.info "API[#count] > "   + request.url.substr(5), data
+      log-data = {} <<< data
+      log-data.secret = '********' if log-data.secret
+      log-data.old-secret = '********' if log-data.old-secret
+      console.info "API[#count] > "   + request.url.substr(5), log-data
       request.transform-response      = (data) ->
         try
           data = JSON.parse data
