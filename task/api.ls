@@ -74,7 +74,7 @@ export api = ->*
       for key, val of lib
         throw @error 'Library function clobbers existing property' if @[name][key]
         @[name][key] = val.bind @[name]
-    info "DISPATCH #{@url}".blue
+    info "DISPATCH [#{@header['x-forwarded-for'] or '0.0.0.0'}] #{@url}".blue
     if @api.to-string!index-of('function*') != 0
       req =
         knex: ((table) -> db.knex camelize table)
