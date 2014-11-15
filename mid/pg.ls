@@ -1,13 +1,17 @@
 module.exports = (next) ->*
-  @pg = yield olio.pg.connect-pool "postgres://postgres@#{olio.config.pg.host or 'localhost'}/#{olio.config.pg.db}"
-  this <<< @pg.model
-  this <<< @pg{exec, first, relate, related, save, wrap}
-  yield @pg.exec 'BEGIN'
+  if @ses
+    @pg = yield olio.pg.connect-pool "postgres://postgres@#{olio.config.pg.host or 'localhost'}/#{olio.config.pg.db}"
+    this <<< @pg.model
+    this <<< @pg{exec, first, relate, related, save, wrap}
+    yield @pg.exec 'BEGIN'
   try
     yield next
-    yield @pg.exec 'COMMIT'
+    if @ses
+      yield @pg.exec 'COMMIT'
   catch e
-    yield @pg.exec 'ROLLBACK'
+    if @ses
+      yield @pg.exec 'ROLLBACK'
     throw e
   finally
-    @pg.release!
+    if @ses
+      @pg.release!

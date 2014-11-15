@@ -60,7 +60,8 @@ export api = ->*
     app.use mid[m]
   app.use (next) ->*
     return if not @api
-    yield @exec "set cfh.session = '#{@ses.id}'"
+    if @ses
+      yield @exec "set cfh.session = '#{@ses.id}'"
     for name, lib of olio.lib
       if typeof! lib == 'Function'
         throw @error 'Library function clobbers existing property' if @[name]
