@@ -55,7 +55,7 @@ export api = ->*
     @unsecured = true if @api in unsecured
     @error = (code, message) -> new ApiError code, message
     @required = (...p) ~> p |> each ~> throw @error 400, "Missing parameter: #it" if not @in.has-own-property camelize it
-    @unsecured = -> warn "Non-secure api".red, @url.blue, "called from route".red, @header['x-route'].yellow
+    @notsecure = -> warn "Non-secure api".red, @url.blue, "called from route".red, @header['x-route'].yellow
     yield next
   olio.config.api.mid |> each (m) ->
     app.use mid[m]
