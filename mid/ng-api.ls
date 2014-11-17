@@ -24,6 +24,7 @@ angular.module 'NG-APPLICATION'
       request.headers['Content-Type'] = 'application/json'
       request.headers['X-Token']      = cache.get 'token'   if (cache.get 'token') and re-uuid.test(cache.get 'token')
       request.headers['X-Persona']    = cache.get 'persona' if (cache.get 'persona') and re-uuid.test(cache.get 'persona')
+      request.headers['X-Route']      = state.route
       request.method                  = 'post'
       request.url                     = '/api/' + module
       request.url                    += '/' + name if name
