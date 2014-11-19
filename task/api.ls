@@ -14,8 +14,6 @@ util.inherits ApiError, Error
 export watch = [ 'host.ls', 'olio.ls', 'api', 'mid', 'lib', "#__dirname/../mid" ]
 
 export api = ->*
-  global.db = require fs.path.resolve "#__dirname/../lib/db"
-  db database: olio.config.pg.db
   olio.api = api <<< require-dir "#{process.cwd!}/api"
   olio.config.api ?= {}
   olio.config.api.port ?= 9001
@@ -76,62 +74,14 @@ export api = ->*
         throw @error 'Library function clobbers existing property' if @[name][key]
         @[name][key] = val.bind @[name]
     info "DISPATCH [#{@header['x-forwarded-for'] or '0.0.0.0'}] #{@url}".blue
-    if @api.to-string!index-of('function*') != 0
-      req =
-        knex: ((table) -> db.knex camelize table)
-        data: @in
-        session: @ses
-      req.knex.raw = db.knex.raw
-      req.create = (table, properties = {}, other = {}) ->
-        req.knex table
-        .insert other <<< properties: properties
-        .returning '*'
-        .then -> it[0]
-      req.relate = (table, ids, qualities) ->
-        kds = keys ids
-        if not qualities
-          qualities = {}
-          if kds.length > 2
-            qualities <<< ids
-            delete qualities[kds[0]]
-            delete qualities[kds[1]]
-        ids = { ("#{kds[0]}Id"): ids[kds[0]].id, ("#{kds[1]}Id"): ids[kds[1]].id }
-        record = {} <<< ids <<< { qualities: qualities }
-        req.knex table
-        .where ids
-        .then ->
-          if it.length
-            req.knex table
-            .update record
-            .where ids
-          else
-            req.knex table
-            .insert record
-      req.update = (table, data) ->
-        req.knex table
-        .first db.primary-key data
-        .then ->
-          return 404 if not it
-          data.properties = it.properties <<< (data.properties || {}) if it.properties
-          data.qualities  = it.qualities  <<< (data.qualities  || {}) if it.qualities
-          req.knex table
-          .update db.table-ready data
-          .where db.primary-key data
-      if typeof! req.data == 'Array'
-        result = yield promise.all(req.data |> map ~> @api(req{knex, session} <<< { data: it }))
-      else
-        result = @api req, @response
-      if typeof! result != 'Number'
-        result = yield result
+    if typeof! @in == 'Array'
+      data = @in
+      result = []
+      for item in data
+        @in = item
+        result.push(yield @api!)
     else
-      if typeof! @in == 'Array'
-        data = @in
-        result = []
-        for item in data
-          @in = item
-          result.push(yield @api!)
-      else
-        result = yield @api!
+      result = yield @api!
     result ?= 200
     throw @pg.error! if @pg and @pg.error!
     if typeof! result == 'Number'
