@@ -100,7 +100,7 @@ task-modules = require-dir "#__dirname/../task", "#{process.cwd!}/task"
 
 # Print list of tasks if none given, or task does not exist.
 if !olio.task.0 or !(task-module = task-modules[camelize olio.task.0])
-  exit 'No tasks defined' if !task-modules.length
+  exit 'No tasks defined' if !(keys task-modules).length
   info 'Tasks:'
   keys task-modules |> each -> info "  #it"
   process.exit!
