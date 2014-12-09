@@ -83,7 +83,7 @@ global.olio =
 # Load libraries
 olio <<< olio.lib = require-dir "#{process.cwd!}/lib"
 
-if olio.config.log.identifier
+if olio.config.log?identifier
   global <<< do
     log:   (...args) -> args.unshift "[#{olio.config.log.identifier}]"; console.log ...args
     info:  (...args) -> args.unshift "[#{olio.config.log.identifier}]"; console.info ...args
@@ -99,7 +99,8 @@ if olio.config.log.identifier
 task-modules = require-dir "#__dirname/../task", "#{process.cwd!}/task"
 
 # Print list of tasks if none given, or task does not exist.
-if !(task-module = task-modules[camelize olio.task.0])
+if !olio.task.0 or !(task-module = task-modules[camelize olio.task.0])
+  exit 'No tasks defined' if !task-modules.length
   info 'Tasks:'
   keys task-modules |> each -> info "  #it"
   process.exit!
