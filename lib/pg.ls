@@ -23,12 +23,13 @@ save = (connection, source, properties = {}) ->*
     if key in columns[source._table]
       source._record[key] = delete properties[key]
   if source._record.properties
-    source._record.properties <<< Obj.compact properties
+    for key in keys properties
+      source._record.properties[key] = properties[key] if properties[key] != undefined
     delete source._record.properties.id
   copy = {} <<< source._record
   delete copy.qualities
   id = delete copy.id
-  yield exec connection, "UPDATE #{source._table} SET " + (keys copy |> map -> "\"#{camelize it}\" = ?").join(', ') + " WHERE id = ?", (values copy) ++ [ id ]
+  return wrap(source._table, first(yield exec connection, "UPDATE #{source._table} SET " + (keys copy |> map -> "\"#{camelize it}\" = ?").join(', ') + " WHERE id = ? RETURNING *", (values copy) ++ [ id ]))
 
 camelized = {}
 
@@ -206,7 +207,7 @@ setup-interface = (connection, release) ->*
       else
         return (records |> map -> wrap(source._table, it))
     save: (source, properties = {}) ->*
-      yield save connection, source, properties
+      return (yield save connection, source, properties)
     wrap: (table, records) ->
       if typeof! records == 'Array'
         records |> map -> wrap table, it
