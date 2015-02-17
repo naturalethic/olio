@@ -10,7 +10,9 @@ exec = (connection, statement, ...args) ->*
   statement = statement.to-string! if typeof! statement != 'String'
   args = args[0] if args.length == 1 and typeof! args[0] == 'Array'
   exec.i = 0
+  statement = statement.replace /\?\?/g, 'JSONB_QUESTION'
   statement = statement.replace /\?/g, -> exec.i += 1; '$' + exec.i
+  statement = statement.replace \JSONB_QUESTION, '?'
   statement = statement.replace /\w+\-\w+/g, -> if camelized[it] then "\"#{camelized[it]}\"" else it
   return (yield connection.query-async statement, args).rows
 
@@ -156,8 +158,6 @@ setup-interface = (connection, release) ->*
     estrange: (source, target, qualities) ->*
       yield @relate source, target, qualities, true
     related: (source, target, properties = {}, qualities = {}) ->*
-      properties = Obj.compact properties
-      qualities  = Obj.compact qualities
       source = { _table: source } if typeof! source == 'String'
       target = { _table: target } if typeof! target == 'String'
       join-table = camelize (sort [source._table, target._table]).join('-')
@@ -176,11 +176,17 @@ setup-interface = (connection, release) ->*
             (typeof! properties[it] == 'Array' and statement.where-in "#{target._table}.#it", properties[it]) or statement.where "#{target._table}.#it", properties[it]
           else if typeof! properties[it] == 'Array'
             statement.where-raw "\"#{target._table}\".properties ->> '#it' in (#{(['?'] * properties[it].length).join(',')})"
+          else if typeof! properties[it] == 'Undefined'
+            statement.where-raw "(\"#{target._table}\".properties ?? '#it') = false"
+            delete properties[it]
           else
             statement.where-raw "\"#{target._table}\".properties ->> '#it' = ?"
         keys qualities |> each ->
           if typeof! qualities[it] == 'Array'
             statement.where-raw "\"#join-table\".qualities ->> '#it' in (#{(['?'] * properties[it].length).join(',')})"
+          else if typeof! qualities[it] == 'Undefined'
+            statement.where-raw "(\"#join-table\".qualities ?? '#it') = false"
+            delete qualities[it]
           else
             statement.where-raw "\"#join-table\".qualities ->> '#it' = ?"
         statement.select "qualities", "#{target._table}.*"
@@ -192,11 +198,17 @@ setup-interface = (connection, release) ->*
             (typeof! properties[it] == 'Array' and statement.where-in "#{source._table}.#it", properties[it]) or statement.where "#{source._table}.#it", properties[it]
           else if typeof! properties[it] == 'Array'
             statement.where-raw "\"#{source._table}\".properties ->> '#it' in (#{(['?'] * properties[it].length).join(',')})"
+          else if typeof! properties[it] == 'Undefined'
+            statement.where-raw "(\"#{source._table}\".properties ?? '#it') = false"
+            delete properties[it]
           else
             statement.where-raw "\"#{source._table}\".properties ->> '#it' = ?"
         keys qualities |> each ->
           if typeof! qualities[it] == 'Array'
             statement.where-raw "\"#join-table\".qualities ->> '#it' in (#{(['?'] * properties[it].length).join(',')})"
+          else if typeof! qualities[it] == 'Undefined'
+            statement.where-raw "(\"#join-table\".qualities ?? '#it') = false"
+            delete qualities[it]
           else
             statement.where-raw "\"#join-table\".qualities ->> '#it' = ?"
         statement.select "qualities", "#{source._table}.*"
