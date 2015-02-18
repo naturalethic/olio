@@ -221,6 +221,8 @@ setup-interface = (connection, release) ->*
         return (records |> map -> wrap(target._table, it))
       else
         return (records |> map -> wrap(source._table, it))
+    relation: (source, target, properties = {}, qualities = {}) ->*
+      return first (yield @related source, target, properties, qualities)
     save: (source, properties = {}) ->*
       return (yield save connection, source, properties)
     wrap: (table, records) ->
