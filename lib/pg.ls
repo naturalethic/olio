@@ -65,10 +65,10 @@ wrap = (table, record) ->
   # XXX: (postgresql-9.4) Shim because node-postgres isn't parsing these out for jsonb columns
   # record.properties = JSON.parse record.properties if record.properties and typeof! record.properties == 'String'
   # record.qualities  = JSON.parse record.qualities  if record.qualities  and typeof! record.qualities  == 'String'
-  extra = {}
+  extra = pairs-to-obj(keys record |> (filter -> it not in columns[table] ++ <[ properties qualities ]>) |> map -> [ it, record[it] ])
   target = ^^record
   target.toJSON = ->
-    obj = pairs-to-obj(columns[table] |> (filter -> it not in [ 'id', 'properties', 'qualities' ]) |> map -> [ it, record[it] ])
+    obj = pairs-to-obj(columns[table] |> (filter -> it not in <[ id properties qualities ]>) |> map -> [ it, record[it] ])
     obj[table + 'Id'] = record.id
     obj <<< record.properties or {}
     obj <<< record.qualities  or {}
