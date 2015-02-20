@@ -154,7 +154,10 @@ setup-interface = (connection, release) ->*
       qualities.estranged = estranged
       join-record.qualities <<< qualities
       statement = """UPDATE "#join-table" SET qualities = ? WHERE "#source-id" = ? AND "#target-id" = ?"""
-      yield exec connection, statement, JSON.stringify(join-record.qualities), source.id, target.id
+      statement += " RETURNING *"
+      record = first (yield exec connection, statement, JSON.stringify(join-record.qualities), source.id, target.id)
+      record.id = delete record[source-id]
+      return @wrap source._table, record
     estrange: (source, target, qualities) ->*
       yield @relate source, target, qualities, true
     related: (source, target, properties = {}, qualities = {}) ->*
