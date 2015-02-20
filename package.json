@@ -1,6 +1,9 @@
 {
   "name": "olio",
   "version": "0.0.1",
+  "directories": {
+    "bin": "./bin"
+  },
   "files": [
     "lib",
     "bin",
