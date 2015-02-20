@@ -1,13 +1,11 @@
 {
   "name": "olio",
   "version": "0.0.1",
-  "directories": {
-    "lib": "./lib",
-    "bin": "./bin"
-  },
   "files": [
     "lib",
-    "bin"
+    "bin",
+    "mid",
+    "olio.js"
   ],
   "repository": {
     "type": "git",
