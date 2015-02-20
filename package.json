@@ -14,17 +14,17 @@
     "url": "git://github.com/naturalethic/olio"
   },
   "dependencies": {
-    "LiveScript": "naturalethic/LiveScript#generators",
-    "bluebird": "https://registry.npmjs.org/bluebird/-/bluebird-2.3.5.tgz",
-    "chokidar": "^0.9.0",
-    "co": "^3.1.0",
+    "LiveScript": "^1.3.1",
+    "bluebird": "^2.9.12",
+    "chokidar": "^1.0.0-rc3",
+    "co": "^4.4.0",
     "colors": "^1.0.3",
     "deepmerge": "^0.2.7",
-    "glob": "^4.0.6",
-    "harmony-reflect": "^1.1.0",
+    "glob": "^4.4.0",
+    "harmony-reflect": "^1.1.1",
     "knex": "^0.7.3",
     "optimist": "^0.6.1",
-    "pg": "^3.5.0",
+    "pg": "^4.2.0",
     "prelude-ls": "^1.1.1"
   }
 }

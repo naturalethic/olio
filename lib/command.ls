@@ -128,6 +128,6 @@ else if olio.option.supervised
   chokidar.watch [ fs.realpath-sync "#__dirname/.." ] ++ (task-module.watch or []), persistent: true, ignore-initial: true, ignored: /(node_modules|\.git)/ .on 'all', (event, path) ->
     info "Change detected in '#path'..."
     process.exit!
-  (co task)!
+  co task
 else
-  (co task)!
+  co task
