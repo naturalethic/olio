@@ -20,8 +20,7 @@ process <<< child_process
 global  <<< console
 global  <<< prelude-ls
 
-Array::remove  = -> index = @index-of(it); @splice(index, 1) if index > -1; this
-Array::replace = (a, b) -> index = @index-of(a); @splice(index, 1, b) if index > -1; this
+array-replace = (it, a, b) -> index = it.index-of(a); it.splice(index, 1, b) if index > -1; it
 
 global <<< do
   fs:            fs <<< { path: path }
@@ -117,7 +116,7 @@ if !(olio.task.1 and task = task-module[camelize olio.task.1]) and !(task = task
 if olio.option.watch
     process.argv.shift!
     process.argv.shift!
-    process.argv.replace '--watch', '--supervised'
+    array-replace process.argv, '--watch', '--supervised'
     while true
       child = process.spawn-sync fs.path.resolve('node_modules/.bin/olio'), process.argv, { stdio: 'inherit' }
       if child.error
