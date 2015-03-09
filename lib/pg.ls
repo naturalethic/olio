@@ -129,7 +129,7 @@ setup-interface = (connection, release) ->*
       [ statement, vals ] = find-statement query
       records = yield exec connection, statement, vals
       return (records |> map -> wrap(table, it))
-    model[table].first = (query = {}) ->*
+    model[table].find-first = (query = {}) ->*
       [ statement, vals ] = find-statement query
       record = yield exec-first connection, statement, vals
       return (record and wrap(table, record)) or null
