@@ -142,7 +142,7 @@ setup-interface = (connection, release) ->*
     error: -> @_error = it if it; connection.error or @_error
     exec: (statement, ...args) -> exec(connection, statement, ...args)
     first: (statement, ...args) -> exec-first(connection, statement, ...args)
-    relate: (source, target, qualities = {}, estranged = undefined) ->*
+    relate: (source, target, qualities = {}) ->*
       join-table = camelize (sort [source._table, target._table]).join('-')
       source-id = (source._table == target._table and 'sourceId') or source._table + 'Id'
       target-id = (source._table == target._table and 'targetId') or target._table + 'Id'
@@ -151,15 +151,18 @@ setup-interface = (connection, release) ->*
       if not join-record
         statement = """INSERT INTO "#join-table" ("#source-id", "#target-id") VALUES (?, ?) RETURNING *"""
         join-record = first(yield exec connection, statement, source.id, target.id)
-      qualities.estranged = estranged
       join-record.qualities <<< qualities
       statement = """UPDATE "#join-table" SET qualities = ? WHERE "#source-id" = ? AND "#target-id" = ?"""
       statement += " RETURNING *"
       record = first (yield exec connection, statement, JSON.stringify(join-record.qualities), source.id, target.id)
       record.id = delete record[source-id]
       return @wrap source._table, record
-    estrange: (source, target, qualities) ->*
-      yield @relate source, target, qualities, true
+    estrange: (source, target) ->*
+      join-table = camelize (sort [source._table, target._table]).join('-')
+      source-id = (source._table == target._table and 'sourceId') or source._table + 'Id'
+      target-id = (source._table == target._table and 'targetId') or target._table + 'Id'
+      statement = """DELETE FROM "#join-table" WHERE "#source-id" = ? AND "#target-id" = ?"""
+      yield exec connection, statement, source.id, target.id
     related: (source, target, properties = {}, qualities = {}) ->*
       source = { _table: source } if typeof! source == 'String'
       target = { _table: target } if typeof! target == 'String'
@@ -216,7 +219,6 @@ setup-interface = (connection, release) ->*
             statement.where-raw "\"#join-table\".qualities ->> '#it' = ?"
         statement.select "qualities", "#{source._table}.*"
       records = yield exec connection, statement, flatten (keys properties |> (filter -> it not in columns[table]) |> map -> properties[it]) ++ (values qualities)
-      records = records |> filter -> not it.qualities.estranged
       if source.id and target.id
         return null if not records.length
         return records[0].qualities
