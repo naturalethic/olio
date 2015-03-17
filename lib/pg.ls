@@ -220,9 +220,9 @@ setup-interface = (connection, release) ->*
         statement.select "qualities", "#{source._table}.*"
       records = yield exec connection, statement, flatten (keys properties |> (filter -> it not in columns[table]) |> map -> properties[it]) ++ (values qualities)
       if source.id and target.id
-        return null if not records.length
-        return records[0].qualities
-      else if source.id
+        return [] if not records.length
+        return [records[0].qualities]
+      if source.id
         return (records |> map -> wrap(target._table, it))
       else
         return (records |> map -> wrap(source._table, it))
