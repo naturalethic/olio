@@ -122,8 +122,13 @@ setup-interface = (connection, release) ->*
         if it in columns[table]
           (typeof! query[it] == 'Array' and statement.where-in it, query[it]) or statement.where it, query[it]
         else
-          statement.where-raw "\"#table\".properties ->> '#it' = ?"
-          vals.push query[it]
+          if query[it] == true
+            statement.where-raw "\"#table\".properties ?? '#it'"
+          else if not query[it]
+            statement.where-raw "NOT (\"#table\".properties ?? '#it')"
+          else
+            statement.where-raw "\"#table\".properties ->> '#it' = ?"
+            vals.push query[it]
       [ statement, vals ]
     model[table].find = (query = {}) ->*
       [ statement, vals ] = find-statement query
@@ -230,6 +235,8 @@ setup-interface = (connection, release) ->*
       return first (yield @related source, target, properties, qualities)
     save: (source, properties = {}) ->*
       return (yield save connection, source, properties)
+    destroy: (record) ->*
+      yield exec connection, "DELETE FROM #{record._table} where id = ?", record.id
     wrap: (table, records) ->
       if typeof! records == 'Array'
         records |> map -> wrap table, it
