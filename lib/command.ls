@@ -112,6 +112,17 @@ if !(olio.task.1 and task = task-module[camelize olio.task.1]) and !(task = task
   |> each -> info "  #{dasherize it}"
   process.exit!
 
+co-task = (task) ->*
+  try
+    obj = {} <<< task-module
+    if olio.config.pg.db
+      pg = yield olio.pg.connect "postgres://postgres@#{olio.config.pg.host or 'localhost'}/#{olio.config.pg.db}"
+      obj <<< pg{exec, first, relate, related, save, wrap} <<< pg.model
+    obj._task = task
+    yield obj._task!
+  finally
+    pg.release! if pg
+
 # Provide watch capability to all tasks.
 if olio.option.watch
     process.argv.shift!
@@ -127,6 +138,6 @@ else if olio.option.supervised
   chokidar.watch [ fs.realpath-sync "#__dirname/.." ] ++ (task-module.watch or []), persistent: true, ignore-initial: true, ignored: /(node_modules|\.git)/ .on 'all', (event, path) ->
     info "Change detected in '#path'..."
     process.exit!
-  co task
+  co co-task task
 else
-  co task
+  co co-task task
