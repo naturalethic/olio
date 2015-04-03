@@ -115,7 +115,7 @@ if !(olio.task.1 and task = task-module[camelize olio.task.1]) and !(task = task
 co-task = (task) ->*
   try
     obj = {} <<< task-module
-    if olio.config.pg.db
+    if olio.config.pg.db and not task.nodb
       pg = yield olio.pg.connect "postgres://postgres@#{olio.config.pg.host or 'localhost'}/#{olio.config.pg.db}"
       obj <<< pg{exec, first, relate, related, save, wrap} <<< pg.model
     obj._task = task
