@@ -117,7 +117,7 @@ co-task = (task) ->*
     obj = {} <<< task-module
     if olio.config.pg.db and not task.nodb
       pg = yield olio.pg.connect "postgres://postgres@#{olio.config.pg.host or 'localhost'}/#{olio.config.pg.db}"
-      obj <<< pg{exec, first, relate, related, save, wrap} <<< pg.model
+      obj <<< pg{exec, first, relate, related, relation, save, wrap} <<< pg.model
     obj._task = task
     yield obj._task!
   finally
