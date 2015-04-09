@@ -105,7 +105,7 @@ if !olio.task.0 or !(task-module = task-modules[camelize olio.task.0])
   process.exit!
 
 # Print list of subtasks if one is acceptable and none given, or subtask does not exist.
-if !(olio.task.1 and task = task-module[camelize olio.task.1]) and !(task = task-module[camelize olio.task.0])
+if !(olio.task.1 and task = task-module[camelize olio.task.1.to-string!]) and !(task = task-module[camelize olio.task.0])
   info 'Subtasks:'
   keys task-module
   |> filter -> it != camelize olio.task.0
