@@ -12,7 +12,7 @@ exec = (connection, statement, ...args) ->*
   exec.i = 0
   statement = statement.replace /\?\?/g, 'JSONB_QUESTION'
   statement = statement.replace /\?/g, -> exec.i += 1; '$' + exec.i
-  statement = statement.replace \JSONB_QUESTION, '?'
+  statement = statement.replace /JSONB_QUESTION/g, '?'
   statement = statement.replace /\w+\-\w+/g, -> if camelized[it] then "\"#{camelized[it]}\"" else it
   return (yield connection.query-async statement, args).rows
 
@@ -187,7 +187,7 @@ setup-interface = (connection, release) ->*
             (typeof! properties[it] == 'Array' and statement.where-in "#{target._table}.#it", properties[it]) or statement.where "#{target._table}.#it", properties[it]
           else if typeof! properties[it] == 'Array'
             statement.where-raw "\"#{target._table}\".properties ->> '#it' in (#{(['?'] * properties[it].length).join(',')})"
-          else if typeof! properties[it] == 'Undefined'
+          else if typeof! properties[it] == 'Undefined' or properties[it] == false
             statement.where-raw "(\"#{target._table}\".properties ?? '#it') = false"
             delete properties[it]
           else
@@ -195,7 +195,7 @@ setup-interface = (connection, release) ->*
         keys qualities |> each ->
           if typeof! qualities[it] == 'Array'
             statement.where-raw "\"#join-table\".qualities ->> '#it' in (#{(['?'] * properties[it].length).join(',')})"
-          else if typeof! qualities[it] == 'Undefined'
+          else if typeof! qualities[it] == 'Undefined' or qualities[it] == false
             statement.where-raw "(\"#join-table\".qualities ?? '#it') = false"
             delete qualities[it]
           else
@@ -209,7 +209,7 @@ setup-interface = (connection, release) ->*
             (typeof! properties[it] == 'Array' and statement.where-in "#{source._table}.#it", properties[it]) or statement.where "#{source._table}.#it", properties[it]
           else if typeof! properties[it] == 'Array'
             statement.where-raw "\"#{source._table}\".properties ->> '#it' in (#{(['?'] * properties[it].length).join(',')})"
-          else if typeof! properties[it] == 'Undefined'
+          else if typeof! properties[it] == 'Undefined' or properties[it] == false
             statement.where-raw "(\"#{source._table}\".properties ?? '#it') = false"
             delete properties[it]
           else
@@ -217,7 +217,7 @@ setup-interface = (connection, release) ->*
         keys qualities |> each ->
           if typeof! qualities[it] == 'Array'
             statement.where-raw "\"#join-table\".qualities ->> '#it' in (#{(['?'] * properties[it].length).join(',')})"
-          else if typeof! qualities[it] == 'Undefined'
+          else if typeof! qualities[it] == 'Undefined' or qualities[it] == false
             statement.where-raw "(\"#join-table\".qualities ?? '#it') = false"
             delete qualities[it]
           else
