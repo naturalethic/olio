@@ -73,7 +73,6 @@ if !fs.exists-sync './host.ls'
 
 
 global.olio =
-  pg:      require './pg'
   config:  deepmerge (require "#{process.cwd!}/olio.ls"), (require "#{process.cwd!}/host.ls")
   command: delete optimist.argv.$0
   task:    delete optimist.argv._
@@ -113,15 +112,9 @@ if !(olio.task.1 and task = task-module[camelize olio.task.1.to-string!]) and !(
   process.exit!
 
 co-task = (task) ->*
-  try
-    obj = {} <<< task-module
-    if olio.config.pg.db and not task.nodb
-      pg = yield olio.pg.connect "postgres://postgres@#{olio.config.pg.host or 'localhost'}/#{olio.config.pg.db}"
-      obj <<< pg{exec, first, relate, related, relation, save, wrap} <<< pg.model
-    obj._task = task
-    yield obj._task!
-  finally
-    pg.release! if pg
+  obj = {} <<< task-module
+  obj._task = task
+  yield obj._task!
 
 # Provide watch capability to all tasks.
 if olio.option.watch
