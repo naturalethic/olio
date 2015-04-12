@@ -68,15 +68,15 @@ global.exit = (message) ->
 # Require a configuration file.  It also proves `cwd` is an olio project root.
 if !fs.exists-sync './olio.ls'
   exit "You must provide a file named 'olio.ls' in your project root"
-if !fs.exists-sync './host.ls'
-  exit "You must provide a file named 'host.ls' in your project root"
-
 
 global.olio =
-  config:  deepmerge (require "#{process.cwd!}/olio.ls"), (require "#{process.cwd!}/host.ls")
+  config:  require "#{process.cwd!}/olio.ls"
   command: delete optimist.argv.$0
   task:    delete optimist.argv._
   option:  pairs-to-obj(obj-to-pairs(optimist.argv) |> map -> [camelize(it[0]), it[1]])
+
+if fs.exists-sync './host.ls'
+  olio.config = deepmerge olio.config, require "#{process.cwd!}/host.ls"
 
 # Load libraries
 olio <<< olio.lib = require-dir "#{process.cwd!}/lib"
@@ -112,6 +112,9 @@ if !(olio.task.1 and task = task-module[camelize olio.task.1.to-string!]) and !(
   process.exit!
 
 co-task = (task) ->*
+  # Initialize libraries
+  for lib in values olio.lib
+    lib.initialize and yield lib.initialize!
   obj = {} <<< task-module
   obj._task = task
   yield obj._task!
