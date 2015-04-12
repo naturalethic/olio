@@ -113,8 +113,11 @@ if !(olio.task.1 and task = task-module[camelize olio.task.1.to-string!]) and !(
 
 co-task = (task) ->*
   # Initialize libraries
-  for lib in values olio.lib
+  for name, lib of olio.lib
     lib.initialize and yield lib.initialize!
+    for n, l of olio.lib
+      if l != lib and !lib[n]
+        lib[n] = l
   obj = {} <<< task-module
   obj._task = task
   yield obj._task!
