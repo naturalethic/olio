@@ -26,7 +26,8 @@ save = (connection, source, properties = {}) ->*
       source._record[key] = delete properties[key]
   if source._record.properties
     for key in keys properties
-      source._record.properties[key] = properties[key] if properties[key] != undefined
+      properties[key] = undefined if properties[key] == false
+      source._record.properties[key] = properties[key]
     delete source._record.properties.id
   copy = {} <<< source._record
   delete copy.qualities
