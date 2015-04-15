@@ -16,16 +16,14 @@
   },
   "dependencies": {
     "LiveScript": "gkz/LiveScript",
-    "bluebird": "^2.9.12",
-    "chokidar": "^1.0.0-rc3",
-    "co": "^4.4.0",
+    "bluebird": "^2.9.24",
+    "chokidar": "^1.0.1",
+    "co": "^4.5.1",
     "colors": "^1.0.3",
     "deepmerge": "^0.2.7",
-    "glob": "^4.4.0",
-    "harmony-reflect": "^1.1.1",
-    "knex": "^0.7.3",
+    "glob": "^5.0.5",
+    "harmony-reflect": "^1.1.2",
     "optimist": "^0.6.1",
-    "pg": "^4.2.0",
     "prelude-ls": "^1.1.1"
   }
 }
