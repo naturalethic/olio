@@ -93,8 +93,9 @@ if olio.config.log?identifier
 # End global assignments.
 # -----------------------------------------------------------------------------
 
-# Load both built-in and project tasks.  Project tasks will mask built-ins of the same name.
-task-modules = require-dir "#__dirname/../task", "#{process.cwd!}/task"
+# Load plugin and project tasks.  Project tasks will mask plugins of the same name.
+task-modules = require-dir ...((glob.sync "#{process.cwd!}/node_modules/olio-*/task") ++ "#{process.cwd!}/task")
+# task-modules = require-dir "#__dirname/../task", "#{process.cwd!}/task"
 
 # Print list of tasks if none given, or task does not exist.
 if !olio.task.0 or !(task-module = task-modules[camelize olio.task.0])
