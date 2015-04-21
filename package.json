@@ -24,6 +24,7 @@
     "glob": "^4.4.0",
     "harmony-reflect": "^1.1.1",
     "knex": "^0.7.3",
+    "moment": "^2.10.2",
     "optimist": "^0.6.1",
     "pg": "^4.2.0",
     "prelude-ls": "^1.1.1"

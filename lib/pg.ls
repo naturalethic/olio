@@ -1,14 +1,22 @@
 require! \pg
 require! \knex
+require! \moment
 
 knex = knex client: 'pg'
 
 promisify-all pg
 promisify-all pg.Client.prototype
 
+pg.types.set-type-parser 1186, ->
+  it and moment.duration(it)
+
 exec = (connection, statement, ...args) ->*
   statement = statement.to-string! if typeof! statement != 'String'
   args = args[0] if args.length == 1 and typeof! args[0] == 'Array'
+  args = args |> map ->
+    if it.to-ISO-string
+      return it.to-ISO-string!
+    it
   exec.i = 0
   statement = statement.replace /\?\?/g, 'JSONB_QUESTION'
   statement = statement.replace /\?/g, -> exec.i += 1; '$' + exec.i
