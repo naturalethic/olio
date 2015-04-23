@@ -14,7 +14,7 @@ exec = (connection, statement, ...args) ->*
   statement = statement.to-string! if typeof! statement != 'String'
   args = args[0] if args.length == 1 and typeof! args[0] == 'Array'
   args = args |> map ->
-    if it.to-ISO-string
+    if it and it.to-ISO-string
       return it.to-ISO-string!
     it
   exec.i = 0
