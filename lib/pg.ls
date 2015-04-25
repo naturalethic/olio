@@ -7,6 +7,12 @@ knex = knex client: 'pg'
 promisify-all pg
 promisify-all pg.Client.prototype
 
+pg.types.set-type-parser 1182, ->
+  it and moment(it)
+
+pg.types.set-type-parser 1184, ->
+  it and moment(it)
+
 pg.types.set-type-parser 1186, ->
   it and moment.duration(it)
 
