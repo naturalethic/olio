@@ -23,15 +23,17 @@ global  <<< prelude-ls
 array-replace = (it, a, b) -> index = it.index-of(a); it.splice(index, 1, b) if index > -1; it
 
 global <<< do
+  co:            co
   fs:            fs <<< { path: path }
+  glob:          glob
   Promise:       bluebird
   promise:       bluebird
   promisify:     bluebird.promisify
   promisify-all: bluebird.promisify-all
-  livescript:    LiveScript
-  glob:          glob
-  re-uuid:       /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/
-  system-id:     -> "00000000-0000-0000-0000-00000000000#it"
+  is-array:      -> typeof! it is \Array
+  is-object:     -> typeof! it is \Object
+  is-number:     -> typeof! it is \Number
+  is-function:   -> typeof! it is \Function
 
 global.require-dir = ->
   return fold1 (<<<), (& |> map -> require-dir it) if &.length > 1
@@ -79,7 +81,7 @@ if fs.exists-sync './host.ls'
   olio.config = deepmerge olio.config, require "#{process.cwd!}/host.ls"
 
 # Load libraries
-olio <<< olio.lib = require-dir "#{process.cwd!}/lib"
+olio.lib = require-dir ...((glob.sync "#{process.cwd!}/node_modules/olio*/lib") ++ "#{process.cwd!}/lib")
 
 if olio.config.log?identifier
   global <<< do
@@ -94,8 +96,7 @@ if olio.config.log?identifier
 # -----------------------------------------------------------------------------
 
 # Load plugin and project tasks.  Project tasks will mask plugins of the same name.
-task-modules = require-dir ...((glob.sync "#{process.cwd!}/node_modules/olio-*/task") ++ "#{process.cwd!}/task")
-# task-modules = require-dir "#__dirname/../task", "#{process.cwd!}/task"
+task-modules = require-dir ...((glob.sync "#{process.cwd!}/node_modules/olio*/task") ++ "#{process.cwd!}/task")
 
 # Print list of tasks if none given, or task does not exist.
 if !olio.task.0 or !(task-module = task-modules[camelize olio.task.0])
