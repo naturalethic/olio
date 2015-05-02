@@ -127,9 +127,10 @@ co-task = (task) ->*
 if olio.option.watch and task-module.watch
     process.argv.shift!
     process.argv.shift!
-    array-replace process.argv, '--watch', '--supervised'
+    argv = olio.task ++ process.argv
+    array-replace argv, '--watch', '--supervised'
     while true
-      child = process.spawn-sync fs.path.resolve('node_modules/.bin/olio'), process.argv, { stdio: 'inherit' }
+      child = process.spawn-sync fs.path.resolve('node_modules/.bin/olio'), argv, { stdio: 'inherit' }
       if child.error
         info child.error
         process.exit!
