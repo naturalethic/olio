@@ -23,15 +23,17 @@ global  <<< prelude-ls
 array-replace = (it, a, b) -> index = it.index-of(a); it.splice(index, 1, b) if index > -1; it
 
 global <<< do
+  co:            co
   fs:            fs <<< { path: path }
+  glob:          glob
   Promise:       bluebird
   promise:       bluebird
   promisify:     bluebird.promisify
   promisify-all: bluebird.promisify-all
-  livescript:    LiveScript
-  glob:          glob
-  re-uuid:       /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/
-  system-id:     -> "00000000-0000-0000-0000-00000000000#it"
+  is-array:      -> typeof! it is \Array
+  is-object:     -> typeof! it is \Object
+  is-number:     -> typeof! it is \Number
+  is-function:   -> typeof! it is \Function
 
 global.require-dir = ->
   return fold1 (<<<), (& |> map -> require-dir it) if &.length > 1
@@ -68,19 +70,17 @@ global.exit = (message) ->
 # Require a configuration file.  It also proves `cwd` is an olio project root.
 if !fs.exists-sync './olio.ls'
   exit "You must provide a file named 'olio.ls' in your project root"
-if !fs.exists-sync './host.ls'
-  exit "You must provide a file named 'host.ls' in your project root"
-
 
 global.olio =
-  pg:      require './pg'
-  config:  deepmerge (require "#{process.cwd!}/olio.ls"), (require "#{process.cwd!}/host.ls")
-  command: delete optimist.argv.$0
-  task:    delete optimist.argv._
+  config:  require "#{process.cwd!}/olio.ls"
+  task:    [last((delete optimist.argv.$0).split ' ')] ++ delete optimist.argv._
   option:  pairs-to-obj(obj-to-pairs(optimist.argv) |> map -> [camelize(it[0]), it[1]])
 
+if fs.exists-sync './host.ls'
+  olio.config = deepmerge olio.config, require "#{process.cwd!}/host.ls"
+
 # Load libraries
-olio <<< olio.lib = require-dir "#{process.cwd!}/lib"
+olio.lib = require-dir ...((glob.sync "#{process.cwd!}/node_modules/olio*/lib") ++ "#{process.cwd!}/lib")
 
 if olio.config.log?identifier
   global <<< do
@@ -94,8 +94,8 @@ if olio.config.log?identifier
 # End global assignments.
 # -----------------------------------------------------------------------------
 
-# Load both built-in and project tasks.  Project tasks will mask built-ins of the same name.
-task-modules = require-dir "#__dirname/../task", "#{process.cwd!}/task"
+# Load plugin and project tasks.  Project tasks will mask plugins of the same name.
+task-modules = require-dir ...((glob.sync "#{process.cwd!}/node_modules/olio*/task") ++ "#{process.cwd!}/task")
 
 # Print list of tasks if none given, or task does not exist.
 if !olio.task.0 or !(task-module = task-modules[camelize olio.task.0])
@@ -113,18 +113,18 @@ if !(olio.task.1 and task = task-module[camelize olio.task.1.to-string!]) and !(
   process.exit!
 
 co-task = (task) ->*
-  try
-    obj = {} <<< task-module
-    if olio.config.pg.db and not task.nodb
-      pg = yield olio.pg.connect "postgres://postgres@#{olio.config.pg.host or 'localhost'}/#{olio.config.pg.db}"
-      obj <<< pg{exec, first, relate, related, relation, save, wrap} <<< pg.model
-    obj._task = task
-    yield obj._task!
-  finally
-    pg.release! if pg
+  # Initialize libraries
+  for name, lib of olio.lib
+    lib.initialize and yield lib.initialize!
+    for n, l of olio.lib
+      if l != lib and !lib[n]
+        lib[n] = l
+  obj = {} <<< task-module
+  obj._task = task
+  yield obj._task!
 
 # Provide watch capability to all tasks.
-if olio.option.watch
+if olio.option.watch and task-module.watch
     process.argv.shift!
     process.argv.shift!
     array-replace process.argv, '--watch', '--supervised'
@@ -134,8 +134,7 @@ if olio.option.watch
         info child.error
         process.exit!
 else if olio.option.supervised
-  # Always include the olio module in the watch list.
-  chokidar.watch [ fs.realpath-sync "#__dirname/.." ] ++ (task-module.watch or []), persistent: true, ignore-initial: true, ignored: /(node_modules|\.git)/ .on 'all', (event, path) ->
+  chokidar.watch task-module.watch, persistent: true, ignore-initial: true, ignored: /(node_modules|\.git)/ .on 'all', (event, path) ->
     info "Change detected in '#path'..."
     process.exit!
   co co-task task
