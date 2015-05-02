@@ -79,9 +79,6 @@ global.olio =
 if fs.exists-sync './host.ls'
   olio.config = deepmerge olio.config, require "#{process.cwd!}/host.ls"
 
-# Load libraries
-olio.lib = require-dir ...((glob.sync "#{process.cwd!}/node_modules/olio*/lib") ++ "#{process.cwd!}/lib")
-
 if olio.config.log?identifier
   global <<< do
     log:   (...args) -> args.unshift "[#{olio.config.log.identifier}]"; console.log ...args
@@ -114,6 +111,7 @@ if !(olio.task.1 and task = task-module[camelize olio.task.1.to-string!]) and !(
 
 co-task = (task) ->*
   # Initialize libraries
+  olio.lib = require-dir ...((glob.sync "#{process.cwd!}/node_modules/olio*/lib") ++ "#{process.cwd!}/lib")
   for name, lib of olio.lib
     lib.initialize and yield lib.initialize!
     for n, l of olio.lib
