@@ -1,4 +1,6 @@
 #!/bin/bash
 rdlkf() { [ -L "$1" ] && (local lk="$(readlink "$1")"; local d="$(dirname "$1")"; cd "$d"; local l="$(rdlkf "$lk")"; ([[ "$l" = /* ]] && echo "$l" || echo "$d/$l")) || echo "$1"; }
 DIR="$(dirname "$(rdlkf "$0")")"
-/usr/bin/env node --harmony --harmony_proxies "$DIR/../olio.js" "$@"
+$DIR/../node_modules/livescript/bin/lsc -e "require '$DIR/../lib/command'" -n --harmony --harmony_proxies "$@"
+# XXX: For future sourcemap support
+#$DIR/../node_modules/livescript/bin/lsc --map=embedded -e "require('source-map-support').install!;require '$DIR/../lib/command'" -n --harmony --harmony_proxies "$@"
