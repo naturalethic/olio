@@ -73,8 +73,7 @@ if !fs.exists-sync './olio.ls'
 
 global.olio =
   config:  require "#{process.cwd!}/olio.ls"
-  command: delete optimist.argv.$0
-  task:    delete optimist.argv._
+  task:    [last((delete optimist.argv.$0).split ' ')] ++ delete optimist.argv._
   option:  pairs-to-obj(obj-to-pairs(optimist.argv) |> map -> [camelize(it[0]), it[1]])
 
 if fs.exists-sync './host.ls'
@@ -125,7 +124,7 @@ co-task = (task) ->*
   yield obj._task!
 
 # Provide watch capability to all tasks.
-if olio.option.watch
+if olio.option.watch and task-module.watch
     process.argv.shift!
     process.argv.shift!
     array-replace process.argv, '--watch', '--supervised'
@@ -135,8 +134,7 @@ if olio.option.watch
         info child.error
         process.exit!
 else if olio.option.supervised
-  # Always include the olio module in the watch list.
-  chokidar.watch [ fs.realpath-sync "#__dirname/.." ] ++ (task-module.watch or []), persistent: true, ignore-initial: true, ignored: /(node_modules|\.git)/ .on 'all', (event, path) ->
+  chokidar.watch task-module.watch, persistent: true, ignore-initial: true, ignored: /(node_modules|\.git)/ .on 'all', (event, path) ->
     info "Change detected in '#path'..."
     process.exit!
   co co-task task
