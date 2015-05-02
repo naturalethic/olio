@@ -15,7 +15,6 @@
     "url": "git://github.com/naturalethic/olio"
   },
   "dependencies": {
-    "LiveScript": "naturalethic/LiveScript",
     "bluebird": "^2.9.24",
     "chokidar": "^1.0.1",
     "co": "^4.5.1",
@@ -23,6 +22,7 @@
     "deepmerge": "^0.2.7",
     "glob": "^5.0.5",
     "harmony-reflect": "^1.1.2",
+    "livescript": "git://github.com/gkz/livescript",
     "optimist": "^0.6.1",
     "prelude-ls": "^1.1.1"
   }
