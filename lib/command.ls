@@ -9,7 +9,6 @@ require! \chokidar
 require! \glob
 require! \co
 require! \harmony-reflect
-require! \LiveScript
 require! \deepmerge
 
 # -----------------------------------------------------------------------------
