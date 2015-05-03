@@ -26,6 +26,7 @@ global <<< do
   co:            co
   fs:            fs <<< { path: path }
   glob:          glob
+  deepmerge:     deepmerge
   Promise:       bluebird
   promise:       bluebird
   promisify:     bluebird.promisify
