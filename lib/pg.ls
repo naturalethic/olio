@@ -16,6 +16,9 @@ pg.types.set-type-parser 1184, ->
 pg.types.set-type-parser 1186, ->
   it and moment.duration(it)
 
+pg.types.set-type-parser 1700, ->
+  it and parse-float it
+
 exec = (connection, statement, ...args) ->*
   statement = statement.to-string! if typeof! statement != 'String'
   args = args[0] if args.length == 1 and typeof! args[0] == 'Array'
