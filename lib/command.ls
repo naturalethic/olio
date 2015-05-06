@@ -134,8 +134,7 @@ if olio.option.watch
         info child.error
         process.exit!
 else if olio.option.supervised
-  # Always include the olio module in the watch list.
-  chokidar.watch [ fs.realpath-sync "#__dirname/.." ] ++ (task-module.watch or []), persistent: true, ignore-initial: true, ignored: /(node_modules|\.git|\.\.)/ .on 'all', (event, path) ->
+  chokidar.watch (task-module.watch or []), persistent: true, ignore-initial: true, ignored: /(node_modules|\.git)/ .on 'all', (event, path) ->
     info "Change detected in '#path'..."
     process.exit!
   co co-task task
