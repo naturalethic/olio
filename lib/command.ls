@@ -117,7 +117,7 @@ co-task = (task) ->*
     for n, l of olio.lib
       if l != lib and !lib[n]
         lib[n] = l
-  obj = {} <<< task-module
+  obj = ({} <<< task-module) <<< olio.lib
   obj._task = task
   yield obj._task!
 
