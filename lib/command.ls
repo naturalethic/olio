@@ -26,6 +26,7 @@ global <<< do
   fs:            fs <<< { path: path }
   glob:          glob
   deepmerge:     deepmerge
+  watcher:       chokidar
   Promise:       bluebird
   promise:       bluebird
   promisify:     bluebird.promisify
@@ -133,7 +134,7 @@ if olio.option.watch and task-module.watch
         info child.error
         process.exit!
 else if olio.option.supervised
-  chokidar.watch (task-module.watch or []), persistent: true, ignore-initial: true, ignored: /(node_modules|\.git)/ .on 'all', (event, path) ->
+  watcher.watch (task-module.watch or []), persistent: true, ignore-initial: true, ignored: /(node_modules|\.git)/ .on 'all', (event, path) ->
     info "Change detected in '#path'..."
     process.exit!
   co co-task task

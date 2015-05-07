@@ -7,5 +7,6 @@ This package only provides the task runner.  In order to get the most out of Oli
 - https://github.com/naturalethic/olio-angular
 - https://github.com/naturalethic/olio-arango
 - https://github.com/naturalethic/olio-sendgrid
+- https://github.com/naturalethic/olio-slack
 
 A tutorial for Olio shall be forthcoming.
