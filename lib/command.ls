@@ -9,7 +9,7 @@ require! \chokidar
 require! \glob
 require! \co
 require! \harmony-reflect
-require! \LiveScript
+require! \livescript
 require! \deepmerge
 
 # -----------------------------------------------------------------------------
@@ -28,7 +28,7 @@ global <<< do
   promise:       bluebird
   promisify:     bluebird.promisify
   promisify-all: bluebird.promisify-all
-  livescript:    LiveScript
+  livescript:    livescript
   glob:          glob
   re-uuid:       /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/
   system-id:     -> "00000000-0000-0000-0000-00000000000#it"
@@ -42,6 +42,7 @@ global.require-dir = ->
 
 global.ex = (command) -> exec command, true
 global.exec = (command, async) ->
+  info command
   if async
     data = []
     return new Promise (resolve, reject) ->
@@ -79,9 +80,6 @@ global.olio =
   task:    delete optimist.argv._
   option:  pairs-to-obj(obj-to-pairs(optimist.argv) |> map -> [camelize(it[0]), it[1]])
 
-# Load libraries
-olio <<< olio.lib = require-dir "#{process.cwd!}/lib"
-
 if olio.config.log?identifier
   global <<< do
     log:   (...args) -> args.unshift "[#{olio.config.log.identifier}]"; console.log ...args
@@ -112,14 +110,37 @@ if !(olio.task.1 and task = task-module[camelize olio.task.1.to-string!]) and !(
   |> each -> info "  #{dasherize it}"
   process.exit!
 
+global.compose-environment = (pg) ->
+  env = {}
+  if pg
+    env <<< pg{exec, first, relate, related, relation, save, wrap, estrange} <<< pg.model
+  for name, lib of olio.lib
+    if env[name]
+      env[name] <<< lib
+    else
+      if typeof! lib == \Function
+        env[name] = lib
+      else
+        env[name] = {} <<< lib
+      if pg
+        env[name] <<< pg{exec, first, relate, estrange, related, relation, save, destroy, wrap}
+  all-names = (pg and unique((keys olio.lib) ++ (keys pg.model))) or keys olio.lib
+  for n1 in all-names
+    for n2 in all-names
+      continue if n1 == n2
+      env[n1][n2] = env[n2]
+  env
+
 co-task = (task) ->*
+  olio <<< olio.lib = require-dir "#{process.cwd!}/lib"
+  if olio.config.pg.db and not task.nodb
+    pg = yield olio.pg.connect "postgres://postgres@#{olio.config.pg.host or 'localhost'}/#{olio.config.pg.db}"
+  env = compose-environment pg
+  for name, lib of olio.lib
+    lib.initialize and yield lib.initialize!
+  env._task = task
   try
-    obj = {} <<< task-module
-    if olio.config.pg.db and not task.nodb
-      pg = yield olio.pg.connect "postgres://postgres@#{olio.config.pg.host or 'localhost'}/#{olio.config.pg.db}"
-      obj <<< pg{exec, first, relate, related, relation, save, wrap} <<< pg.model
-    obj._task = task
-    yield obj._task!
+    yield env._task!
   finally
     pg.release! if pg
 

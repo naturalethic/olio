@@ -208,6 +208,9 @@ setup-interface = (connection, release) ->*
           else if typeof! properties[it] == 'Undefined' or properties[it] == false
             statement.where-raw "(\"#{target._table}\".properties ?? '#it') = false"
             delete properties[it]
+          else if properties[it] == true
+            statement.where-raw "(\"#{target._table}\".properties ?? '#it') = true"
+            delete properties[it]
           else
             statement.where-raw "\"#{target._table}\".properties ->> '#it' = ?"
         keys qualities |> each ->
@@ -215,6 +218,9 @@ setup-interface = (connection, release) ->*
             statement.where-raw "\"#join-table\".qualities ->> '#it' in (#{(['?'] * properties[it].length).join(',')})"
           else if typeof! qualities[it] == 'Undefined' or qualities[it] == false
             statement.where-raw "(\"#join-table\".qualities ?? '#it') = false"
+            delete qualities[it]
+          else if qualities[it] == true
+            statement.where-raw "(\"#join-table\".qualities ?? '#it') = true"
             delete qualities[it]
           else
             statement.where-raw "\"#join-table\".qualities ->> '#it' = ?"
@@ -230,6 +236,9 @@ setup-interface = (connection, release) ->*
           else if typeof! properties[it] == 'Undefined' or properties[it] == false
             statement.where-raw "(\"#{source._table}\".properties ?? '#it') = false"
             delete properties[it]
+          else if properties[it] == true
+            statement.where-raw "(\"#{source._table}\".properties ?? '#it') = true"
+            delete properties[it]
           else
             statement.where-raw "\"#{source._table}\".properties ->> '#it' = ?"
         keys qualities |> each ->
@@ -237,6 +246,9 @@ setup-interface = (connection, release) ->*
             statement.where-raw "\"#join-table\".qualities ->> '#it' in (#{(['?'] * properties[it].length).join(',')})"
           else if typeof! qualities[it] == 'Undefined' or qualities[it] == false
             statement.where-raw "(\"#join-table\".qualities ?? '#it') = false"
+            delete qualities[it]
+          else if qualities[it] == true
+            statement.where-raw "(\"#join-table\".qualities ?? '#it') = true"
             delete qualities[it]
           else
             statement.where-raw "\"#join-table\".qualities ->> '#it' = ?"
