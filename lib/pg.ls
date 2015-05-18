@@ -166,6 +166,8 @@ setup-interface = (connection, release) ->*
     exec: (statement, ...args) -> exec(connection, statement, ...args)
     first: (statement, ...args) -> exec-first(connection, statement, ...args)
     relate: (source, target, qualities = {}) ->*
+      for key of qualities
+        qualities[key] = undefined if qualities[key] == false
       join-table = camelize (sort [source._table, target._table]).join('-')
       source-id = (source._table == target._table and 'sourceId') or source._table + 'Id'
       target-id = (source._table == target._table and 'targetId') or target._table + 'Id'
