@@ -49,7 +49,7 @@ save = (connection, source, properties = {}) ->*
   copy = {} <<< source._record
   delete copy.qualities
   id = delete copy.id
-  return wrap(source._table, first(yield exec connection, "UPDATE #{source._table} SET " + (keys copy |> map -> "\"#{camelize it}\" = ?").join(', ') + " WHERE id = ? RETURNING *", (values copy) ++ [ id ]))
+  return wrap(source._table, first(yield exec connection, "UPDATE \"#{source._table}\" SET " + (keys copy |> map -> "\"#{camelize it}\" = ?").join(', ') + " WHERE id = ? RETURNING *", (values copy) ++ [ id ]))
 
 camelized = {}
 
@@ -115,16 +115,16 @@ setup-interface = (connection, release) ->*
     # Model function creates or loads records
     model[table] = (record = {}) ->*
       if typeof! record == 'String'
-        return wrap(table, (yield exec-first connection, """SELECT * FROM #table WHERE id = ?""", record))
-      else if record.id and original = wrap(table, (yield exec-first connection, """SELECT * FROM #table WHERE id = ?""", record.id))
+        return wrap(table, (yield exec-first connection, """SELECT * FROM "#table" WHERE id = ?""", record))
+      else if record.id and original = wrap(table, (yield exec-first connection, """SELECT * FROM "#table" WHERE id = ?""", record.id))
         yield save connection, original, record
         return original <<< record
       else
         cols = columns[table] |> filter -> record.has-own-property(it) or (it in [ 'qualities', 'properties' ])
         if cols.length
-          statement = """INSERT INTO #table ("#{cols.join('","')}") VALUES (#{(['?'] * cols.length).join(',')}) RETURNING *"""
+          statement = """INSERT INTO "#table" ("#{cols.join('","')}") VALUES (#{(['?'] * cols.length).join(',')}) RETURNING *"""
         else
-          statement = """INSERT INTO #table DEFAULT VALUES RETURNING *"""
+          statement = """INSERT INTO "#table" DEFAULT VALUES RETURNING *"""
         values = cols |> map ->
           return (record[it]) if it not in [ 'qualities', 'properties' ]
           extra = {}
