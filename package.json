@@ -22,7 +22,7 @@
     "deepmerge": "^0.2.7",
     "glob": "^5.0.5",
     "harmony-reflect": "^1.1.2",
-    "livescript": "git://github.com/gkz/livescript",
+    "livescript": "^1.4.0",
     "optimist": "^0.6.1",
     "prelude-ls": "^1.1.1"
   }

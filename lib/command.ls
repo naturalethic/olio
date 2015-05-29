@@ -10,6 +10,7 @@ require! \glob
 require! \co
 require! \harmony-reflect
 require! \deepmerge
+require! \livescript
 
 # -----------------------------------------------------------------------------
 # Global assignments.  Please keep all global assignments within this area.
@@ -25,6 +26,7 @@ global <<< do
   co:            co
   fs:            fs <<< { path: path }
   glob:          glob
+  livescript:    livescript
   deepmerge:     deepmerge
   watcher:       chokidar
   Promise:       bluebird
