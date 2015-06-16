@@ -122,8 +122,8 @@ global.compose-environment = (pg) ->
         env[name] = lib
       else
         env[name] = {} <<< lib
-      if pg
-        env[name] <<< pg{exec, first, relate, estrange, related, relation, save, destroy, wrap}
+    if pg
+      env[name] <<< pg{exec, first, relate, estrange, related, relation, save, destroy, wrap}
   all-names = (pg and unique((keys olio.lib) ++ (keys pg.model))) or keys olio.lib
   for n1 in all-names
     for n2 in all-names
