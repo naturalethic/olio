@@ -142,7 +142,7 @@ co-task = (task) ->*
   try
     yield env._task!
   finally
-    pg.release! if pg
+    pg.release! if pg and not env._task.keepalive
 
 # Provide watch capability to all tasks.
 if olio.option.watch
