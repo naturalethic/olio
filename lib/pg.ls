@@ -160,7 +160,16 @@ setup-interface = (connection, release) ->*
     yield columns connection, table if not columns[table]
     setup-model table
   return do
-    connection: connection
+    listen: (channel, cb) ->
+      connection.on \notification, ->
+        return if it.channel != channel
+        cb it.payload
+      connection.query "LISTEN #channel"
+    notify: ->
+      if it
+        model._notify = it
+      else if model._notify
+        connection.query "NOTIFY #{model._notify}"
     release: release
     model: model
     error: -> @_error = it if it; connection.error or @_error
