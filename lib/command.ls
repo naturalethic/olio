@@ -113,7 +113,7 @@ if !(olio.task.1 and task = task-module[camelize olio.task.1.to-string!]) and !(
 global.compose-environment = (pg) ->
   env = {}
   if pg
-    env <<< pg{exec, first, relate, related, relation, save, wrap, estrange} <<< pg.model
+    env <<< pg{connection, exec, first, relate, related, relation, save, wrap, estrange} <<< pg.model
   for name, lib of olio.lib
     if env[name]
       env[name] <<< lib
@@ -123,7 +123,7 @@ global.compose-environment = (pg) ->
       else
         env[name] = {} <<< lib
     if pg
-      env[name] <<< pg{exec, first, relate, estrange, related, relation, save, destroy, wrap}
+      env[name] <<< pg{connection, exec, first, relate, estrange, related, relation, save, destroy, wrap}
   all-names = (pg and unique((keys olio.lib) ++ (keys pg.model))) or keys olio.lib
   for n1 in all-names
     for n2 in all-names

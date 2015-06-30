@@ -160,6 +160,7 @@ setup-interface = (connection, release) ->*
     yield columns connection, table if not columns[table]
     setup-model table
   return do
+    connection: connection
     release: release
     model: model
     error: -> @_error = it if it; connection.error or @_error
