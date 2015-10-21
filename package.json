@@ -16,14 +16,27 @@
   },
   "dependencies": {
     "bluebird": "^2.9.24",
+    "browserify": "^11.2.0",
+    "browserify-css": "^0.7.1",
     "chokidar": "^1.0.1",
     "co": "^4.5.1",
     "colors": "^1.0.3",
     "deepmerge": "^0.2.7",
     "glob": "^5.0.5",
     "harmony-reflect": "^1.1.2",
+    "html5-history-api": "^4.2.4",
+    "inflection": "^1.7.2",
+    "jade": "^1.11.0",
+    "jquery": "^2.1.4",
+    "kefir": "^3.1.0",
     "livescript": "^1.4.0",
+    "mithril": "^0.2.0",
+    "nib": "^1.1.0",
+    "node-notifier": "^4.3.1",
     "optimist": "^0.6.1",
-    "prelude-ls": "^1.1.1"
+    "prelude-ls": "^1.1.1",
+    "stylus": "^0.52.4",
+    "watchify": "^3.4.0",
+    "webcomponents.js": "^0.7.2"
   }
 }
