@@ -1,5 +1,5 @@
 # Olio
-### Olio is a pristine framework for building web applications.
+### Olio is a collection of tools for building web applications.
 
 This package only provides the task runner.  In order to get the most out of Olio, you'll want to install some of these modules:
 
