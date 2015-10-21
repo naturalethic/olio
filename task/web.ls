@@ -10,7 +10,7 @@ require! \jade
 
 promisify-all stylus!__proto__
 
-export watch = <[ task/web.ls ]>
+export watch = [ __filename ]
 
 olio.config.web ?= {}
 olio.config.web.app ?= 'test'
@@ -38,7 +38,7 @@ indent-source = (preamble, source, indent = 2) ->
 
 prep = ->
   info 'Syncing    -> tmp'
-  exec 'rsync -u web/* tmp/'
+  exec "rsync --exclude '*.ls' -u web/* tmp/"
   info 'Syncing    -> public'
   exec "rsync -v -u #{glob.sync('web/**/*.!(ls)').join(' ')} public"
 
@@ -50,7 +50,7 @@ stitch = ->*
     require 'webcomponents.js'
     jade = require 'jade/runtime'
     m = require 'mithril'
-    m.convert = require './template-converter'
+    m.convert = require 'template-converter'
     kefir = require 'kefir'
     s = ^^kefir
     s.from-child-events = (target, event-name, query, transform = id) ->
@@ -58,9 +58,15 @@ stitch = ->*
         handler = -> emitter.emit transform it
         q target .on event-name, query, handler
         -> q target .off event-name, query, handler
+    history = require 'html5-history-api'
+    window.current-route = -> ((history.location || window.location).href.split '#').1?substr(1) or ''
+    q window .on 'load', ->
+      q window .trigger q.Event 'route', route: current-route!
+    q window .on 'popstate', ->
+      q window .trigger q.Event 'route', route: current-route!
     # window.deepstream = require 'deepstream.io-client-js/dist/deepstream'
     require './index.css'
-    require './livescript-utilities'
+    require 'livescript-utilities'
     window <<< require 'prelude-ls'
     if console.log.apply
       <[ log info warn error ]> |> each (key) -> window[key] = -> console[key] ...&
@@ -84,16 +90,19 @@ stitch = ->*
       if component.style
         component.style = indent-source (dasherize key), component.style
         style.push(yield stylus(delete component.style).use(nib()).import("nib").render-async!)
-      view = jade.compile-client(delete component.view).to-string!replace(/\/\/.*$/gm, '').split(/\s+/m).join(' ')
+      view = jade.compile-client(delete component.view, pretty: true).to-string!replace(/(^|\s)\s*\/\/.*$/gm, '').split(/\s+/m).join(' ')
       script.push "(->"
       script.push "  view-function = ``#{view}``"
       script.push "  prototype = Object.create HTMLElement.prototype"
       script.push "  prototype.attached-callback = ->"
       script.push "    m.render this, (eval m.convert view-function @start!)"
-      script.push "    @model @intent!"
-      script.push "    .on-value (model) ~>"
-      script.push "      info 'MODEL', model"
-      script.push "      m.render this, (eval m.convert view-function model)"
+      script.push "    s.merge @intent!"
+      script.push "    .map ~>"
+      script.push "      info 'INTENT', it"
+      script.push "      @model it"
+      script.push "    .on-value ~>"
+      script.push "      info 'MODEL', it"
+      script.push "      m.render this, (eval m.convert view-function it)"
       script.push "    @ready!"
       script.push "  prototype <<<"
       component.module ?= ->
@@ -108,6 +117,8 @@ stitch = ->*
   # info script.join '\n'
   # info '\nJAVASCRIPT'
   # info livescript.compile(script.join('\n'), { -header})
+  info 'Writing    -> tmp/index.ls'
+  fs.write-file-sync \tmp/index.ls, script.join('\n')
   info 'Writing    -> tmp/index.js'
   # XXX: chop out livescript utilities from this compile output
   fs.write-file-sync \tmp/index.js, livescript.compile(script.join('\n'), { -header })
@@ -122,6 +133,7 @@ setup-bundler = ->*
   bundler = watchify browserify <[ ./tmp/index.js ]>, {
     paths:
       fs.realpath-sync "#__dirname/../node_modules"
+      fs.realpath-sync "#__dirname/../web"
     no-parse: no-parse
     detect-globals: false
     cache: {}
