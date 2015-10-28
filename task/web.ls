@@ -10,6 +10,8 @@ require! \jade
 require! \esprima
 require! \esprima-walk
 require! \escodegen
+require! \http
+require! \node-static
 
 export watch = [ __filename, "#__dirname/../web/olio.ls" ]
 
@@ -143,3 +145,13 @@ export web = ->*
     info "Change detected in '#path'..."
     co bundler.build
   co bundler.build
+
+export serve = ->*
+  port = olio.option.port or olio.config.web?port or 8000
+  file = new node-static.Server './public'
+  server = http.create-server (request, response) ->
+    request.add-listener \end, ->
+      file.serve request, response
+    .resume!
+  server.listen port
+  info 'Serving on port', port

@@ -38,6 +38,7 @@
     "mithril": "^0.2.0",
     "nib": "^1.1.0",
     "node-notifier": "^4.3.1",
+    "node-static": "^0.7.7",
     "optimist": "^0.6.1",
     "prelude-ls": "^1.1.1",
     "stylus": "^0.52.4",

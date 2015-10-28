@@ -24,14 +24,15 @@ s.from-child-events = (target, event-name, query, transform = id) ->
 
 # History
 window.history = require 'html5-history-api'
-window.current-route = ->
+window.route = s.stream (emitter) ->
+  q window .on \load, ->
+    emitter.emit route: route.current!
+  q window .on \popstate, ->
+    emitter.emit route: route.current!
+route.current = ->
   /http(s)?\:\/\/[^\/]+\/(\#\/)?(.*)/.exec(history.location or window.location).3.replace(/\//g, '-')
-window.route-to = ->
+route.go = ->
   history.push-state null, null, "#/#{it.replace(/\-/g, '/')}"
-q window .on 'load', ->
-  q window .trigger q.Event 'route', route: current-route!
-q window .on 'popstate', ->
-  q window .trigger q.Event 'route', route: current-route!
 
 register-component = (name, component) ->
   info name, component
