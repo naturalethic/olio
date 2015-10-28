@@ -29,55 +29,58 @@ indent-source = (preamble, source, indent = 2) ->
 
 prep = ->
   info 'Syncing    -> tmp'
-  exec "rsync --exclude '*.ls' -u web/* tmp/"
+  exec "rsync -maz --exclude '*.ls' web/ tmp/"
   info 'Syncing    -> public'
-  exec "rsync -v -u #{glob.sync('web/**/*.!(ls)').join(' ')} public"
+  exec "rsync -maz --exclude '*.js' --exclude '*.css' tmp/ public/"
 
 stitch = ->*
   style = []
   script = [
     fs.read-file-sync("#__dirname/../web/olio.ls").to-string!
   ]
-  for it in glob.sync 'web/**/*.ls'
-    name = it.replace(/\//g, '-').substring(4, it.length - 3)
-    info "Writing    -> component/#name.js"
-    syntax = esprima.parse livescript.compile(fs.read-file-sync(it).to-string!)
-    state =
-      component: null
-      components: []
-    esprima-walk.walk-add-parent syntax, ->
-      if it.type is \MemberExpression and it.object.name == \out$
-        state.component = name: dasherize it.property.name
-        state.components.push state.component
-        if state.component.name != \index
-          script.push "register-component '#{state.component.name}', require('./component/#{name}').#{state.component.name}"
-      if state.component and it.type is \ObjectExpression and (dasherize it.parent.left.name) == state.component.name
-        state.component.object = it
-    for component in state.components
-      it = component.object
-      if component.name == \index
+  try
+    for it in glob.sync 'web/**/*.ls'
+      name = it.replace(/\//g, '-').substring(4, it.length - 3)
+      info "Writing    -> component/#name.js"
+      syntax = esprima.parse livescript.compile(fs.read-file-sync(it).to-string!)
+      state =
+        component: null
+        components: []
+      esprima-walk.walk-add-parent syntax, ->
+        if it.type is \MemberExpression and it.object?name == \out$
+          state.component = name: dasherize it.property.name
+          state.components.push state.component
+          if state.component.name != \index
+            script.push "register-component '#{state.component.name}', require('./component/#{name}').#{state.component.name}"
+        if state.component and it.type is \ObjectExpression and it.parent.left?name and (dasherize it.parent.left.name) == state.component.name
+          state.component.object = it
+      for component in state.components
+        it = component.object
+        if component.name == \index
+          if prop = find (-> it.key.name == \style), it.properties
+            it.properties.splice (it.properties.index-of prop), 1
+            style.push(stylus(prop.value.value).use(nib!).import(\nib).render!)
+          if prop = find (-> it.key.name == \view), it.properties
+            it.properties.splice (it.properties.index-of prop), 1
+            info 'Writing    -> public/index.html'
+            fs.write-file-sync \public/index.html, jade.render(prop.value.value, pretty: true)
+          continue
         if prop = find (-> it.key.name == \style), it.properties
           it.properties.splice (it.properties.index-of prop), 1
-          style.push(stylus(prop.value.value).use(nib!).import(\nib).render!)
+          style.push(stylus(indent-source state.component.name, prop.value.value).use(nib!).import(\nib).render!)
         if prop = find (-> it.key.name == \view), it.properties
-          it.properties.splice (it.properties.index-of prop), 1
-          info 'Writing    -> public/index.html'
-          fs.write-file-sync \public/index.html, jade.render(prop.value.value, pretty: true)
-        continue
-      if prop = find (-> it.key.name == \style), it.properties
-        it.properties.splice (it.properties.index-of prop), 1
-        style.push(stylus(indent-source state.component.name, prop.value.value).use(nib!).import(\nib).render!)
-      if prop = find (-> it.key.name == \view), it.properties
-        view = esprima.parse jade.compile-client(prop.value.value, pretty: true).to-string!replace(/(^|\s)\s*\/\/.*$/gm, '').split(/\s+/m).join(' ')
-        prop.value =
-          type: 'FunctionExpression'
-          id: null
-          params: [ { type: 'Identifier', name: 'locals' } ]
-          defaults: []
-          body: { type: 'BlockStatement', body: view.body.0.body.body }
-          generator: false
-          expression: false
-    fs.write-file-sync "tmp/component/#name.js", escodegen.generate syntax, format: { indent: { style: '  ' } }
+          view = esprima.parse jade.compile-client(prop.value.value, pretty: true).to-string!replace(/(^|\s)\s*\/\/.*$/gm, '').split(/\s+/m).join(' ')
+          prop.value =
+            type: 'FunctionExpression'
+            id: null
+            params: [ { type: 'Identifier', name: 'locals' } ]
+            defaults: []
+            body: { type: 'BlockStatement', body: view.body.0.body.body }
+            generator: false
+            expression: false
+      fs.write-file-sync "tmp/component/#name.js", escodegen.generate syntax, format: { indent: { style: '  ' } }
+  catch e
+    info e.stack
   # info '\nLIVESCRIPT'
   # info script.join '\n'
   # info '\nJAVASCRIPT'
