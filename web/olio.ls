@@ -15,7 +15,7 @@ m.convert = require 'template-converter'
 
 # FRP
 kefir = require 'kefir'
-s = ^^kefir
+window.s = ^^kefir
 s.from-child-events = (target, event-name, query, transform = id) ->
   s.stream (emitter) ->
     handler = -> emitter.emit transform it
@@ -23,8 +23,11 @@ s.from-child-events = (target, event-name, query, transform = id) ->
     -> q target .off event-name, query, handler
 
 # History
-history = require 'html5-history-api'
-window.current-route = -> ((history.location || window.location).href.split '#').1?substr(1) or ''
+window.history = require 'html5-history-api'
+window.current-route = ->
+  /http(s)?\:\/\/[^\/]+\/(\#\/)?(.*)/.exec(history.location or window.location).3.replace(/\//g, '-')
+window.route-to = ->
+  history.push-state null, null, it.replace(/\-/g, '/')
 q window .on 'load', ->
   q window .trigger q.Event 'route', route: current-route!
 q window .on 'popstate', ->
