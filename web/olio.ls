@@ -1,29 +1,33 @@
+window.global = window
+window.q = require \jquery
+window.merge  = require \deepmerge
+window.extend = q.extend
+
 require './index.css'
 window <<< require 'prelude-ls'
-require 'livescript-utilities'
+require \livescript-utilities
 if console.log.apply
   <[ log info warn error ]> |> each (key) -> window[key] = -> console[key] ...&
 else
   <[ log info warn error ]> |> each (key) -> window[key] = console[key]
-window.q = require 'jquery'
 
 # Templates
 require 'webcomponents.js'
-jade = require 'jade/runtime'
+window.jade = require 'jade/runtime'
 m = require 'mithril'
-m.convert = require 'template-converter'
+m.convert = require \template-converter
 
 # FRP
-kefir = require 'kefir'
+require! \kefir
 window.s = ^^kefir
-s.from-child-events = (target, event-name, query, transform = id) ->
+s.from-child-events = (target, query, event-name, transform = id) ->
   s.stream (emitter) ->
     handler = -> emitter.emit transform it
     q target .on event-name, query, handler
     -> q target .off event-name, query, handler
 
 # History
-window.history = require 'html5-history-api'
+window.history = require \html5-history-api
 window.route = s.stream (emitter) ->
   q window .on \load, ->
     emitter.emit route: route.current!
@@ -34,24 +38,54 @@ route.current = ->
 route.go = ->
   history.push-state null, null, "#/#{it.replace(/\-/g, '/')}"
 
+# Session
+require! 'socket.io-client': socket-io
+require! 'fast-json-patch/dist/json-patch-duplex.min': patch
+socket = socket-io!
+session = {}
+session-observer = patch.observe session
+socket.on \session, ->
+  info \SESSION, session
+  patch.apply session, it
+  patch.generate session-observer
+  if session-emitter
+    session-emitter.emit session: session
+session-emitter = null
+window.session = s.stream (emitter) ->
+  session-emitter := emitter
+  ->
+    session-emitter := null
+session-extend = ->
+  return false if not it
+  extend session, it
+  patches = patch.generate session-observer
+  info \FLUSH, JSON.stringify patches
+  socket.emit \session, patches
+  true
+
 register-component = (name, component) ->
-  info name, component
   prototype = Object.create HTMLElement.prototype
   prototype.attached-callback = ->
-    info \ATTACHED
-    m.render this, (eval m.convert @view @start!)
-    s.merge @intent!
-    .map ~>
-      info 'INTENT', it
-      @model it
+    @state = session: session
+    state-extend = ~>
+      return false if not it
+      extend @state, it
+      true
+    m.render this, (eval m.convert @view @state)
+    s.merge @watch!
     .on-value ~>
-      info 'MODEL', it
-      m.render this, (eval m.convert @view it)
+      info \ACT, it
+      if not it.session
+        session-extend @apply it
+      if state-extend @react it
+        info \RENDERING, this.tag-name, @state
+        m.render this, (eval m.convert @view @state)
     @ready!
   prototype <<< do
     ready: ->
     start: -> {}
-    intent: -> {}
-    model: s.constant {}
+    watch: -> []
+    apply: -> null
+    react: -> null
   prototype <<< component
   document.register-element name, prototype: prototype

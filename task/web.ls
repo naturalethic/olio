@@ -12,6 +12,9 @@ require! \esprima-walk
 require! \escodegen
 require! \http
 require! \node-static
+require! \http
+require! 'socket.io': socket-io
+require! 'fast-json-patch': patch
 
 export watch = [ __filename, "#__dirname/../web/olio.ls" ]
 
@@ -146,12 +149,32 @@ export web = ->*
     co bundler.build
   co bundler.build
 
-export serve = ->*
-  port = olio.option.port or olio.config.web?port or 8000
+export service = ->*
   file = new node-static.Server './public'
   server = http.create-server (request, response) ->
     request.add-listener \end, ->
       file.serve request, response
     .resume!
+  port = olio.option.port or olio.config.web?port or 8000
   server.listen port
+  server = socket-io server
+  server.on \connection, (socket) ->
+    session = {}
+    session-observer = patch.observe session
+    squash = ->
+      patch.generate session-observer
+    flush = ->
+      patches = patch.generate session-observer
+      info \FLUSH, JSON.stringify patches
+      socket.emit \session, patches
+    socket.on \session, ->
+      patch.apply session, it
+      squash!
+      for p in it
+        info p
+        pathmod = require fs.realpath-sync "./session#{p.path}.ls"
+        if p.op == \add
+          result = pathmod.self session
+        extend session, result
+        flush!
   info 'Serving on port', port
