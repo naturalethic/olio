@@ -16,7 +16,7 @@ require! \http
 require! 'socket.io': socket-io
 require! 'fast-json-patch': patch
 
-export watch = [ __filename, "#__dirname/../web/olio.ls" ]
+export watch = [ __filename, \session, "#__dirname/../web/olio.ls" ]
 
 olio.config.web ?= {}
 olio.config.web.app ?= 'test'

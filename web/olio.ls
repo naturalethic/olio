@@ -66,11 +66,12 @@ session-extend = ->
 register-component = (name, component) ->
   prototype = Object.create HTMLElement.prototype
   prototype.attached-callback = ->
-    @state = session: session
+    @state = @start!
     state-extend = ~>
       return false if not it
       extend @state, it
       true
+    info \RENDERING, this.tag-name, @state
     m.render this, (eval m.convert @view @state)
     s.merge @watch!
     .on-value ~>
