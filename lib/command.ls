@@ -10,6 +10,7 @@ require! \glob
 require! \co
 require! \harmony-reflect
 require! \deepmerge
+require! \deep-extend
 require! \livescript
 
 # -----------------------------------------------------------------------------
@@ -27,7 +28,8 @@ global <<< do
   fs:            fs <<< { path: path }
   glob:          glob
   livescript:    livescript
-  deepmerge:     deepmerge
+  merge:         deepmerge
+  extend:        deep-extend
   watcher:       chokidar
   Promise:       bluebird
   promise:       bluebird
@@ -113,16 +115,10 @@ if !(olio.task.1 and task = task-module[camelize olio.task.1.to-string!]) and !(
   process.exit!
 
 co-task = (task) ->*
-  # Initialize libraries
-  olio.lib = require-dir ...((glob.sync "#{process.cwd!}/node_modules/olio*/lib") ++ "#{process.cwd!}/lib")
-  for name, lib of olio.lib
-    lib.initialize and yield lib.initialize!
-    for n, l of olio.lib
-      if l != lib and !lib[n]
-        lib[n] = l
-  obj = ({} <<< task-module) <<< olio.lib
-  obj._task = task
-  yield obj._task!
+  # obj = ({} <<< task-module) <<< olio.lib
+  # obj._task = task
+  # yield obj._task!
+  yield task!
 
 # Provide watch capability to all tasks.
 if olio.option.watch and task-module.watch
