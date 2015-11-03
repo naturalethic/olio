@@ -143,6 +143,8 @@ register-component = (name, component) ->
       avals[i].on-value ~>
         if cursor = cursors[head akey]
           cursor.set (tail akey), it
+        else
+          session.root.set akey, it
     watchers = @watch!
     wkeys = keys watchers
     wvals = values watchers
