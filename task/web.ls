@@ -65,7 +65,7 @@ stitch = ->*
         if component.name == \index
           if prop = find (-> it.key.name == \style), it.properties
             it.properties.splice (it.properties.index-of prop), 1
-            style.push(stylus(prop.value.value).use(nib!).import(\nib).render!)
+            style.unshift(stylus(prop.value.value).use(nib!).import(\nib).render!)
           if prop = find (-> it.key.name == \view), it.properties
             it.properties.splice (it.properties.index-of prop), 1
             info 'Writing    -> public/index.html'
