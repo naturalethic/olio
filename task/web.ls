@@ -15,6 +15,7 @@ require! \node-static
 require! \http
 require! 'socket.io': socket-io
 require! 'fast-json-patch': patch
+require! \baobab
 
 export watch = [ __filename, \session, "#__dirname/../web/olio.ls" ]
 
@@ -159,22 +160,44 @@ export service = ->*
   server.listen port
   server = socket-io server
   server.on \connection, (socket) ->
-    session = {}
-    session-observer = patch.observe session
-    squash = ->
-      patch.generate session-observer
-    flush = ->
-      patches = patch.generate session-observer
-      info \FLUSH, JSON.stringify patches
-      socket.emit \session, patches
+    info 'New Connection'
+    session = new baobab do
+      route: 'login'
+      person:
+        identifier: 'foo'
+        secret: ''
+        authentic: false
+    socket.emit \session, (patch.compare {}, session.get!)
     socket.on \session, ->
-      patch.apply session, it
-      squash!
-      for p in it
-        info p
-        pathmod = require fs.realpath-sync "./session#{p.path}.ls"
-        if p.op == \add
-          result = pathmod.self session
-        extend session, result
-        flush!
+      info \RECV, it
+    # session-observer = patch.observe session
+    # squash = ->
+    #   patch.generate session-observer
+    # flush = ->
+    #   patches = patch.generate session-observer
+    #   info \FLUSH, JSON.stringify patches
+    #   socket.emit \session, patches
+    # socket.on \session, ->
+    #   patch.apply session, it
+    #   squash!
+    #   for p in it
+    #     info p
+    #     pathmod = require fs.realpath-sync "./session#{p.path}.ls"
+    #     if p.op == \add
+    #       result = pathmod.self session
+    #     extend session, result
+    #     flush!
   info 'Serving on port', port
+
+
+export test = ->*
+  # session = (new baobab session: {}).select \session
+  # session = session.set \foo, \bar
+  # info session.get!
+  session = new baobab { foo: {}, bar: {} } #, auto-commit: false
+  # session.set \foo, {}
+  # session.set \bar, {}
+  (session.watch [ \zap ]).on \update, -> info \WATCH, it
+  cursor = session.select <[ zap zip ]>
+  cursor.set \bim, \bam
+  info session.get!
