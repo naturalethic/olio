@@ -153,6 +153,8 @@ export web = ->*
 export service = ->*
   file = new node-static.Server './public'
   server = http.create-server (request, response) ->
+    if not fs.exists-sync "./public#{request.url}"
+      request.url = '/'
     request.add-listener \end, ->
       file.serve request, response
     .resume!
