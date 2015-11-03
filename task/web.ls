@@ -162,9 +162,9 @@ export service = ->*
   server.on \connection, (socket) ->
     info 'New Connection'
     session = new baobab do
-      route: 'login'
+      # route: 'login'
       person:
-        identifier: 'foo'
+        identifier: ''
         secret: ''
         authentic: false
     socket.emit \session, (patch.compare {}, session.get!)

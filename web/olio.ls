@@ -28,15 +28,26 @@ s.from-child-events = (target, query, event-name, transform = id) ->
 
 # History
 window.history = require \html5-history-api
-window.route = s.stream (emitter) ->
-  q window .on \load, ->
-    emitter.emit route: route.current!
-  q window .on \popstate, ->
-    emitter.emit route: route.current!
-route.current = ->
+current-route = ->
   /http(s)?\:\/\/[^\/]+\/(\#\/)?(.*)/.exec(history.location or window.location).3.replace(/\//g, '-')
-route.go = ->
-  history.push-state null, null, "#/#{it.replace(/\-/g, '/')}"
+# window.go = ->
+#   history.push-state null, null, "#/#{it.replace(/\-/g, '/')}"
+q window .on \load, ->
+  info current-route!
+  session.set \route, current-route!
+  # emitter.emit route: route.current!
+q window .on \popstate, ->
+  info current-route!
+  session.set \route, current-route!
+# window.route = s.stream (emitter) ->
+#   q window .on \load, ->
+#     info route.current!
+#     session.set \route, route.current!
+#     # emitter.emit route: route.current!
+#   q window .on \popstate, ->
+#     info route.current!
+#     session.set \route, route.current!
+#     # emitter.emit route: route.current!
 
 # THOUGHTS
 /*
@@ -70,6 +81,9 @@ socket.on \session, ->
   #   patch.generate session-observer
   #   if session-emitter
   #     session-emitter.emit session: session
+
+session.on \update, ->
+  info \SESSIONUP
 
 # window.session = (path) ->
 #   map =
