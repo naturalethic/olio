@@ -30,8 +30,8 @@ s.from-child-events = (target, query, event-name, transform = id) ->
 window.history = require \html5-history-api
 current-route = ->
   /http(s)?\:\/\/[^\/]+\/(\#\/)?(.*)/.exec(history.location or window.location).3.replace(/\//g, '-')
-# window.go = ->
-#   history.push-state null, null, "#/#{it.replace(/\-/g, '/')}"
+window.go = ->
+  history.push-state null, null, "#/#{it.replace(/\-/g, '/')}"
 q window .on \load, ->
   info current-route!
   session.set \route, current-route!
@@ -74,9 +74,11 @@ socket.on \session, ->
   #   patch.generate session-observer
   #   if session-emitter
   #     session-emitter.emit session: session
-session.root.start-recording 2
-session.on \update, ->
-  info \HISTORY, JSON.stringify session.root.get-history!
+session.root.start-recording 1
+session.root.on \update, ->
+  diff = patch.compare session.root.get-history!0, session.root.get!
+  info diff
+  socket.emit \session, diff if diff.length
 
 # window.session = (path) ->
 #   map =

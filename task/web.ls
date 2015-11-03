@@ -171,6 +171,26 @@ export service = ->*
     socket.emit \session, (patch.compare {}, session.get!)
     socket.on \session, ->
       info \RECV, it
+      new-session = session.serialize!
+      patch.apply new-session, it
+      session.deep-merge new-session
+    glob.sync 'session/**/*' |> each ->
+      session-module = require fs.realpath-sync it
+      keys session-module |> each (key) ->
+        cursor = session.select key
+        cursor.on \update, ->
+          return if not patch.compare(it.data.current-data, it.data.previous-data).length
+          info \UPDATE
+          sdata = session.root.serialize!
+          cdata = cursor.serialize!
+          session-module[key] sdata, cdata
+          session.root.deep-merge sdata
+          cursor.deep-merge cdata
+    session.root.start-recording 1
+    session.root.on \update, ->
+      diff = patch.compare session.root.get-history!0, session.root.get!
+      info \EMIT, diff
+      socket.emit \session, diff if diff.length
     # session-observer = patch.observe session
     # squash = ->
     #   patch.generate session-observer
