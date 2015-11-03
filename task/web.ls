@@ -16,11 +16,11 @@ require! \http
 require! 'socket.io': socket-io
 require! 'fast-json-patch': patch
 require! \baobab
+require! \rethinkdbdash
 
 export watch = [ __filename, \session.ls, \session, "#__dirname/../web/olio.ls" ]
 
-olio.config.web ?= {}
-olio.config.web.app ?= 'test'
+r = (olio.config.db and (rethinkdbdash olio.config.db{host}).db(olio.config.db.name)) or null
 
 compile-snippet = ->
   it = livescript.compile (camelize it), { +bare, -header } .slice 0, -1
@@ -128,7 +128,7 @@ setup-bundler = ->*
       return info err if err
       fs.write-file-sync 'public/index.js', buf
       info "--- Done in #{(Date.now! - bundler.time) / 1000} seconds ---"
-      node-notifier.notify title: (inflection.capitalize olio.config.web.app), message: "Site Rebuilt: #{(Date.now! - bundler.time) / 1000}s"
+      node-notifier.notify title: \Olio, message: "Site Rebuilt: #{(Date.now! - bundler.time) / 1000}s"
       process.exit 0 if olio.option.exit
   bundler.on \update, bundle
   bundler.build = ->*
