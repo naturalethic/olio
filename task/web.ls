@@ -164,12 +164,6 @@ export service = ->*
   server.on \connection, (socket) ->
     info 'New Connection'
     session = new baobab require fs.realpath-sync './session.ls'
-    # session = new baobab do
-    #   # route: 'login'
-    #   person:
-    #     identifier: ''
-    #     secret: ''
-    #     authentic: false
     socket.emit \session, (patch.compare {}, session.get!)
     socket.on \session, ->
       info \RECV, it
@@ -182,7 +176,6 @@ export service = ->*
         cursor = session.select key
         cursor.on \update, ->
           return if not patch.compare(it.data.current-data, it.data.previous-data).length
-          info \UPDATE
           sdata = session.root.serialize!
           cdata = cursor.serialize!
           session-module[key] sdata, cdata
@@ -193,34 +186,4 @@ export service = ->*
       diff = patch.compare session.root.get-history!0, session.root.get!
       info \EMIT, diff
       socket.emit \session, diff if diff.length
-    # session-observer = patch.observe session
-    # squash = ->
-    #   patch.generate session-observer
-    # flush = ->
-    #   patches = patch.generate session-observer
-    #   info \FLUSH, JSON.stringify patches
-    #   socket.emit \session, patches
-    # socket.on \session, ->
-    #   patch.apply session, it
-    #   squash!
-    #   for p in it
-    #     info p
-    #     pathmod = require fs.realpath-sync "./session#{p.path}.ls"
-    #     if p.op == \add
-    #       result = pathmod.self session
-    #     extend session, result
-    #     flush!
   info 'Serving on port', port
-
-
-export test = ->*
-  # session = (new baobab session: {}).select \session
-  # session = session.set \foo, \bar
-  # info session.get!
-  session = new baobab { foo: {}, bar: {} } #, auto-commit: false
-  # session.set \foo, {}
-  # session.set \bar, {}
-  (session.watch [ \zap ]).on \update, -> info \WATCH, it
-  cursor = session.select <[ zap zip ]>
-  cursor.set \bim, \bam
-  info session.get!
