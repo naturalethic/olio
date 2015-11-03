@@ -139,13 +139,20 @@ register-component = (name, component) ->
     appliers = @apply!
     akeys = keys appliers
     avals = values appliers
-    [0 til akeys.length] |> each (i) ->
+    [0 til akeys.length] |> each (i) ~>
       akey = akeys[i].split \.
-      avals[i].on-value ~>
-        if cursor = cursors[head akey]
-          cursor.set (tail akey), it
+      if typeof! avals[i] != \Array
+        avals[i] = [ avals[i] ]
+      avals[i] |> each (aval) ~>
+        if akey.0 is \react
+          aval.on-value ~>
+            @react it
         else
-          session.root.set akey, it
+          aval.on-value ~>
+            if cursor = cursors[head akey]
+              cursor.set (tail akey), it
+            else
+              session.root.set akey, it
     watchers = @watch!
     wkeys = keys watchers
     wvals = values watchers
