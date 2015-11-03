@@ -17,7 +17,7 @@ require! 'socket.io': socket-io
 require! 'fast-json-patch': patch
 require! \baobab
 
-export watch = [ __filename, \session, "#__dirname/../web/olio.ls" ]
+export watch = [ __filename, \session.ls, \session, "#__dirname/../web/olio.ls" ]
 
 olio.config.web ?= {}
 olio.config.web.app ?= 'test'
@@ -161,12 +161,13 @@ export service = ->*
   server = socket-io server
   server.on \connection, (socket) ->
     info 'New Connection'
-    session = new baobab do
-      # route: 'login'
-      person:
-        identifier: ''
-        secret: ''
-        authentic: false
+    session = new baobab require fs.realpath-sync './session.ls'
+    # session = new baobab do
+    #   # route: 'login'
+    #   person:
+    #     identifier: ''
+    #     secret: ''
+    #     authentic: false
     socket.emit \session, (patch.compare {}, session.get!)
     socket.on \session, ->
       info \RECV, it

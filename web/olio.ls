@@ -49,13 +49,6 @@ q window .on \popstate, ->
 #     session.set \route, route.current!
 #     # emitter.emit route: route.current!
 
-# THOUGHTS
-/*
- Look to use immutable, with immutable diff/patch.  Components can watch state paths x.y.z ---
-  -- return result replaces that state at the path?
-
- */
-
 # Session
 require! 'socket.io-client': socket-io
 require! 'fast-json-patch/dist/json-patch-duplex.min': patch
@@ -81,9 +74,9 @@ socket.on \session, ->
   #   patch.generate session-observer
   #   if session-emitter
   #     session-emitter.emit session: session
-
+session.root.start-recording 2
 session.on \update, ->
-  info \SESSIONUP
+  info \HISTORY, JSON.stringify session.root.get-history!
 
 # window.session = (path) ->
 #   map =
@@ -143,22 +136,15 @@ register-component = (name, component) ->
     akeys = keys appliers
     avals = values appliers
     [0 til akeys.length] |> each (i) ->
-      info \AKEY, i
       akey = akeys[i].split \.
       avals[i].on-value ~>
-        info \CURS, akeys[i], it
-        info cursors
-        info head akey
         if cursor = cursors[head akey]
-          info cursor
           cursor.set (tail akey), it
       # appliers[key] = appliers[key].map -> (key): it
     watchers = @watch!
     wkeys = keys watchers
     wvals = values watchers
-    info \WVALS,wvals
     [0 til wkeys.length] |> each (i) ->
-      info \ADDCURS, wkeys[i], wvals[i].cursor
       cursors[wkeys[i]] = wvals[i].cursor
       wvals[i] = wvals[i].stream.map -> (wkeys[i]): it
     s.merge wvals
