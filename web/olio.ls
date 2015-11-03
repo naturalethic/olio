@@ -26,29 +26,6 @@ s.from-child-events = (target, query, event-name, transform = id) ->
     q target .on event-name, query, handler
     -> q target .off event-name, query, handler
 
-# History
-window.history = require \html5-history-api
-current-route = ->
-  /http(s)?\:\/\/[^\/]+\/(\#\/)?(.*)/.exec(history.location or window.location).3.replace(/\//g, '-')
-window.go = ->
-  history.push-state null, null, "#/#{it.replace(/\-/g, '/')}"
-q window .on \load, ->
-  info current-route!
-  session.set \route, current-route!
-  # emitter.emit route: route.current!
-q window .on \popstate, ->
-  info current-route!
-  session.set \route, current-route!
-# window.route = s.stream (emitter) ->
-#   q window .on \load, ->
-#     info route.current!
-#     session.set \route, route.current!
-#     # emitter.emit route: route.current!
-#   q window .on \popstate, ->
-#     info route.current!
-#     session.set \route, route.current!
-#     # emitter.emit route: route.current!
-
 # Session
 require! 'socket.io-client': socket-io
 require! 'fast-json-patch/dist/json-patch-duplex.min': patch
@@ -117,6 +94,31 @@ window.session = (path) ->
 #   socket.emit \session, patches
 #   true
 
+# History
+window.history = require \html5-history-api
+current-route = ->
+  /http(s)?\:\/\/[^\/]+\/(\#\/)?(.*)/.exec(history.location or window.location).3.replace(/\//g, '-')
+window.go = ->
+  history.push-state null, null, "#/#{it.replace(/\-/g, '/')}"
+q window .on \load, ->
+  info current-route!
+  session.set \route, current-route!
+  # emitter.emit route: route.current!
+q window .on \popstate, ->
+  info current-route!
+  session.set \route, current-route!
+session.select \route
+.on \update, ->
+  go session.root.get \route
+# window.route = s.stream (emitter) ->
+#   q window .on \load, ->
+#     info route.current!
+#     session.set \route, route.current!
+#     # emitter.emit route: route.current!
+#   q window .on \popstate, ->
+#     info route.current!
+#     session.set \route, route.current!
+#     # emitter.emit route: route.current!
 
 
 register-component = (name, component) ->
@@ -134,7 +136,6 @@ register-component = (name, component) ->
     # m.render this, (eval m.convert @view @state)
     m.render this, (eval m.convert @view state)
     appliers = @apply!
-
     akeys = keys appliers
     avals = values appliers
     [0 til akeys.length] |> each (i) ->
@@ -142,7 +143,6 @@ register-component = (name, component) ->
       avals[i].on-value ~>
         if cursor = cursors[head akey]
           cursor.set (tail akey), it
-      # appliers[key] = appliers[key].map -> (key): it
     watchers = @watch!
     wkeys = keys watchers
     wvals = values watchers

@@ -65,7 +65,7 @@ stitch = ->*
         if component.name == \index
           if prop = find (-> it.key.name == \style), it.properties
             it.properties.splice (it.properties.index-of prop), 1
-            style.unshift(stylus(prop.value.value).use(nib!).import(\nib).render!)
+            style.unshift(stylus(prop.value.value).use(nib!).import(\nib).render!) if prop.value.value.trim!
           if prop = find (-> it.key.name == \view), it.properties
             it.properties.splice (it.properties.index-of prop), 1
             info 'Writing    -> public/index.html'
@@ -73,7 +73,7 @@ stitch = ->*
           continue
         if prop = find (-> it.key.name == \style), it.properties
           it.properties.splice (it.properties.index-of prop), 1
-          style.push(stylus(indent-source state.component.name, prop.value.value).use(nib!).import(\nib).render!)
+          style.push(stylus(indent-source state.component.name, prop.value.value).use(nib!).import(\nib).render!) if prop.value.value.trim!
         if prop = find (-> it.key.name == \view), it.properties
           view = esprima.parse jade.compile-client(prop.value.value, pretty: true).to-string!replace(/(^|\s)\s*\/\/.*$/gm, '').split(/\s+/m).join(' ')
           prop.value =
