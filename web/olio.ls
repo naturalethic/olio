@@ -97,7 +97,7 @@ window.session = (path) ->
 # History
 window.history = require \html5-history-api
 current-route = ->
-  /http(s)?\:\/\/[^\/]+\/(\#\/)?(.*)/.exec(history.location or window.location).3.replace(/\//g, '-')
+  /http(s)?\:\/\/[^\/]+\/([^\?\#]*)/.exec(history.location or window.location).2.replace(/\//g, '-')
 window.go = ->
   # history.push-state null, null, "#/#{it.replace(/\-/g, '/')}"
   history.push-state null, null, "#{it.replace(/\-/g, '/')}"
