@@ -173,9 +173,12 @@ export service = ->*
   server.on \connection, (socket) ->
     info 'New Connection'
     session = new baobab require fs.realpath-sync './session.ls'
+    info 'Initializing session', session.serialize!
     socket.emit \session, (patch.compare {}, session.get!)
+    receive-last = []
     socket.on \session, ->
       info \RECV, it
+      receive-last := it |> map -> JSON.stringify it
       new-session = session.serialize!
       patch.apply new-session, it
       session.deep-merge new-session
@@ -211,7 +214,10 @@ export service = ->*
       )!
     session.root.start-recording 1
     session.root.on \update, ->
+      # Don't send session changes that were just received from client
       diff = patch.compare session.root.get-history!0, session.root.get!
+      |> filter -> JSON.stringify(it) not in receive-last
+      receive-last := []
       if diff.length
         info \EMIT, diff
         socket.emit \session, diff if diff.length

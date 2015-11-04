@@ -33,9 +33,11 @@ require! 'baobab'
 socket = socket-io!
 session = new baobab
 receive-count = 0
+receive-last = []
 socket.on \session, ->
   new-session = session.serialize!
   patch.apply new-session, it
+  receive-last := it |> map -> JSON.stringify it
   session.deep-merge new-session
   # Load the session only after we have received the initial stuff
   if not receive-count
@@ -43,10 +45,16 @@ socket.on \session, ->
       session.set \id, id
   receive-count := receive-count + 1
   info \SESSION, receive-count, session.get!
+
 session.root.start-recording 1
 session.root.on \update, ->
+  # Don't send session changes that were just received from server
   diff = patch.compare session.root.get-history!0, session.root.get!
-  socket.emit \session, diff if diff.length
+  |> filter -> JSON.stringify(it) not in receive-last
+  receive-last := []
+  if diff.length
+    info \EMIT, diff
+    socket.emit \session, diff if diff.length
 session.select \id
 .on \update, ->
   return if not it.data.current-data
@@ -68,7 +76,7 @@ window.history = require \html5-history-api
 current-route = ->
   /http(s)?\:\/\/[^\/]+\/([^\?\#]*)/.exec(history.location or window.location).2.replace(/\//g, '-')
 window.go = ->
-  if current-route! != it
+  if it and current-route! != it
     history.push-state null, null, "#{it.replace(/\-/g, '/')}"
 q window .on \load, ->
   session.set \route, current-route!
