@@ -41,6 +41,12 @@ session.root.start-recording 1
 session.root.on \update, ->
   diff = patch.compare session.root.get-history!0, session.root.get!
   socket.emit \session, diff if diff.length
+session.select \id
+.on \update, ->
+  return if not it.data.current-data
+  session-storage.set-item \id, it.data.current-data
+if id = session-storage.get-item \id
+  session.set \id, id
 
 window.session = (path) ->
   map =
