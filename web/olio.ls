@@ -79,6 +79,8 @@ window.go = ->
   if (it == '' or it) and current-route! != it
     info "Routing to: '#it'"
     history.push-state null, null, "/#{it.replace(/\-/g, '/')}"
+window.route = ->
+  session.root.set \route, it
 q window .on \load, ->
   session.set \route, current-route!
 q window .on \popstate, ->
