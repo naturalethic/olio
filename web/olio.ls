@@ -125,6 +125,7 @@ register-component = (name, component) ->
       if (patch.compare old-state, state).length
         info \RENDERING, this.tag-name, state
         m.render this, (eval m.convert @view state)
+        @react watch: state
     @ready!
   prototype <<< do
     event: (query, name, transform) -> s.from-child-events this, query, name, transform
