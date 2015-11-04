@@ -76,8 +76,9 @@ window.history = require \html5-history-api
 current-route = ->
   /http(s)?\:\/\/[^\/]+\/([^\?\#]*)/.exec(history.location or window.location).2.replace(/\//g, '-')
 window.go = ->
-  if it and current-route! != it
-    history.push-state null, null, "#{it.replace(/\-/g, '/')}"
+  if (it == '' or it) and current-route! != it
+    info "Routing to: '#it'"
+    history.push-state null, null, "/#{it.replace(/\-/g, '/')}"
 q window .on \load, ->
   session.set \route, current-route!
 q window .on \popstate, ->
