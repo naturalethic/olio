@@ -125,7 +125,6 @@ register-component = (name, component) ->
       wvals[i] = wvals[i].stream.map -> (wkeys[i]): it
     s.merge wvals
     .on-value ~>
-      info \WATCH, it
       old-state = {} <<< state
       state <<< it
       if (patch.compare old-state, state).length
