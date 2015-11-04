@@ -189,9 +189,10 @@ export service = ->*
         return if key is \r
         session-module[key] = co.wrap(session-module[key])
         session-module[key].bind session-module
-        cursor = session.select key
+        cursor = session.select (dasherize key).split \-
         cursor.on \update, ->
-          return if not patch.compare(it.data.current-data, it.data.previous-data).length
+          return if not it.data.current-data
+          return if it.data.previous-data and !patch.compare(it.data.current-data, it.data.previous-data).length
           sdata = session.root.serialize!
           cdata = cursor.serialize!
           session-module[key] sdata, cdata
@@ -245,8 +246,8 @@ export seed = ->*
       yield r.table(key).insert { id: uuid } <<< item
   process.exit!
 
-export sessions = ->*
+export list = ->*
   r = rethinkdbdash olio.config.db{host}
   r = r.db olio.config.db.name
-  info yield r.table(\session)
+  info yield r.table(olio.task.2)
   process.exit!

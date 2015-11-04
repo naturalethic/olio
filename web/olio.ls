@@ -89,11 +89,14 @@ session.select \route
 .on \update, ->
   go session.root.get \route
 
+# Disable all form submits
+q document.body .on \submit, \form, false
+
 register-component = (name, component) ->
   prototype = Object.create HTMLElement.prototype
   self = null
   prototype.attached-callback = ->
-    state = {}
+    state = @start!
     cursors = {}
     info \RENDERING, this.tag-name, state
     m.render this, (eval m.convert @view state)
@@ -122,6 +125,7 @@ register-component = (name, component) ->
       wvals[i] = wvals[i].stream.map -> (wkeys[i]): it
     s.merge wvals
     .on-value ~>
+      info \WATCH, it
       old-state = {} <<< state
       state <<< it
       if (patch.compare old-state, state).length
@@ -131,9 +135,11 @@ register-component = (name, component) ->
     @ready!
   prototype <<< do
     event: (query, name, transform) -> s.from-child-events this, query, name, transform
+    event-value: (query, name) -> s.from-child-events this, query, name, -> q it.target .val!
     ready: ->
     watch: -> {}
     apply: -> null
     react: -> null
+    start: -> {}
   prototype <<< component
   document.register-element name, prototype: prototype
