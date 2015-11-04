@@ -203,10 +203,10 @@ export service = ->*
         info \IDCHANGE, event.data.previous-data, event.data.current-data
         record = first (yield r.table(\session).filter(id: session.get(\id)))
         if record
-          info \LOADINGSESSION, record
-          session.deep-merge record
-        else
-          info \SAVINGSESSION, session.serialize!
+          info \LOAD-SESSION, record
+          session.set record
+        else if session.get \persistent
+          info \INSERT-SESSION, session.serialize!
           yield r.table(\session).insert session.serialize!
       )!
     session.root.start-recording 1
@@ -215,8 +215,8 @@ export service = ->*
       if diff.length
         info \EMIT, diff
         socket.emit \session, diff if diff.length
-        if id = session.get \id
-          info \SAVINGSESSION
+        if (id = session.get \id) and session.get \persistent
+          info \UPDATE-SESSION, session.serialize!
           r.table(\session).get(id).update(session.serialize!).run!
 
 export seed = ->*
