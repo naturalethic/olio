@@ -216,14 +216,14 @@ export service = ->*
     session.root.on \update, ->
       # Don't send session changes that were just received from client
       diff = patch.compare session.root.get-history!0, session.root.get!
-      |> filter -> JSON.stringify(it) not in receive-last
+      if diff.length and (id = session.get \id) and session.get \persistent
+        info \UPDATE-SESSION, session.serialize!
+        r.table(\session).get(id).update(session.serialize!).run!
+      diff = diff |> filter -> JSON.stringify(it) not in receive-last
       receive-last := []
       if diff.length
         info \EMIT, diff
         socket.emit \session, diff if diff.length
-      if (id = session.get \id) and session.get \persistent
-        info \UPDATE-SESSION, session.serialize!
-        r.table(\session).get(id).update(session.serialize!).run!
 
 export seed = ->*
   r = null
