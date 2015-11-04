@@ -17,10 +17,9 @@ require! 'socket.io': socket-io
 require! 'fast-json-patch': patch
 require! \baobab
 require! \rethinkdbdash
+require! \co
 
 export watch = [ __filename, \session.ls, \session, "#__dirname/../web/olio.ls" ]
-
-r = (olio.config.db and (rethinkdbdash olio.config.db{host}).db(olio.config.db.name)) or null
 
 compile-snippet = ->
   it = livescript.compile (camelize it), { +bare, -header } .slice 0, -1
@@ -151,6 +150,16 @@ export web = ->*
   co bundler.build
 
 export service = ->*
+  try
+    r = null
+    r = rethinkdbdash olio.config.db{host}
+    if olio.config.db.name not in (yield r.db-list!)
+      info "Creating database '#{olio.config.db.name}'"
+      yield r.db-create olio.config.db.name
+    r = r.db olio.config.db.name
+    for table in  difference olio.config.db.tables, (yield r.table-list!)
+      info "Creating table '#table'"
+      yield r.table-create table
   file = new node-static.Server './public'
   server = http.create-server (request, response) ->
     if not fs.exists-sync "./public#{request.url}"
@@ -172,18 +181,44 @@ export service = ->*
       session.deep-merge new-session
     glob.sync 'session/**/*' |> each ->
       session-module = require fs.realpath-sync it
+      session-module.r = r
       keys session-module |> each (key) ->
+        return if key is \r
+        session-module[key] = co.wrap(session-module[key])
+        session-module[key].bind session-module
         cursor = session.select key
         cursor.on \update, ->
           return if not patch.compare(it.data.current-data, it.data.previous-data).length
           sdata = session.root.serialize!
           cdata = cursor.serialize!
           session-module[key] sdata, cdata
-          session.root.deep-merge sdata
-          cursor.deep-merge cdata
+          .then ->
+            session.root.deep-merge sdata
+            cursor.deep-merge cdata
     session.root.start-recording 1
     session.root.on \update, ->
       diff = patch.compare session.root.get-history!0, session.root.get!
       info \EMIT, diff
       socket.emit \session, diff if diff.length
   info 'Serving on port', port
+
+export seed = ->*
+  try
+    r = null
+    r = rethinkdbdash olio.config.db{host}
+    try
+      yield r.db-drop olio.config.db.name
+    if olio.config.db.name not in (yield r.db-list!)
+      info "Creating database '#{olio.config.db.name}'"
+      yield r.db-create olio.config.db.name
+    r = r.db olio.config.db.name
+    for table in  difference olio.config.db.tables, (yield r.table-list!)
+      info "Creating table '#table'"
+      yield r.table-create table
+    seed = require fs.realpath-sync './seed.ls'
+    for key, val of seed
+      for item in val
+        uuid = yield r._r.uuid!
+        info "Adding '#key' #uuid"
+        yield r.table(key).insert { id: uuid } <<< item
+    process.exit!
