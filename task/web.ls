@@ -221,9 +221,9 @@ export service = ->*
       if diff.length
         info \EMIT, diff
         socket.emit \session, diff if diff.length
-        if (id = session.get \id) and session.get \persistent
-          info \UPDATE-SESSION, session.serialize!
-          r.table(\session).get(id).update(session.serialize!).run!
+      if (id = session.get \id) and session.get \persistent
+        info \UPDATE-SESSION, session.serialize!
+        r.table(\session).get(id).update(session.serialize!).run!
 
 export seed = ->*
   r = null
