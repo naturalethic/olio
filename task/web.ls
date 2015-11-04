@@ -191,7 +191,7 @@ export service = ->*
         session-module[key].bind session-module
         cursor = session.select (dasherize key).split \-
         cursor.on \update, ->
-          return if not it.data.current-data
+          return if it.data.current-data is undefined
           return if it.data.previous-data and !patch.compare(it.data.current-data, it.data.previous-data).length
           sdata = session.root.serialize!
           cdata = cursor.serialize!
@@ -202,16 +202,21 @@ export service = ->*
     session.select \id
     .on \update, (event) ->
       (co.wrap ->*
-        return if not session.get(\id)
+        id = session.get \id
+        return if id is undefined
         return if event.data.previous-data == event.data.current-data
         info \IDCHANGE, event.data.previous-data, event.data.current-data
-        record = first (yield r.table(\session).filter(id: session.get(\id)))
-        if record
-          info \LOAD-SESSION, record
-          session.set record
-        else if session.get \persistent
-          info \INSERT-SESSION, session.serialize!
-          yield r.table(\session).insert session.serialize!
+        if id
+          record = first (yield r.table(\session).filter(id: session.get(\id)))
+          if record
+            info \LOAD-SESSION, record
+            session.set record
+          else if session.get \persistent
+            info \INSERT-SESSION, session.serialize!
+            yield r.table(\session).insert session.serialize!
+        else if event.data.previous-data
+          session.root.set <[ person authentic ]>, false
+          yield r.table(\session).get(event.data.previous-data).delete!
       )!
     session.root.start-recording 1
     session.root.on \update, ->
