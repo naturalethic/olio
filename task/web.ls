@@ -74,7 +74,7 @@ stitch = ->*
           it.properties.splice (it.properties.index-of prop), 1
           style.push(stylus(indent-source state.component.name, prop.value.value).use(nib!).import(\nib).render!) if prop.value.value.trim!
         if prop = find (-> it.key.name == \view), it.properties
-          view = esprima.parse jade.compile-client(prop.value.value, pretty: true).to-string!replace(/(^|\s)\s*\/\/.*$/gm, '').split(/\s+/m).join(' ')
+          view = esprima.parse jade.compile-client(prop.value.value)
           prop.value =
             type: 'FunctionExpression'
             id: null
