@@ -39,7 +39,7 @@ require! 'socket.io-client': socket-io
 require! 'fast-json-patch/dist/json-patch-duplex.min': patch
 require! 'baobab'
 socket = socket-io!
-session = new baobab
+window.$session = session = new baobab
 receive-count = 0
 receive-last = []
 socket.on \session, ->
