@@ -89,6 +89,7 @@ stitch = ->*
   # info script.join '\n'
   # info '\nJAVASCRIPT'
   # info livescript.compile(script.join('\n'), { -header})
+  script.unshift "window.config = #{JSON.stringify olio.config.web}"
   info 'Writing    -> tmp/index.ls'
   fs.write-file-sync \tmp/index.ls, script.join('\n')
   info 'Writing    -> tmp/index.js'
