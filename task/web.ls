@@ -64,7 +64,7 @@ stitch = ->*
         if component.name == \index
           if prop = find (-> it.key.name == \style), it.properties
             it.properties.splice (it.properties.index-of prop), 1
-            style.unshift(stylus(prop.value.value).use(nib!).import(\nib).render!) if prop.value.value.trim!
+            style.unshift(prop.value.value.trim!)
           if prop = find (-> it.key.name == \view), it.properties
             it.properties.splice (it.properties.index-of prop), 1
             info 'Writing    -> public/index.html'
@@ -72,7 +72,7 @@ stitch = ->*
           continue
         if prop = find (-> it.key.name == \style), it.properties
           it.properties.splice (it.properties.index-of prop), 1
-          style.push(stylus(indent-source state.component.name, prop.value.value).use(nib!).import(\nib).render!) if prop.value.value.trim!
+          style.push(indent-source state.component.name, prop.value.value.trim!)
         if prop = find (-> it.key.name == \view), it.properties
           view = esprima.parse jade.compile-client(prop.value.value)
           prop.value =
@@ -96,7 +96,9 @@ stitch = ->*
   # XXX: chop out livescript utilities from this compile output
   fs.write-file-sync \tmp/index.js, livescript.compile(script.join('\n'), { -header })
   info 'Writing    -> tmp/index.css'
-  fs.write-file-sync \tmp/index.css, style.join('\n')
+  style = style.join '\n'
+  fs.write-file-sync \tmp/index.styl, style
+  fs.write-file-sync \tmp/index.css, stylus(style).use(nib!).import(\nib).render!
 
 setup-bundler = ->*
   no-parse = []
