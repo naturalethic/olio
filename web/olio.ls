@@ -86,8 +86,8 @@ window.go = ->
   if (it == '' or it) and current-route! != it
     info "Routing to: '#it'"
     history.push-state null, null, "/#{it.replace(/\-/g, '/')}"
-window.route = ->
-  session.root.set \route, it
+# window.route = ->
+#   session.root.set \route, it
 q window .on \load, ->
   session.set \route, current-route!
 q window .on \popstate, ->
@@ -103,9 +103,17 @@ register-component = (name, component) ->
   prototype = Object.create HTMLElement.prototype
   self = null
   prototype.attached-callback = ->
-    state = @start!
+    merge-state = ~>
+      for key, cursor of cursors
+        if state[key]?
+          cursor = cursor.up!
+          object = { (key): state[key] }
+          if cursor.get! is void
+            cursor.set {}
+          cursor.deep-merge object
+    state = @state!
     cursors = {}
-    info \RENDERING, this.tag-name, state
+    info \FIRST-RENDERING, this.tag-name, state
     m.render this, (eval m.convert @view state)
     # Appliers
     appliers = @apply state
@@ -119,6 +127,7 @@ register-component = (name, component) ->
         if akey.0 is \react
           aval.on-value ~>
             @react state, it
+            merge-state!
         else
           aval.on-value ~>
             if cursor = cursors[head akey]
@@ -132,19 +141,21 @@ register-component = (name, component) ->
     [0 til wkeys.length] |> each (i) ->
       cursors[wkeys[i]] = wvals[i].cursor
       wvals[i] = wvals[i].stream.map -> (wkeys[i]): it
-      if state[wkeys[i]]?
-        cursor = cursors[wkeys[i]].up!
-        object = { (wkeys[i]): state[wkeys[i]] }
-        if cursor.get! is void
-          cursor.set {}
-        cursor.deep-merge object
+    merge-state!
+      # if state[wkeys[i]]?
+      #   cursor = cursors[wkeys[i]].up!
+      #   object = { (wkeys[i]): state[wkeys[i]] }
+      #   if cursor.get! is void
+      #     cursor.set {}
+      #   cursor.deep-merge object
     @$watch-on-value = ~>
       old-state = {} <<< state
       state <<< it
       if (patch.compare old-state, state).length
-        info \RENDERING, this.tag-name, state
+        info \RE-RENDERING, this.tag-name, state
         m.render this, (eval m.convert @view state)
         @react state, it
+        merge-state!
     @$watch-merge = s.merge wvals
     @$watch-merge.on-value @$watch-on-value
     @ready!
@@ -159,6 +170,6 @@ register-component = (name, component) ->
     watch: -> {}
     apply: -> null
     react: -> null
-    start: -> {}
+    state: -> {}
   prototype <<< component
   document.register-element name, prototype: prototype
