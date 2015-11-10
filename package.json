@@ -17,6 +17,7 @@
     "url": "git://github.com/naturalethic/olio"
   },
   "dependencies": {
+    "atomify-css": "^3.3.5",
     "baobab": "^2.1.0",
     "bluebird": "^2.9.24",
     "browserify": "^11.2.0",

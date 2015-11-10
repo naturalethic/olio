@@ -3,7 +3,6 @@ window.q = require \jquery
 window.merge  = require \deepmerge
 window.extend = q.extend
 
-require './index.css'
 window <<< require 'prelude-ls'
 require \livescript-utilities
 if console.log.apply
@@ -13,7 +12,7 @@ else
 
 window <<< do
   is-array:     -> typeof! it is \Array
-  is-function:   -> typeof! it is \Function
+  is-function:  -> typeof! it is \Function
   is-number:    -> typeof! it is \Number
   is-object:    -> typeof! it is \Object
   is-string:    -> typeof! it is \String

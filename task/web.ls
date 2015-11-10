@@ -1,7 +1,6 @@
 require! \stylus
 require! \nib
 require! \browserify
-require! \browserify-css
 require! \inflection
 require! \livescript
 require! \node-notifier
@@ -95,10 +94,15 @@ stitch = ->*
   info 'Writing    -> tmp/index.js'
   # XXX: chop out livescript utilities from this compile output
   fs.write-file-sync \tmp/index.js, livescript.compile(script.join('\n'), { -header })
-  info 'Writing    -> tmp/index.css'
+  info 'Writing    -> tmp/index.styl'
   style = style.join '\n'
   fs.write-file-sync \tmp/index.styl, style
-  fs.write-file-sync \tmp/index.css, stylus(style).use(nib!).import(\nib).render!
+  info 'Writing    -> public/index.css'
+  style = stylus(style)
+  style.use(nib!).import(\nib)
+  style.get('paths').push \tmp
+  style.set 'include css', true
+  fs.write-file-sync \public/index.css, style.render!
 
 setup-bundler = ->*
   no-parse = []
@@ -113,15 +117,6 @@ setup-bundler = ->*
     detect-globals: false
     cache: {}
     package-cache: {}
-  }
-  bundler
-  .transform browserify-css, {
-    auto-inject-options: { verbose: false }
-    process-relative-url: (url) ->
-      path = /([^\#\?]*)/.exec(url).1
-      base = fs.path.basename path
-      exec "cp #path public/#base"
-      "#base"
   }
   bundle = ->
     info 'Browserify -> public/index.js'
