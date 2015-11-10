@@ -107,6 +107,7 @@ register-component = (name, component) ->
     cursors = {}
     info \RENDERING, this.tag-name, state
     m.render this, (eval m.convert @view state)
+    # Appliers
     appliers = @apply state
     akeys = keys appliers
     avals = values appliers
@@ -124,12 +125,19 @@ register-component = (name, component) ->
               cursor.set (tail akey), it
             else
               session.root.set akey, it
+    # Watchers
     watchers = @watch!
     wkeys = keys watchers
     wvals = values watchers
     [0 til wkeys.length] |> each (i) ->
       cursors[wkeys[i]] = wvals[i].cursor
       wvals[i] = wvals[i].stream.map -> (wkeys[i]): it
+      if state[wkeys[i]]?
+        cursor = cursors[wkeys[i]].up!
+        object = { (wkeys[i]): state[wkeys[i]] }
+        if cursor.get! is void
+          cursor.set {}
+        cursor.deep-merge object
     s.merge wvals
     .on-value ~>
       old-state = {} <<< state
