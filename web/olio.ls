@@ -11,6 +11,14 @@ if console.log.apply
 else
   <[ log info warn error ]> |> each (key) -> window[key] = console[key]
 
+window <<< do
+  is-array:     -> typeof! it is \Array
+  is-function:   -> typeof! it is \Function
+  is-number:    -> typeof! it is \Number
+  is-object:    -> typeof! it is \Object
+  is-string:    -> typeof! it is \String
+  is-undefined: -> typeof! it is \Undefined
+
 # Templates
 require 'webcomponents.js'
 window.jade = require 'jade/runtime'
