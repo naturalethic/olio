@@ -36,9 +36,11 @@ global <<< do
   promisify:     bluebird.promisify
   promisify-all: bluebird.promisify-all
   is-array:      -> typeof! it is \Array
-  is-object:     -> typeof! it is \Object
-  is-number:     -> typeof! it is \Number
   is-function:   -> typeof! it is \Function
+  is-number:     -> typeof! it is \Number
+  is-object:     -> typeof! it is \Object
+  is-string:     -> typeof! it is \String
+  is-undefined:  -> typeof! it is \Undefined
 
 global.require-dir = ->
   return fold1 (<<<), (& |> map -> require-dir it) if &.length > 1
