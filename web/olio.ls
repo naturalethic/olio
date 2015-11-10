@@ -118,7 +118,7 @@ register-component = (name, component) ->
       avals[i] |> each (aval) ~>
         if akey.0 is \react
           aval.on-value ~>
-            @react it
+            @react state, it
         else
           aval.on-value ~>
             if cursor = cursors[head akey]
@@ -144,7 +144,7 @@ register-component = (name, component) ->
       if (patch.compare old-state, state).length
         info \RENDERING, this.tag-name, state
         m.render this, (eval m.convert @view state)
-        @react watch: state
+        @react state, it
     @$watch-merge = s.merge wvals
     @$watch-merge.on-value @$watch-on-value
     @ready!
