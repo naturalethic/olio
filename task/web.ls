@@ -71,7 +71,7 @@ stitch = ->*
           continue
         if prop = find (-> it.key.name == \style), it.properties
           it.properties.splice (it.properties.index-of prop), 1
-          style.push(indent-source state.component.name, prop.value.value.trim!)
+          style.push(indent-source state.component.name, prop.value.value.trim!) if prop.value.value.trim!
         if prop = find (-> it.key.name == \view), it.properties
           view = esprima.parse jade.compile-client(prop.value.value)
           prop.value =
