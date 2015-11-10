@@ -108,7 +108,7 @@ register-component = (name, component) ->
     cursors = {}
     info \RENDERING, this.tag-name, state
     m.render this, (eval m.convert @view state)
-    appliers = @apply!
+    appliers = @apply state
     akeys = keys appliers
     avals = values appliers
     [0 til akeys.length] |> each (i) ~>
