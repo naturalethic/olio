@@ -76,7 +76,7 @@ window.session = (path) ->
       # This isn't right, fix it (properly create/dispose)
       map.cursor.on \update, ->
         emitter.emit map.cursor.get!
-      -> map.cursor.release!; delete map.cursor
+      ->
 
 # History
 window.history = require \html5-history-api
@@ -138,15 +138,20 @@ register-component = (name, component) ->
         if cursor.get! is void
           cursor.set {}
         cursor.deep-merge object
-    s.merge wvals
-    .on-value ~>
+    @$watch-on-value = ~>
       old-state = {} <<< state
       state <<< it
       if (patch.compare old-state, state).length
         info \RENDERING, this.tag-name, state
         m.render this, (eval m.convert @view state)
         @react watch: state
+    @$watch-merge = s.merge wvals
+    @$watch-merge.on-value @$watch-on-value
     @ready!
+  prototype.detached-callback = ->
+    info \DETACHED, @tag-name
+    @$watch-merge.off-value @$watch-on-value
+
   prototype <<< do
     event: (query, name, transform) -> s.from-child-events this, query, name, transform
     event-value: (query, name) -> s.from-child-events this, query, name, -> q it.target .val!
