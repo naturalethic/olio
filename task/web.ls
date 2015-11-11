@@ -170,7 +170,7 @@ export service = ->*
   server = socket-io server
   server.on \connection, (socket) ->
     info 'New Connection'
-    session = new baobab require fs.realpath-sync './session.ls'
+    session = new baobab
     info 'Initializing session', session.serialize!
     socket.emit \session, (patch.compare {}, session.get!)
     receive-last = []

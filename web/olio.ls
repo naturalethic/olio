@@ -163,7 +163,7 @@ register-component = (name, component) ->
     info \DETACHED, @tag-name
     @$watch-merge.off-value @$watch-on-value
   prototype.map = (path, func) ->
-    @$watchers[path].stream.map func
+    @$watchers[path].stream.map -> info \FIRING; func it
 
   prototype <<< do
     event: (query, name, transform) -> s.from-child-events this, query, name, transform
