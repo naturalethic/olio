@@ -104,14 +104,19 @@ register-component = (name, component) ->
   self = null
   prototype.attached-callback = ->
     merge-state = ~>
+      render = false
       for key, cursor of cursors
         if state[key]?
           cursor = cursor.up!
           object = { (key): state[key] }
+          if (diff = patch.compare object, cursor.serialize!{(key)}).length
+            render = true
           if cursor.get! is void
             cursor.set {}
           cursor.deep-merge object
-    state = @state!
+      if render
+        m.render this, (eval m.convert @view state)
+    state = @start!
     cursors = {}
     info \FIRST-RENDERING, this.tag-name, state
     m.render this, (eval m.convert @view state)
@@ -141,21 +146,18 @@ register-component = (name, component) ->
     [0 til wkeys.length] |> each (i) ->
       cursors[wkeys[i]] = wvals[i].cursor
       wvals[i] = wvals[i].stream.map -> (wkeys[i]): it
+    info \INITIAL-MERGE, @tag-name
     merge-state!
-      # if state[wkeys[i]]?
-      #   cursor = cursors[wkeys[i]].up!
-      #   object = { (wkeys[i]): state[wkeys[i]] }
-      #   if cursor.get! is void
-      #     cursor.set {}
-      #   cursor.deep-merge object
     @$watch-on-value = ~>
       old-state = {} <<< state
       state <<< it
       if (patch.compare old-state, state).length
-        info \RE-RENDERING, this.tag-name, state
+        info \RE-RENDERING, this.tag-name, JSON.stringify(session.get!)
         m.render this, (eval m.convert @view state)
         @react state, it
+        info \POST-REACT, this.tag-name, JSON.stringify(session.get!)
         merge-state!
+        info \POST-MERGE, this.tag-name, JSON.stringify(session.get!)
     @$watch-merge = s.merge wvals
     @$watch-merge.on-value @$watch-on-value
     @ready!
@@ -170,6 +172,6 @@ register-component = (name, component) ->
     watch: -> {}
     apply: -> null
     react: -> null
-    state: -> {}
+    start: -> {}
   prototype <<< component
   document.register-element name, prototype: prototype
