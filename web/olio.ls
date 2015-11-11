@@ -103,16 +103,18 @@ register-component = (name, component) ->
   prototype = Object.create HTMLElement.prototype
   self = null
   prototype.attached-callback = ->
-    merge-state = ~>
+    @merge = (what) ~>
+      what ?= state
       render = false
       for key, cursor of cursors
-        if state[key]?
+        if what[key]?
           cursor = cursor.up!
-          object = { (key): state[key] }
+          object = { (key): what[key] }
           if cursor.get! is void
             cursor.set {}
-          if (diff = patch.compare object, cursor.serialize!{(key)}).length
+          if (diff = patch.compare cursor.serialize!{(key)}, object).length
             render = true
+            info \DIFF, @tag-name, cursor.serialize!{(key)}, object
           cursor.deep-merge object
       if render
         m.render this, (eval m.convert @view state)
@@ -132,9 +134,9 @@ register-component = (name, component) ->
         if akey.0 is \react
           aval.on-value ~>
             @react state, it
-            merge-state!
         else
           aval.on-value ~>
+            info \VALUE, it
             if cursor = cursors[head akey]
               cursor.set (tail akey), it
             else
@@ -146,7 +148,7 @@ register-component = (name, component) ->
     [0 til wkeys.length] |> each (i) ->
       cursors[wkeys[i]] = wvals[i].cursor
       wvals[i] = wvals[i].stream.map -> (wkeys[i]): it
-    merge-state!
+    @merge!
     @$watch-on-value = ~>
       old-state = {} <<< state
       state <<< it
@@ -154,7 +156,6 @@ register-component = (name, component) ->
         info \RE-RENDERING, @tag-name, state
         m.render this, (eval m.convert @view state)
         @react state, it
-        merge-state!
     @$watch-merge = s.merge wvals
     @$watch-merge.on-value @$watch-on-value
     @ready!
