@@ -122,6 +122,23 @@ register-component = (name, component) ->
     cursors = {}
     info \RENDERING, @tag-name, state
     m.render this, (eval m.convert @view state)
+    # Watchers
+    @$watchers = @watch!
+    wkeys = keys @$watchers
+    wvals = values @$watchers
+    [0 til wkeys.length] |> each (i) ->
+      cursors[wkeys[i]] = wvals[i].cursor
+      wvals[i] = wvals[i].stream.map -> (wkeys[i]): it
+    @merge!
+    @$watch-on-value = ~>
+      old-state = {} <<< state
+      state <<< it
+      if (patch.compare old-state, state).length
+        info \RE-RENDERING, @tag-name, state
+        m.render this, (eval m.convert @view state)
+        @react state, it
+    @$watch-merge = s.merge wvals
+    @$watch-merge.on-value @$watch-on-value
     # Appliers
     appliers = @apply state
     akeys = keys appliers
@@ -141,27 +158,12 @@ register-component = (name, component) ->
               cursor.set (tail akey), it
             else
               session.root.set akey, it
-    # Watchers
-    watchers = @watch!
-    wkeys = keys watchers
-    wvals = values watchers
-    [0 til wkeys.length] |> each (i) ->
-      cursors[wkeys[i]] = wvals[i].cursor
-      wvals[i] = wvals[i].stream.map -> (wkeys[i]): it
-    @merge!
-    @$watch-on-value = ~>
-      old-state = {} <<< state
-      state <<< it
-      if (patch.compare old-state, state).length
-        info \RE-RENDERING, @tag-name, state
-        m.render this, (eval m.convert @view state)
-        @react state, it
-    @$watch-merge = s.merge wvals
-    @$watch-merge.on-value @$watch-on-value
     @ready!
   prototype.detached-callback = ->
     info \DETACHED, @tag-name
     @$watch-merge.off-value @$watch-on-value
+  prototype.map = (path, func) ->
+    @$watchers[path].stream.map func
 
   prototype <<< do
     event: (query, name, transform) -> s.from-child-events this, query, name, transform
