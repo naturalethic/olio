@@ -118,7 +118,7 @@ register-component = (name, component) ->
         m.render this, (eval m.convert @view state)
     state = @start!
     cursors = {}
-    info \FIRST-RENDERING, this.tag-name, state
+    info \RENDERING, @tag-name, state
     m.render this, (eval m.convert @view state)
     # Appliers
     appliers = @apply state
@@ -146,18 +146,15 @@ register-component = (name, component) ->
     [0 til wkeys.length] |> each (i) ->
       cursors[wkeys[i]] = wvals[i].cursor
       wvals[i] = wvals[i].stream.map -> (wkeys[i]): it
-    info \INITIAL-MERGE, @tag-name
     merge-state!
     @$watch-on-value = ~>
       old-state = {} <<< state
       state <<< it
       if (patch.compare old-state, state).length
-        info \RE-RENDERING, this.tag-name, JSON.stringify(session.get!)
+        info \RE-RENDERING, @tag-name, state
         m.render this, (eval m.convert @view state)
         @react state, it
-        info \POST-REACT, this.tag-name, JSON.stringify(session.get!)
         merge-state!
-        info \POST-MERGE, this.tag-name, JSON.stringify(session.get!)
     @$watch-merge = s.merge wvals
     @$watch-merge.on-value @$watch-on-value
     @ready!
