@@ -109,10 +109,10 @@ register-component = (name, component) ->
         if state[key]?
           cursor = cursor.up!
           object = { (key): state[key] }
-          if (diff = patch.compare object, cursor.serialize!{(key)}).length
-            render = true
           if cursor.get! is void
             cursor.set {}
+          if (diff = patch.compare object, cursor.serialize!{(key)}).length
+            render = true
           cursor.deep-merge object
       if render
         m.render this, (eval m.convert @view state)
