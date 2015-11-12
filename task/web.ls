@@ -178,13 +178,12 @@ export service = ->*
   server.listen port
   server = socket-io server
   server.on \connection, (socket) ->
-    info 'New Connection from', socket.handshake.address
+    info socket.handshake.address, \CONNECTION
     session = new baobab
-    info 'Initializing session', session.serialize!
     socket.emit \session, (patch.compare {}, session.get!)
     receive-last = []
     socket.on \session, ->
-      info \RECV, it
+      info socket.handshake.address, \RECV, it
       receive-last := it |> map -> JSON.stringify it
       new-session = session.serialize!
       patch.apply new-session, it
@@ -217,14 +216,14 @@ export service = ->*
         id = session.get \id
         return if id is undefined
         return if event.data.previous-data == event.data.current-data
-        info \IDCHANGE, event.data.previous-data, event.data.current-data
+        info socket.handshake.address, \IDCHANGE, event.data.previous-data, event.data.current-data
         if id
           record = first (yield r.table(\session).filter(id: session.get(\id)))
           if record
-            info \LOAD-SESSION, record
+            info socket.handshake.address, \LOAD-SESSION, record
             session.set record
           else if session.get \persistent
-            info \INSERT-SESSION, session.serialize!
+            info socket.handshake.address, \INSERT-SESSION, session.serialize!
             yield r.table(\session).insert session.serialize!
         else if event.data.previous-data
           session.root.set <[ person authentic ]>, false
@@ -235,12 +234,12 @@ export service = ->*
       # Don't send session changes that were just received from client
       diff = patch.compare session.root.get-history!0, session.root.get!
       if diff.length and (id = session.get \id) and session.get \persistent
-        info \UPDATE-SESSION, session.serialize!
+        info socket.handshake.address, \UPDATE-SESSION, session.serialize!
         r.table(\session).get(id).update(session.serialize!).run!
       diff = diff |> filter -> JSON.stringify(it) not in receive-last
       receive-last := []
       if diff.length
-        info \EMIT, diff
+        info socket.handshake.address, \EMIT, diff
         socket.emit \session, diff if diff.length
       if session.get \end
         socket.disconnect!
