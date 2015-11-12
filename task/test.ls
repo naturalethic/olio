@@ -54,7 +54,6 @@ export test = ->*
         else if paths.length
           run-module paths.pop!
     names = keys module
-    info names
     if names.length
       run names.pop!
     else if paths.length

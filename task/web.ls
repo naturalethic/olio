@@ -174,10 +174,11 @@ export service = ->*
       file.serve request, response
     .resume!
   port = olio.option.port or olio.config.web?port or 8000
+  schema = require "#{process.cwd!}/session"
   server.listen port
   server = socket-io server
   server.on \connection, (socket) ->
-    info 'New Connection'
+    info 'New Connection from', socket.handshake.address
     session = new baobab
     info 'Initializing session', session.serialize!
     socket.emit \session, (patch.compare {}, session.get!)
