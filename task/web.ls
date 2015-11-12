@@ -241,6 +241,8 @@ export service = ->*
       if diff.length
         info \EMIT, diff
         socket.emit \session, diff if diff.length
+      if session.get \end
+        socket.disconnect!
 
 export seed = ->*
   r = null

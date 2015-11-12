@@ -4,11 +4,11 @@ require! baobab
 require! 'fast-json-patch/dist/json-patch-duplex.min': patch
 
 export test = ->*
-  for path in glob.sync 'test/**/*'
+  run-module = (path) ->
     module = require fs.realpath-sync path
     run = (name) ->
       info '=' * 40
-      info name
+      info path, \:, name
       info '-' * 40
       session = new baobab
       socket = socket-io 'http://localhost:8000'
@@ -18,10 +18,10 @@ export test = ->*
         new-session = session.serialize!
         patch.apply new-session, it
         receive-last := it |> map -> JSON.stringify it
-        info \NEW-SESSION, new-session
+        # info \NEW-SESSION, new-session
         session.deep-merge new-session
         receive-count := receive-count + 1
-        info \SESSION, receive-count, session.get!
+        # info \SESSION, receive-count, session.get!
       session.root.start-recording 1
       session.on \update, ->
         # Don't send session changes that were just received from server
@@ -29,7 +29,7 @@ export test = ->*
         |> filter -> JSON.stringify(it) not in receive-last
         receive-last := []
         if diff.length
-          info \EMIT, diff
+          # info \EMIT, diff
           socket.emit \session, diff if diff.length
       keys module[name] |> each (key) ->
         return if key is \session
@@ -47,5 +47,17 @@ export test = ->*
               cursor.deep-merge cdata
             session.trim!
       session.deep-merge(module[name].session or {})
+      socket.on \disconnect, ->
+        info \DISCONNECT
+        if names.length
+          run names.pop!
+        else if paths.length
+          run-module paths.pop!
     names = keys module
-    run names.pop! if names.length
+    info names
+    if names.length
+      run names.pop!
+    else if paths.length
+      run-module paths.pop!
+  paths = glob.sync 'test/**/*'
+  run-module paths.pop! if paths.length
