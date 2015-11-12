@@ -100,22 +100,22 @@ q document.body .on \submit, \form, false
 register-component = (name, component) ->
   prototype = Object.create HTMLElement.prototype
   self = null
-  prototype.merge = (what) ->
-    what ?= state
-    render = false
-    for key, cursor of cursors
-      if what[key]?
-        cursor = cursor.up!
-        object = { (key): what[key] }
-        if cursor.get! is void
-          cursor.set {}
-        if (diff = patch.compare cursor.serialize!{(key)}, object).length
-          render = true
-          info \DIFF, @tag-name, cursor.serialize!{(key)}, object
-        cursor.deep-merge object
-    if render
-      m.render this, (eval m.convert @view state)
   prototype.attached-callback = ->
+    @merge = (what) ~>
+      what ?= state
+      render = false
+      for key, cursor of cursors
+        if what[key]?
+          cursor = cursor.up!
+          object = { (key): what[key] }
+          if cursor.get! is void
+            cursor.set {}
+          if (diff = patch.compare cursor.serialize!{(key)}, object).length
+            render = true
+            info \DIFF, @tag-name, cursor.serialize!{(key)}, object
+          cursor.deep-merge object
+      if render
+        m.render this, (eval m.convert @view state)
     state = @start!
     cursors = {}
     info \RENDERING, @tag-name, state
