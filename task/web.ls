@@ -18,6 +18,14 @@ require! \baobab
 require! \rethinkdbdash
 require! \co
 
+baobab::trim = (obj, path = []) ->
+  obj ?= @serialize!
+  for key, val of obj
+    if val is false
+      @unset path ++ [ key ]
+    else if is-object val
+      @trim val, path ++ [ key ]
+
 export watch = [ __filename, \olio.ls, \session.ls, \session, "#__dirname/../web/olio.ls" ]
 
 compile-snippet = ->
@@ -195,8 +203,13 @@ export service = ->*
           cdata = cursor.serialize!
           session-module[key] sdata, cdata
           .then ->
-            session.root.deep-merge sdata
-            cursor.deep-merge cdata
+            if is-array it
+              [ sdata, cdata ] = it
+              if sdata
+                session.root.deep-merge sdata
+              if cdata
+                cursor.deep-merge cdata
+              session.trim!
     session.select \id
     .on \update, (event) ->
       (co.wrap ->*
