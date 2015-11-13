@@ -66,14 +66,14 @@ session.select \id
   session-storage.set-item \id, it.data.current-data
 
 window.session = (path) ->
-  map =
+  obj =
     cursor: session.select (path.split \. |> map -> (parse-int(it) and parse-int(it)) or it)
     stream: s.stream (emitter) ->
       if val = session.get path.split \.
         emitter.emit val
       # This isn't right, fix it (properly create/dispose)
-      map.cursor.on \update, ->
-        emitter.emit map.cursor.get!
+      obj.cursor.on \update, ->
+        emitter.emit obj.cursor.get!
       ->
 
 # History
