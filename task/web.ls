@@ -169,7 +169,7 @@ export service = ->*
   $uuid = ->* yield r._r.uuid!
   port = olio.option.port or olio.config.web?port or 8000
   schema = require "#{process.cwd!}/session"
-  server.listen port
+  server.listen port, '127.0.0.1'
   server = socket-io server
   server.on \connection, (socket) ->
     info socket.handshake.address, \CONNECTION
