@@ -45,7 +45,7 @@ prep = ->
   info 'Syncing    -> public'
   exec "rsync -maz --exclude '*.js' --exclude '*.css' tmp/ public/"
 
-stitch = ->*
+stitch = ->
   style = []
   script = [
     fs.read-file-sync("#__dirname/../web/olio.ls").to-string!
@@ -136,11 +136,11 @@ setup-bundler = ->*
       node-notifier.notify title: \Olio, message: "Site Rebuilt: #{(Date.now! - bundler.time) / 1000}s"
       process.exit 0 if olio.option.exit
   bundler.on \update, bundle
-  bundler.build = ->*
+  bundler.build = ->
     try
       bundler.time = Date.now!
       prep!
-      yield stitch!
+      stitch!
     catch e
       info e
     bundle! if not bundler._bundled
@@ -150,10 +150,11 @@ export web = ->*
   exec "mkdir -p tmp/component"
   exec "mkdir -p public"
   bundler = yield setup-bundler!
+  build = debounce bundler.build
   watcher.watch <[ validate.ls olio.ls host.ls web ]>, persistent: true, ignore-initial: true .on 'all', (event, path) ->
     info "Change detected in '#path'..."
-    co bundler.build
-  co bundler.build
+    build!
+  build!
 
 export service = ->*
   try

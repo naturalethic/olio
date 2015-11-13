@@ -64,6 +64,16 @@ global.exec = (command, async) ->
     catch
       false
 
+global.debounce = (func, wait = 300) ->
+  timeout = null
+  ->
+    args = arguments
+    clear-timeout timeout
+    timeout := set-timeout (~>
+      timeout := null
+      func.apply this, args
+    ), wait
+
 global.spawn = ->
   words = it.match(/[^"'\s]+|"[^"]+"|'[^'']+'/g)
   child = process.spawn (head words), (tail words)
