@@ -18,7 +18,7 @@ export test = ->*
       info path, \:, name
       info '-' * 40
       session = new baobab
-      socket = socket-io 'http://localhost:8000'
+      socket = socket-io 'http://localhost:8000', force-new: true
       $require = require
       module = {}
       eval livescript.compile [
@@ -55,7 +55,6 @@ export test = ->*
           module[name][key] session.serialize!
       session.deep-merge(module[name].session or {})
       socket.on \disconnect, ->
-        info \DISCONNECT
         if names.length
           run names.pop!
         else if paths.length
