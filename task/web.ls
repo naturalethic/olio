@@ -208,7 +208,8 @@ export service = ->*
               if sdata
                 session.root.deep-merge sdata
               if cdata
-                cursor.deep-merge cdata
+                object = { (last ((dasherize key).split \-)): cdata }
+                cursor.deep-merge object
               session.trim!
     session.select \id
     .on \update, (event) ->
