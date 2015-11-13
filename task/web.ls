@@ -26,7 +26,7 @@ baobab::trim = (obj, path = []) ->
     else if is-object val
       @trim val, path ++ [ key ]
 
-export watch = [ __filename, \olio.ls, \session.ls, \session, "#__dirname/../web/olio.ls" ]
+export watch = [ __filename, \olio.ls, \session.ls, \react, "#__dirname/../web/olio.ls" ]
 
 compile-snippet = ->
   it = livescript.compile (camelize it), { +bare, -header } .slice 0, -1
@@ -198,6 +198,7 @@ export service = ->*
         "out$ = module"
         "require = $require.cache['#{fs.realpath-sync './olio.ls'}'].require"
         "$merge = -> session.deep-merge it; session.trim!"
+        "$unset = -> session.unset it.split('.')"
         (fs.read-file-sync it .to-string!)
       ].join '\n'
       keys module |> each (key) ->
