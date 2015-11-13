@@ -59,4 +59,6 @@ export test = ->*
     else if paths.length
       run-module paths.pop!
   paths = glob.sync 'test/**/*'
+  if olio.task.1
+    paths = paths |> filter -> //#{olio.task.1}\.ls$//.test it
   run-module paths.pop! if paths.length
