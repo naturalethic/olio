@@ -156,7 +156,7 @@ register-component = (name, component) ->
               cursor.set (tail akey), it
             else
               session.root.set akey, it
-    @ready!
+    @ready state
   prototype.detached-callback = ->
     info \DETACHED, @tag-name
     @$watch-merge.off-value @$watch-on-value
