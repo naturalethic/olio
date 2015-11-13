@@ -67,7 +67,7 @@ session.select \id
 
 window.session = (path) ->
   map =
-    cursor: session.select path.split \.
+    cursor: session.select (path.split \. |> map -> (parse-int(it) and parse-int(it)) or it)
     stream: s.stream (emitter) ->
       if val = session.get path.split \.
         emitter.emit val
