@@ -1,27 +1,42 @@
 require! 'socket.io-client': socket-io
 require! co
 require! baobab
-require! 'fast-json-patch/dist/json-patch-duplex.min': patch
+require! 'fast-json-patch': patch
+
+baobab::trim = (other, tree, path = []) ->
+  tree ?= @serialize!
+  for key, val of tree
+    if not other[key]?
+      @unset path ++ [ key ]
+    else if is-object val
+      @trim other[key], val, path ++ [ key ]
 
 export test = ->*
   run-module = (path) ->
-    module = require fs.realpath-sync path
     run = (name) ->
       info '=' * 40
       info path, \:, name
       info '-' * 40
       session = new baobab
       socket = socket-io 'http://localhost:8000'
+      $require = require
+      module = {}
+      eval livescript.compile [
+        "out$ = module"
+        "require = $require.cache['#{fs.realpath-sync './olio.ls'}'].require"
+        "$merge = -> session.deep-merge it"
+        "$unset = -> session.unset it.split('.')"
+        (fs.read-file-sync path .to-string!)
+      ].join '\n'
       receive-count = 0
       receive-last = []
       socket.on \session, ->
         new-session = session.serialize!
         patch.apply new-session, it
         receive-last := it |> map -> JSON.stringify it
-        # info \NEW-SESSION, new-session
         session.deep-merge new-session
+        session.trim new-session
         receive-count := receive-count + 1
-        # info \SESSION, receive-count, session.get!
       session.root.start-recording 1
       session.on \update, ->
         # Don't send session changes that were just received from server
@@ -37,15 +52,7 @@ export test = ->*
         cursor.on \update, ->
           return if it.data.current-data is undefined
           return if it.data.previous-data and !patch.compare(it.data.current-data, it.data.previous-data).length
-          sdata = session.root.serialize!
-          cdata = cursor.serialize!
-          if is-array (result = module[name][key] sdata, cdata)
-            [ sdata, cdata ] = result
-            if sdata
-              session.root.deep-merge sdata
-            if cdata
-              cursor.deep-merge cdata
-            session.trim!
+          module[name][key] session.serialize!
       session.deep-merge(module[name].session or {})
       socket.on \disconnect, ->
         info \DISCONNECT
@@ -53,7 +60,7 @@ export test = ->*
           run names.pop!
         else if paths.length
           run-module paths.pop!
-    names = keys module
+    names = keys (require fs.realpath-sync path)
     if names.length
       run names.pop!
     else if paths.length

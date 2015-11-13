@@ -18,14 +18,6 @@ require! \baobab
 require! \rethinkdbdash
 require! \co
 
-baobab::trim = (obj, path = []) ->
-  obj ?= @serialize!
-  for key, val of obj
-    if val is false
-      @unset path ++ [ key ]
-    else if is-object val
-      @trim val, path ++ [ key ]
-
 export watch = [ __filename, \olio.ls, \session.ls, \react, "#__dirname/../web/olio.ls" ]
 
 compile-snippet = ->
@@ -197,7 +189,7 @@ export service = ->*
       eval livescript.compile [
         "out$ = module"
         "require = $require.cache['#{fs.realpath-sync './olio.ls'}'].require"
-        "$merge = -> session.deep-merge it; session.trim!"
+        "$merge = -> session.deep-merge it"
         "$unset = -> session.unset it.split('.')"
         (fs.read-file-sync it .to-string!)
       ].join '\n'
