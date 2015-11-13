@@ -174,6 +174,7 @@ export service = ->*
     request.add-listener \end, ->
       file.serve request, response
     .resume!
+  $uuid = ->* yield r._r.uuid!
   port = olio.option.port or olio.config.web?port or 8000
   schema = require "#{process.cwd!}/session"
   server.listen port
@@ -189,29 +190,24 @@ export service = ->*
       new-session = session.serialize!
       patch.apply new-session, it
       session.deep-merge new-session
-    glob.sync 'session/**/*' |> each ->
-      session-module = require fs.realpath-sync it
-      session-module.r = r
-      keys session-module |> each (key) ->
-        return if key is \r
-        session-module[key] = co.wrap(session-module[key])
-        session-module[key].bind session-module
+    glob.sync 'react/**/*' |> each ->
+      $require = require
+      module = {}
+      # XXX: port this to esprima?
+      eval livescript.compile [
+        "out$ = module"
+        "require = $require.cache['#{fs.realpath-sync './olio.ls'}'].require"
+        "$merge = -> session.deep-merge it; session.trim!"
+        (fs.read-file-sync it .to-string!)
+      ].join '\n'
+      keys module |> each (key) ->
+        module[key] = co.wrap(module[key])
+        module[key].bind module
         cursor = session.select (dasherize key).split \-
         cursor.on \update, ->
           return if it.data.current-data is undefined
           return if it.data.previous-data and !patch.compare(it.data.current-data, it.data.previous-data).length
-          sdata = session.root.serialize!
-          cdata = cursor.serialize!
-          session-module[key] sdata, cdata
-          .then ->
-            if is-array it
-              [ sdata, cdata ] = it
-              if sdata
-                session.root.deep-merge sdata
-              if cdata
-                object = { (last ((dasherize key).split \-)): cdata }
-                cursor.deep-merge object
-              session.trim!
+          module[key] session.serialize!
     session.select \id
     .on \update, (event) ->
       (co.wrap ->*
