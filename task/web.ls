@@ -205,10 +205,12 @@ export service = ->*
         "$unset = -> $local.session.unset it.split('.')"
         "r = -> $local.r"
         "$uuid = ->* yield r!_r.uuid!"
+        "$info = -> $local.info ...&"
         (fs.read-file-sync it .to-string!)
       ].join '\n'), { +bare }
       module.exports.$local.session = session
       module.exports.$local.r = r
+      module.exports.$local.info = $info
       keys module.exports |> each (key) ->
         return if key.0 is \$
         module.exports[key] = co.wrap(module.exports[key])
