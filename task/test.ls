@@ -50,6 +50,8 @@ export test = ->*
           socket.emit \session, diff if diff.length
       keys module.exports[name] |> each (key) ->
         return if key is \session
+        module.exports[name][key] = co.wrap(module.exports[name][key])
+        module.exports[name][key].bind module.exports[name]
         cursor = session.select key.split('.')
         cursor.on \update, ->
           return if it.data.current-data is undefined
