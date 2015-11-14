@@ -175,6 +175,8 @@ export service = ->*
   server.on \connection, (socket) ->
     $info = (...args) ->
       date = (new Date).toISOString!split \T
+      if is-string(args.0)
+        args.0 = args.0.magenta
       args.unshift "#{date.0.blue}#{'T'.grey}#{date.1.blue} #{socket.handshake.address.yellow} #{'INFO'.green}"
       obj = ''
       if is-object(last args) or is-array(last args)
@@ -185,12 +187,12 @@ export service = ->*
         dash-color: \white
         number-color: \blue
       # info obj if obj
-    $info \CONNECTION
+    $info 'Connection established'
     session = new baobab
     socket.emit \session, (patch.compare {}, session.get!)
     receive-last = []
     socket.on \session, ->
-      $info \RECV, it
+      $info 'Data received', it
       receive-last := it |> map -> JSON.stringify it
       new-session = session.serialize!
       try
@@ -226,17 +228,17 @@ export service = ->*
         id = session.get \id
         return if id is undefined
         return if event.data.previous-data == event.data.current-data
-        $info \IDCHANGE, event.data.previous-data, event.data.current-data
+        $info 'Session id changed', event.data.previous-data, event.data.current-data
         if id is \destroy
-          info \DESTROY-SESSION
+          info 'Session destroyed'
           session.set {}
         else
           record = first (yield r.table(\session).filter(id: session.get(\id)))
           if record
-            $info \LOAD-SESSION, record
+            $info 'Loading session', record
             session.set record
           else if session.get \persistent
-            $info \INSERT-SESSION, session.serialize!
+            $info 'Creating session', session.serialize!
             yield r.table(\session).insert session.serialize!
       )!
     session.root.start-recording 1
@@ -244,12 +246,12 @@ export service = ->*
       # Don't send session changes that were just received from client
       diff = patch.compare session.root.get-history!0, session.root.get!
       if diff.length and (id = session.get \id) and session.get \persistent
-        $info \UPDATE-SESSION, session.serialize!
+        $info 'Updating session', session.serialize!
         r.table(\session).get(id).update(session.serialize!).run!
       diff = diff |> filter -> JSON.stringify(it) not in receive-last
       receive-last := []
       if diff.length
-        $info \EMIT, diff
+        $info 'Sending data', diff
         socket.emit \session, diff if diff.length
       if session.get \end
         socket.disconnect!
