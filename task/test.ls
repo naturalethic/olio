@@ -17,20 +17,19 @@ export test = ->*
     module = new Module
     module.paths = [ "#{process.cwd!}/node_modules", "#{process.cwd!}/lib" ]
     module._compile livescript.compile ([
-      "_session = null"
-      "export _set-session = -> _session := it"
-      "$merge = -> _session.deep-merge it"
-      "$unset = -> _session.unset it.split('.')"
+      "export $local = {}"
+      "$merge = -> $local.session.deep-merge it"
+      "$unset = -> $local.session.unset it.split('.')"
       (fs.read-file-sync path .to-string!)
     ].join '\n'), { +bare }
     run = (name) ->
-      return if name.0 is \_
+      return if name.0 is \$
       info '=' * 40
       info path, \:, name
       info '-' * 40
       session = new baobab
       socket = socket-io 'http://localhost:8000', force-new: true
-      module.exports._set-session session
+      module.exports.$local.session = session
       receive-count = 0
       receive-last = []
       socket.on \session, ->

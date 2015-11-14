@@ -18,6 +18,7 @@ require! \baobab
 require! \rethinkdbdash
 require! \co
 require! \prettyjson
+Module = (require \module).Module
 
 export watch = [ __filename, \olio.ls, \session.ls, \react, "#__dirname/../web/olio.ls" ]
 
@@ -167,7 +168,6 @@ export service = ->*
     request.add-listener \end, ->
       file.serve request, response
     .resume!
-  $uuid = ->* yield r._r.uuid!
   port = olio.option.port or olio.config.web?port or 8000
   schema = require "#{process.cwd!}/session"
   server.listen port, '127.0.0.1'
@@ -197,24 +197,27 @@ export service = ->*
         patch.apply new-session, it
         session.deep-merge new-session
     glob.sync 'react/**/*' |> each ->
-      $require = require
-      module = {}
-      # XXX: port this to esprima?
-      eval livescript.compile [
-        "out$ = module"
-        "require = $require.cache['#{fs.realpath-sync './olio.ls'}'].require"
-        "$merge = -> session.deep-merge it"
-        "$unset = -> session.unset it.split('.')"
+      module = new Module
+      module.paths = [ "#{process.cwd!}/node_modules", "#{process.cwd!}/lib" ]
+      module._compile livescript.compile ([
+        "export $local = {}"
+        "$merge = -> $local.session.deep-merge it"
+        "$unset = -> $local.session.unset it.split('.')"
+        "r = -> $local.r"
+        "$uuid = ->* yield r!_r.uuid!"
         (fs.read-file-sync it .to-string!)
-      ].join '\n'
-      keys module |> each (key) ->
-        module[key] = co.wrap(module[key])
-        module[key].bind module
+      ].join '\n'), { +bare }
+      module.exports.$local.session = session
+      module.exports.$local.r = r
+      keys module.exports |> each (key) ->
+        return if key.0 is \$
+        module.exports[key] = co.wrap(module.exports[key])
+        module.exports[key].bind module.exports
         cursor = session.select (dasherize key).split \-
         cursor.on \update, ->
           return if it.data.current-data is undefined
           return if it.data.previous-data and !patch.compare(it.data.current-data, it.data.previous-data).length
-          module[key] session.serialize!
+          module.exports[key] session.serialize!
     session.select \id
     .on \update, (event) ->
       (co.wrap ->*
