@@ -17,6 +17,7 @@ require! 'fast-json-patch': patch
 require! \baobab
 require! \rethinkdbdash
 require! \co
+require! \prettyjson
 
 export watch = [ __filename, \olio.ls, \session.ls, \react, "#__dirname/../web/olio.ls" ]
 
@@ -175,7 +176,15 @@ export service = ->*
     $info = (...args) ->
       date = (new Date).toISOString!split \T
       args.unshift "#{date.0.blue}#{'T'.grey}#{date.1.blue} #{socket.handshake.address.yellow} #{'INFO'.green}"
+      obj = ''
+      if is-object(last args) or is-array(last args)
+        obj = args.pop!
       info ...args
+      info prettyjson.render obj,
+        keys-color: \grey
+        dash-color: \white
+        number-color: \blue
+      # info obj if obj
     $info \CONNECTION
     session = new baobab
     socket.emit \session, (patch.compare {}, session.get!)
@@ -184,8 +193,9 @@ export service = ->*
       $info \RECV, it
       receive-last := it |> map -> JSON.stringify it
       new-session = session.serialize!
-      patch.apply new-session, it
-      session.deep-merge new-session
+      try
+        patch.apply new-session, it
+        session.deep-merge new-session
     glob.sync 'react/**/*' |> each ->
       $require = require
       module = {}
@@ -212,7 +222,10 @@ export service = ->*
         return if id is undefined
         return if event.data.previous-data == event.data.current-data
         $info \IDCHANGE, event.data.previous-data, event.data.current-data
-        if id
+        if id is \destroy
+          info \DESTROY-SESSION
+          session.set {}
+        else
           record = first (yield r.table(\session).filter(id: session.get(\id)))
           if record
             $info \LOAD-SESSION, record
@@ -220,12 +233,9 @@ export service = ->*
           else if session.get \persistent
             $info \INSERT-SESSION, session.serialize!
             yield r.table(\session).insert session.serialize!
-        else if event.data.previous-data
-          session.root.set <[ person authentic ]>, false
-          yield r.table(\session).get(event.data.previous-data).delete!
       )!
     session.root.start-recording 1
-    session.root.on \update, ->
+    session.on \update, ->
       # Don't send session changes that were just received from client
       diff = patch.compare session.root.get-history!0, session.root.get!
       if diff.length and (id = session.get \id) and session.get \persistent

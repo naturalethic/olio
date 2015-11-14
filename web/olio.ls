@@ -35,6 +35,13 @@ s.from-child-events = (target, query, event-name, transform = id) ->
 require! 'socket.io-client': socket-io
 require! 'fast-json-patch/dist/json-patch-duplex.min': patch
 require! 'baobab'
+baobab::trim = (other, tree, path = []) ->
+  tree ?= @serialize!
+  for key, val of tree
+    if not other[key]?
+      @unset path ++ [ key ]
+    else if is-object val
+      @trim other[key], val, path ++ [ key ]
 socket = socket-io!
 window.$session = session = new baobab
 receive-count = 0
@@ -44,6 +51,7 @@ socket.on \session, ->
   patch.apply new-session, it
   receive-last := it |> map -> JSON.stringify it
   session.deep-merge new-session
+  session.trim new-session
   # Load the session only after we have received the initial stuff
   if not receive-count
     if id = session-storage.get-item \id
@@ -75,6 +83,10 @@ window.session = (path) ->
       obj.cursor.on \update, ->
         emitter.emit obj.cursor.get!
       ->
+
+window.destroy-session = ->
+  session-storage.remove-item \id
+  session.set \id, \destroy
 
 # History
 window.history = require \html5-history-api
