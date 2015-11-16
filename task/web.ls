@@ -170,7 +170,7 @@ export service = ->*
     .resume!
   port = olio.option.port or olio.config.web?port or 8000
   schema = require "#{process.cwd!}/session"
-  server.listen port, '127.0.0.1'
+  server.listen port, '0.0.0.0'
   server = socket-io server
   server.on \connection, (socket) ->
     $info = (...args) ->
