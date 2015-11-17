@@ -231,7 +231,7 @@ export service = ->*
         $info 'Session id changed', event.data.previous-data, event.data.current-data
         if id is \destroy
           info 'Session destroyed'
-          session.set {}
+          session.set route: session.get(\route)
         else
           record = first (yield r.table(\session).filter(id: session.get(\id)))
           if record
