@@ -70,7 +70,8 @@ session.root.on \update, ->
     socket.emit \session, diff if diff.length
 session.select \id
 .on \update, ->
-  return if not it.data.current-data
+  return if !it.data.current-data or it.data.current-data is \destroy
+  info \SETTING-SESSION-STORAGE
   session-storage.set-item \id, it.data.current-data
 
 window.session = (path) ->
@@ -140,13 +141,14 @@ register-component = (name, component) ->
       cursors[wkeys[i]] = wvals[i].cursor
       wvals[i] = wvals[i].stream.map -> (wkeys[i]): it
     @merge!
-    @$watch-on-value = ~>
+    @$watch-on-value = (val) ~>
       old-state = {} <<< state
-      state <<< it
+      state <<< val
       if (patch.compare old-state, state).length
         info \RE-RENDERING, @tag-name, state
         m.render this, (eval m.convert @view state)
-        @react state, it
+        set-timeout ~>
+          @react state, val
     @$watch-merge = s.merge wvals
     @$watch-merge.on-value @$watch-on-value
     # Appliers
@@ -159,8 +161,9 @@ register-component = (name, component) ->
         avals[i] = [ avals[i] ]
       avals[i] |> each (aval) ~>
         if akey.0 is \react
-          aval.on-value ~>
-            @react state, it
+          aval.on-value (val) ~>
+            set-timeout ~>
+              @react state, val
         else
           aval.on-value ~>
             info \VALUE, it
