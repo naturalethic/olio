@@ -64,7 +64,7 @@ export test = ->*
         return if key is \session
         module.exports[name][key] = co.wrap(module.exports[name][key])
         module.exports[name][key].bind module.exports[name]
-        cursor = session.select key.split('.')
+        cursor = session.select (camelize key).split('.')
         cursor.on \update, ->
           reset-too-long!
           return if it.data.current-data is undefined
