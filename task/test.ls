@@ -26,7 +26,7 @@ export test = ->*
       (fs.read-file-sync path .to-string!)
     ].join '\n'), { +bare }
     run = (name) ->
-      return if name.0 is \$
+      return run-next! if name.0 is \$
       info '=' * 40
       info path, \:, (dasherize name)
       info '-' * 40
@@ -63,6 +63,9 @@ export test = ->*
           return if it.data.current-data is undefined
           return if it.data.previous-data and !patch.compare(it.data.current-data, it.data.previous-data).length
           module.exports[name][key] session.serialize!
+          .catch ->
+            info it.to-string!red
+            session.deep-merge end: true
       session.deep-merge(module.exports[name].session or {})
       fail = null
       too-long = null
@@ -77,15 +80,17 @@ export test = ->*
         if fail
           info "Failed: #fail".red
         if names.length
-          run names.pop!
+          run names.shift!
         else if paths.length
-          run-module paths.pop!
+          run-module paths.shift!
     names = keys module.exports
-    if names.length
-      run names.pop!
-    else if paths.length
-      run-module paths.pop!
+    run-next = ->
+      if names.length
+        run names.shift!
+      else if paths.length
+        run-module paths.shift!
+    run-next!
   paths = glob.sync 'test/**/*'
   if olio.task.1
     paths = paths |> filter -> //#{olio.task.1}\.ls$//.test it
-  run-module paths.pop! if paths.length
+  run-module paths.shift! if paths.length
