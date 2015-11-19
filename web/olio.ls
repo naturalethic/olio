@@ -165,12 +165,11 @@ register-component = (name, component) ->
             set-timeout ~>
               @react state, val
         else
-          aval.on-value ~>
-            info \VALUE, it
+          aval.on-value (val) ~>
             if cursor = cursors[head akey]
-              cursor.set (tail akey), it
+              cursor.set (tail akey), val
             else
-              session.root.set akey, it
+              session.root.set akey, val
     @ready state
   prototype.detached-callback = ->
     info \DETACHED, @tag-name

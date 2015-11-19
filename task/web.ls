@@ -229,6 +229,7 @@ export service = ->*
         cursor.on \update, ->
           return if it.data.current-data is undefined
           return if it.data.previous-data and !patch.compare(it.data.current-data, it.data.previous-data).length
+          $info "Reaction: #key", session.serialize!
           module.exports[key] session.serialize!
     session.select \id
     .on \update, (event) ->
@@ -248,6 +249,8 @@ export service = ->*
           else if session.get \persistent
             $info 'Creating session', session.serialize!
             yield r.table(\session).insert session.serialize!
+          else
+            session.unset \id
       )!
     session.root.start-recording 1
     session.on \update, ->
