@@ -22,9 +22,6 @@ Module = (require \module).Module
 
 require! \db
 
-if olio.option.db
-  olio.config.db.name = olio.option.db
-
 export watch = [ __filename, \olio.ls, \session.ls, \react, "#__dirname/../web/olio.ls" ]
 
 compile-snippet = ->
