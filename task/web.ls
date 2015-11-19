@@ -20,6 +20,11 @@ require! \co
 require! \prettyjson
 Module = (require \module).Module
 
+require! \db
+
+if olio.option.db
+  olio.config.db.name = olio.option.db
+
 export watch = [ __filename, \olio.ls, \session.ls, \react, "#__dirname/../web/olio.ls" ]
 
 compile-snippet = ->
@@ -208,6 +213,8 @@ export service = ->*
         "r = -> $local.r"
         "$uuid = ->* yield r!_r.uuid!"
         "$info = -> $local.info ...&"
+        "$missing = (obj, props) -> (intersection (keys obj), props).length != props.length"
+        "$shy = (obj, props) -> (props |> filter -> obj[camelize it]).length < props.length"
         (fs.read-file-sync it .to-string!)
       ].join '\n'), { +bare }
       module.exports.$local.session = session
@@ -254,20 +261,17 @@ export service = ->*
         $info 'Sending data', diff
         socket.emit \session, diff if diff.length
       if session.get \end
+        $info 'Disconnecting'
         socket.disconnect!
 
+export reset = ->*
+  yield db.reset!
+  process.exit!
+
 export seed = ->*
-  r = null
   r = rethinkdbdash olio.config.db{host}
-  try
-    yield r.db-drop olio.config.db.name
-  if olio.config.db.name not in (yield r.db-list!)
-    info "Creating database '#{olio.config.db.name}'"
-    yield r.db-create olio.config.db.name
+  yield db.reset r
   r = r.db olio.config.db.name
-  for table in  difference (olio.config.db.tables ++ <[ session ]>), (yield r.table-list!)
-    info "Creating table '#table'"
-    yield r.table-create table
   seed = require fs.realpath-sync './seed.ls'
   for key, val of seed
     for item in val

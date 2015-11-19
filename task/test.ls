@@ -4,6 +4,8 @@ require! baobab
 require! 'fast-json-patch': patch
 Module = (require \module).Module
 
+require! \db
+
 baobab::trim = (other, tree, path = []) ->
   tree ?= @serialize!
   for key, val of tree
@@ -13,6 +15,7 @@ baobab::trim = (other, tree, path = []) ->
       @trim other[key], val, path ++ [ key ]
 
 export test = ->*
+  yield db.reset!
   run-module = (path) ->
     module = new Module
     module.paths = [ "#{process.cwd!}/node_modules", "#{process.cwd!}/lib" ]
@@ -25,7 +28,7 @@ export test = ->*
     run = (name) ->
       return if name.0 is \$
       info '=' * 40
-      info path, \:, name
+      info path, \:, (dasherize name)
       info '-' * 40
       session = new baobab
       socket = socket-io 'http://localhost:8000', force-new: true
@@ -33,6 +36,7 @@ export test = ->*
       receive-count = 0
       receive-last = []
       socket.on \session, ->
+        reset-too-long!
         new-session = session.serialize!
         patch.apply new-session, it
         receive-last := it |> map -> JSON.stringify it
@@ -41,6 +45,7 @@ export test = ->*
         receive-count := receive-count + 1
       session.root.start-recording 1
       session.on \update, ->
+        reset-too-long!
         # Don't send session changes that were just received from server
         diff = patch.compare session.root.get-history!0, session.root.get!
         |> filter -> JSON.stringify(it) not in receive-last
@@ -54,11 +59,23 @@ export test = ->*
         module.exports[name][key].bind module.exports[name]
         cursor = session.select key.split('.')
         cursor.on \update, ->
+          reset-too-long!
           return if it.data.current-data is undefined
           return if it.data.previous-data and !patch.compare(it.data.current-data, it.data.previous-data).length
           module.exports[name][key] session.serialize!
       session.deep-merge(module.exports[name].session or {})
+      fail = null
+      too-long = null
+      reset-too-long = ->
+        clear-timeout too-long
+        too-long := set-timeout ->
+          session.deep-merge end: true
+          fail := 'took too long'
+        , 1000
       socket.on \disconnect, ->
+        clear-timeout too-long
+        if fail
+          info "Failed: #fail".red
         if names.length
           run names.pop!
         else if paths.length
