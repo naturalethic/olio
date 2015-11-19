@@ -2,6 +2,7 @@ require! 'socket.io-client': socket-io
 require! co
 require! baobab
 require! 'fast-json-patch': patch
+require! \prettyjson
 Module = (require \module).Module
 
 require! \db
@@ -13,6 +14,12 @@ baobab::trim = (other, tree, path = []) ->
       @unset path ++ [ key ]
     else if is-object val
       @trim other[key], val, path ++ [ key ]
+
+prettyprint = ->
+  info prettyjson.render it,
+    keys-color: \grey
+    dash-color: \white
+    number-color: \blue
 
 export test = ->*
   yield db.reset!
@@ -64,7 +71,14 @@ export test = ->*
           return if it.data.previous-data and !patch.compare(it.data.current-data, it.data.previous-data).length
           module.exports[name][key] session.serialize!
           .catch ->
-            info it.to-string!red
+            if it.name is \AssertionError
+              info "#{it.name.red} (#{it.operator})"
+              info 'Expected'.yellow
+              prettyprint it.expected
+              info 'Actual'.yellow
+              prettyprint it.actual
+            else
+              info it.to-string!red
             session.deep-merge end: true
       session.deep-merge(module.exports[name].session or {})
       fail = null
