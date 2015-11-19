@@ -12,6 +12,7 @@ require! \harmony-reflect
 require! \deepmerge
 require! \deep-extend
 require! \livescript
+Module = (require \module).Module
 
 # -----------------------------------------------------------------------------
 # Global assignments.  Please keep all global assignments within this area.
@@ -109,14 +110,23 @@ if olio.config.log?identifier
 # -----------------------------------------------------------------------------
 
 # Load plugin and project tasks.  Project tasks will mask plugins of the same name.
-task-modules = require-dir ...((glob.sync "#{process.cwd!}/node_modules/olio*/task") ++ "#{process.cwd!}/task")
+task-modules = pairs-to-obj (((glob.sync "#{process.cwd!}/node_modules/olio*/task/*") ++ glob.sync("#{process.cwd!}/task/*")) |> map ->
+  [ (camelize fs.path.basename(it).replace //#{fs.path.extname it}$//, ''), it ]
+)
 
 # Print list of tasks if none given, or task does not exist.
-if !olio.task.0 or !(task-module = task-modules[camelize olio.task.0])
+if !olio.task.0 or !task-modules[camelize olio.task.0]
   exit 'No tasks defined' if !(keys task-modules).length
   info 'Tasks:'
   keys task-modules |> each -> info "  #it"
   process.exit!
+
+task-module = new Module
+task-module.paths = [ "#{process.cwd!}/node_modules/olio/node_modules", "#{process.cwd!}/node_modules", "#{process.cwd!}/lib" ]
+task-module._compile (livescript.compile ([
+  (fs.read-file-sync task-modules[camelize olio.task.0] .to-string!)
+].join '\n'), { +bare }), task-modules[camelize olio.task.0]
+task-module = task-module.exports
 
 # Print list of subtasks if one is acceptable and none given, or subtask does not exist.
 if !(olio.task.1 and task = task-module[camelize olio.task.1.to-string!]) and !(task = task-module[camelize olio.task.0])
@@ -125,12 +135,6 @@ if !(olio.task.1 and task = task-module[camelize olio.task.1.to-string!]) and !(
   |> filter -> it != camelize olio.task.0
   |> each -> info "  #{dasherize it}"
   process.exit!
-
-co-task = (task) ->*
-  # obj = ({} <<< task-module) <<< olio.lib
-  # obj._task = task
-  # yield obj._task!
-  yield task!
 
 # Provide watch capability to all tasks.
 if olio.option.watch and task-module.watch
@@ -147,6 +151,6 @@ else if olio.option.supervised
   watcher.watch (task-module.watch or []), persistent: true, ignore-initial: true, ignored: /(node_modules|\.git)/ .on 'all', (event, path) ->
     info "Change detected in '#path'..."
     process.exit!
-  co co-task task
+  co task
 else
-  co co-task task
+  co task
