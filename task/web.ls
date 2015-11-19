@@ -157,7 +157,6 @@ export web = ->*
 
 export service = ->*
   try
-    r = null
     r = rethinkdbdash olio.config.db{host}
     if olio.config.db.name not in (yield r.db-list!)
       info "Creating database '#{olio.config.db.name}'"
@@ -213,7 +212,6 @@ export service = ->*
         "r = -> $local.r"
         "$uuid = ->* yield r!_r.uuid!"
         "$info = -> $local.info ...&"
-        "$missing = (obj, props) -> (intersection (keys obj), props).length != props.length"
         "$shy = (obj, props) -> (props |> filter -> obj[camelize it]).length < props.length"
         (fs.read-file-sync it .to-string!)
       ].join '\n'), { +bare }
