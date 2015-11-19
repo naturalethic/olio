@@ -33,7 +33,10 @@ compile-snippet = ->
   it
 
 indent-source = (preamble, source, indent = 2) ->
-  "#preamble\n#{' ' * indent}#{source.split('\n').join('\n' + ' ' * indent)}"
+  if preamble
+    "#preamble\n#{' ' * indent}#{source.split('\n').join('\n' + ' ' * indent)}"
+  else
+    "#{' ' * indent}#{source.split('\n').join('\n' + ' ' * indent)}"
 
 prep = ->
   info 'Syncing    -> tmp'
@@ -73,9 +76,12 @@ stitch = ->
             info 'Writing    -> public/index.html'
             fs.write-file-sync \public/index.html, jade.render(prop.value.value, pretty: true)
           continue
+        style.push state.component.name
+        style.push '  display: block'
         if prop = find (-> it.key.name == \style), it.properties
           it.properties.splice (it.properties.index-of prop), 1
-          style.push(indent-source state.component.name, prop.value.value.trim!) if prop.value.value.trim!
+          style.push(indent-source null, prop.value.value.trim!) if prop.value.value.trim!
+        style.push ''
         if prop = find (-> it.key.name == \view), it.properties
           view = esprima.parse jade.compile-client(prop.value.value)
           prop.value =
