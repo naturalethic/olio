@@ -34,9 +34,9 @@ export test = ->*
     ].join '\n'), { +bare }
     run = (name) ->
       return run-next! if name.0 is \$
-      info '=' * 40
+      info '=' * process.stdout.columns
       info path, \:, (dasherize name)
-      info '-' * 40
+      info '-' * process.stdout.columns
       session = new baobab
       socket = socket-io 'http://localhost:8000', force-new: true
       module.exports.$local.session = session
@@ -70,6 +70,8 @@ export test = ->*
           return if it.data.current-data is undefined
           return if it.data.previous-data and !patch.compare(it.data.current-data, it.data.previous-data).length
           module.exports[name][key] session.serialize!
+          .then ->
+            info 'Success'.green
           .catch ->
             if it.name is \AssertionError
               info "#{it.name.red} (#{it.operator})"
