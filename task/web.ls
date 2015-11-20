@@ -20,8 +20,6 @@ require! \co
 require! \prettyjson
 Module = (require \module).Module
 
-require! \db
-
 export watch = [ __filename, \olio.ls, \session.ls, \react, "#__dirname/../web/olio.ls" ]
 
 compile-snippet = ->
@@ -267,25 +265,3 @@ export service = ->*
       if session.get \end
         $info 'Disconnecting'
         socket.disconnect!
-
-export reset = ->*
-  yield db.reset!
-  process.exit!
-
-export seed = ->*
-  r = rethinkdbdash olio.config.db{host}
-  yield db.reset r
-  r = r.db olio.config.db.name
-  seed = require fs.realpath-sync './seed.ls'
-  for key, val of seed
-    for item in val
-      uuid = yield r._r.uuid!
-      info "Adding '#key' #uuid"
-      yield r.table(key).insert { id: uuid } <<< item
-  process.exit!
-
-export list = ->*
-  r = rethinkdbdash olio.config.db{host}
-  r = r.db olio.config.db.name
-  info yield r.table(olio.task.2)
-  process.exit!
