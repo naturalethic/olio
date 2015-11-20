@@ -1,3 +1,4 @@
+require! \rethinkdbdash
 require! \db
 
 export reset = ->*
