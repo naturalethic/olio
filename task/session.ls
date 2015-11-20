@@ -2,13 +2,13 @@ require! \node-static
 require! \http
 require! 'socket.io': socket-io
 require! 'fast-json-patch': patch
-require! \baobab
+require! \rivulet
 require! \co
 require! \prettyjson
 require! \rethinkdbdash
 Module = (require \module).Module
 
-export watch = [ __filename, \olio.ls, \session.ls, \react ]
+export watch = [ __filename, \olio.ls, \session.ls, \react, "#__dirname/../lib/rivulet.ls" ]
 
 export session = ->*
   try
@@ -45,25 +45,23 @@ export session = ->*
         keys-color: \grey
         dash-color: \white
         number-color: \blue
-      # info obj if obj
     $info 'Connection established'
-    session = new baobab
-    socket.emit \session, (patch.compare {}, session.get!)
-    receive-last = []
+    session = rivulet!
+    socket.emit \session, []
     socket.on \session, ->
       $info 'Data received', it
-      receive-last := it |> map -> JSON.stringify it
-      new-session = session.serialize!
-      try
-        patch.apply new-session, it
-        session.deep-merge new-session
+      emit-stream.pause = true
+      session.patch it
+      emit-stream.pause = false
+      if session.get \end
+        $info 'Disconnecting'
+        socket.disconnect!
     glob.sync 'react/**/*' |> each ->
       module = new Module
       module.paths = [ "#{process.cwd!}/node_modules", "#{process.cwd!}/lib" ]
       module._compile livescript.compile ([
         "export $local = {}"
-        "$merge = -> $local.session.deep-merge it"
-        "$unset = -> $local.session.unset it.split('.')"
+        "$revise = -> $local.session it"
         "r = -> $local.r"
         "$uuid = ->* yield r!_r.uuid!"
         "$info = -> $local.info ...&"
@@ -77,19 +75,17 @@ export session = ->*
         return if key.0 is \$
         module.exports[key] = co.wrap(module.exports[key])
         module.exports[key].bind module.exports
-        cursor = session.select (dasherize key).split \-
-        cursor.on \update, ->
-          return if it.data.current-data is undefined
-          return if it.data.previous-data and !patch.compare(it.data.current-data, it.data.previous-data).length
-          $info "Reaction: #key", session.serialize!
-          module.exports[key] session.serialize!
-    session.select \id
-    .on \update, (event) ->
-      (co.wrap ->*
+        session.observe (dasherize key).replace /-/, '.'
+        .on-value ->
+          $info "Reaction: #key", session!
+          set-timeout -> module.exports[key] session!
+    # XXX: Now we can change the semantics of this to just delete the id on the client instead
+    #      of setting to destroy
+    session.observe \id
+    .on-value ->
+      co ->*
         id = session.get \id
-        return if id is undefined
-        return if event.data.previous-data == event.data.current-data
-        $info 'Session id changed', event.data.previous-data, event.data.current-data
+        # return if id is undefined
         if id is \destroy
           info 'Session destroyed'
           session.set route: session.get(\route)
@@ -97,25 +93,15 @@ export session = ->*
           record = first (yield r.table(\session).filter(id: session.get(\id)))
           if record
             $info 'Loading session', record
-            session.set record
+            session record
           else if session.get \persistent
-            $info 'Creating session', session.serialize!
-            yield r.table(\session).insert session.serialize!
+            $info 'Creating session', session!
+            yield r.table(\session).insert session!
           else
-            session.unset \id
-      )!
-    session.root.start-recording 1
-    session.on \update, ->
-      # Don't send session changes that were just received from client
-      diff = patch.compare session.root.get-history!0, session.root.get!
-      if diff.length and (id = session.get \id) and session.get \persistent
-        $info 'Updating session', session.serialize!
-        r.table(\session).get(id).update(session.serialize!).run!
-      diff = diff |> filter -> JSON.stringify(it) not in receive-last
-      receive-last := []
-      if diff.length
-        $info 'Sending data', diff
-        socket.emit \session, diff if diff.length
-      if session.get \end
-        $info 'Disconnecting'
-        socket.disconnect!
+            session.del \id
+    emit-stream = session.observe-deep ''
+    emit-stream.pause = false
+    emit-stream.on-value ->
+      return if emit-stream.pause
+      $info 'Sending data', session.last
+      socket.emit \session, session.last
