@@ -1,12 +1,11 @@
+Module = (require \module).Module
 require! \node-static
 require! \http
 require! 'socket.io': socket-io
-require! 'fast-json-patch': patch
-require! \rivulet
 require! \co
 require! \prettyjson
 require! \rethinkdbdash
-Module = (require \module).Module
+require! \rivulet
 
 export watch = [ __filename, \olio.ls, \session.ls, \react, "#__dirname/../lib/rivulet.ls" ]
 
@@ -46,16 +45,10 @@ export session = ->*
         dash-color: \white
         number-color: \blue
     $info 'Connection established'
-    session = rivulet!
-    socket.emit \session, []
-    socket.on \session, ->
-      $info 'Data received', it
-      emit-stream.pause = true
-      session.patch it
-      emit-stream.pause = false
-      if session.get \end
-        $info 'Disconnecting'
-        socket.disconnect!
+    session = rivulet socket, \session
+    session.observe \end, ->
+      $info 'Disconnecting'
+      session.socket.disconnect!
     glob.sync 'react/**/*' |> each ->
       module = new Module
       module.paths = [ "#{process.cwd!}/node_modules", "#{process.cwd!}/lib" ]
@@ -75,33 +68,24 @@ export session = ->*
         return if key.0 is \$
         module.exports[key] = co.wrap(module.exports[key])
         module.exports[key].bind module.exports
-        session.observe (dasherize key).replace /-/, '.'
-        .on-value ->
-          $info "Reaction: #key", session!
-          set-timeout -> module.exports[key] session!
+        session.observe ((dasherize key).replace /-/, '.'), ->
+          $info "Reaction: #key", it
+          module.exports[key] it
     # XXX: Now we can change the semantics of this to just delete the id on the client instead
     #      of setting to destroy
-    session.observe \id
-    .on-value ->
-      co ->*
-        id = session.get \id
-        # return if id is undefined
-        if id is \destroy
-          info 'Session destroyed'
-          session.set route: session.get(\route)
+    session.observe \id, co.wrap ->*
+      id = session.get \id
+      # return if id is undefined
+      if id is \destroy
+        info 'Session destroyed'
+        session.set route: session.get(\route)
+      else
+        record = first (yield r.table(\session).filter(id: session.get(\id)))
+        if record
+          $info 'Loading session', record
+          session record
+        else if session.get \persistent
+          $info 'Creating session', it
+          yield r.table(\session).insert it
         else
-          record = first (yield r.table(\session).filter(id: session.get(\id)))
-          if record
-            $info 'Loading session', record
-            session record
-          else if session.get \persistent
-            $info 'Creating session', session!
-            yield r.table(\session).insert session!
-          else
-            session.del \id
-    emit-stream = session.observe-deep ''
-    emit-stream.pause = false
-    emit-stream.on-value ->
-      return if emit-stream.pause
-      $info 'Sending data', session.last
-      socket.emit \session, session.last
+          session.del \id

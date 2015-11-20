@@ -1,9 +1,7 @@
-require! 'socket.io-client': socket-io
-require! co
-require! 'fast-json-patch': patch
-require! \prettyjson
 Module = (require \module).Module
-
+require! 'socket.io-client': socket-io
+require! \co
+require! \prettyjson
 require! \db
 require! \rivulet
 
@@ -29,41 +27,27 @@ export test = ->*
       info '=' * process.stdout.columns
       info path, \:, (dasherize name)
       info '-' * process.stdout.columns
-      session = rivulet!
       socket = socket-io 'http://localhost:8000', force-new: true
+      session = rivulet socket, \session
       module.exports.$local.session = session
-      receive-count = 0
-      receive-last = []
-      socket.on \session, ->
-        reset-too-long!
-        root-stream.pause = true
-        session.patch it
-        root-stream.pause = false
-      root-stream = session.observe-deep ''
-      root-stream.pause = false
-      root-stream.on-value ->
-        return if root-stream.pause
-        socket.emit \session, session.last
       keys module.exports[name] |> each (key) ->
         return if key is \session
         module.exports[name][key] = co.wrap(module.exports[name][key])
         module.exports[name][key].bind module.exports[name]
-        session.observe (dasherize key).replace(/-/, '.')
-        .on-value ->
-          set-timeout ->
-            module.exports[name][key] session!
-            .then ->
-              info 'Success'.green
-            .catch ->
-              if it.name is \AssertionError
-                info "#{it.name.red} (#{it.operator})"
-                info 'Expected'.yellow
-                prettyprint it.expected
-                info 'Actual'.yellow
-                prettyprint it.actual
-              else
-                info it.to-string!red
-              session.set \end, true
+        session.observe (dasherize key).replace(/-/, '.'), ->
+          module.exports[name][key] it
+          .then ->
+            info 'Success'.green
+          .catch ->
+            if it.name is \AssertionError
+              info "#{it.name.red} (#{it.operator})"
+              info 'Expected'.yellow
+              prettyprint it.expected
+              info 'Actual'.yellow
+              prettyprint it.actual
+            else
+              info it.to-string!red
+            session.set \end, true
       session module.exports[name].session
       reset-too-long = ->
         clear-timeout state.too-long
@@ -72,7 +56,7 @@ export test = ->*
           session.set \end, true
           state.fail = 'took too long'
         , 1000
-      socket.on \disconnect, ->
+      session.socket.on \disconnect, ->
         clear-timeout state.too-long
         if state.fail
           info "Failed: #{state.fail}".red
