@@ -72,6 +72,7 @@ register-component = (name, component) ->
   prototype = Object.create HTMLElement.prototype
   prototype.attached-callback = ->
     @q = q this
+    @find = ~> @q.find it
     @merge = -> session.merge it
     @revise = -> session it
     session(session! <<< @start!)
@@ -102,7 +103,10 @@ register-component = (name, component) ->
     event:           (query, name, transform) -> s.from-child-events this, query, name, transform
     event-value:     (query, name) -> s.from-child-events this, query, name, -> q it.target .val!
     value-on-change: (query) -> s.from-child-events this, query, \change, -> q it.target .val!
-    truth-on-click:  (query) -> s.from-child-events this, query, \click, -> true
+    truth-on-click:  (query) -> s.from-child-events this, query, \click, ->
+      return (q event.target .prop \checked) if event.target.type in <[ checkbox radio ]>
+      true
+    action-on-click: (query, action) -> s.from-child-events this, query, \click, -> action
     watch: []
     start: -> {}
     apply: -> {}
