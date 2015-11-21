@@ -43,17 +43,13 @@ export test = ->*
               info it.to-string!red
             session.set \end, true
       session module.exports[name].session
-      reset-too-long = ->
-        clear-timeout state.too-long
-        return if session.get \end
-        state.too-long = set-timeout ->
-          session.set \end, true
-          state.fail = 'took too long'
-        , 1000
+      set-timeout ->
+        session.set \end, true
+        state.fail = 'Timed out'
+      , 3000
       session.socket.on \disconnect, ->
-        clear-timeout state.too-long
         if state.fail
-          info "Failed: #{state.fail}".red
+          info state.fail.red
         run-next!
     names = keys module.exports
     run-next = ->
