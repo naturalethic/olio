@@ -71,7 +71,7 @@ q document.body .on \submit, \form, false
 register-component = (name, component) ->
   prototype = Object.create HTMLElement.prototype
   prototype.attached-callback = ->
-    # @q = q(this)
+    @q = q this
     @merge = -> session.merge it
     @revise = -> session it
     session(session! <<< @start!)
@@ -99,8 +99,10 @@ register-component = (name, component) ->
     # XXX: TODO: off-value any of the above on-values
 
   prototype <<< do
-    event: (query, name, transform) -> s.from-child-events this, query, name, transform
-    event-value: (query, name) -> s.from-child-events this, query, name, -> q it.target .val!
+    event:           (query, name, transform) -> s.from-child-events this, query, name, transform
+    event-value:     (query, name) -> s.from-child-events this, query, name, -> q it.target .val!
+    value-on-change: (query) -> s.from-child-events this, query, \change, -> q it.target .val!
+    truth-on-click:  (query) -> s.from-child-events this, query, \click, -> true
     watch: []
     start: -> {}
     apply: -> {}
