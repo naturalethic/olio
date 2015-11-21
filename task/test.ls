@@ -43,11 +43,12 @@ export test = ->*
               info it.to-string!red
             session.set \end, true
       session module.exports[name].session
-      set-timeout ->
+      state.timeout = set-timeout ->
         session.set \end, true
         state.fail = 'Timed out'
       , 3000
       session.socket.on \disconnect, ->
+        clear-timeout state.timeout
         if state.fail
           info state.fail.red
         run-next!
