@@ -33,61 +33,20 @@ s.from-child-events = (target, query, event-name, transform = id) ->
 
 # Session
 require! 'socket.io-client': socket-io
-require! 'fast-json-patch/dist/json-patch-duplex.min': patch
-require! 'baobab'
-baobab::trim = (other, tree, path = []) ->
-  tree ?= @serialize!
-  for key, val of tree
-    if not other[key]?
-      @unset path ++ [ key ]
-    else if is-object val
-      @trim other[key], val, path ++ [ key ]
+require! \rivulet
 socket = socket-io!
-window.$session = session = new baobab
-receive-count = 0
-receive-last = []
-socket.on \session, ->
-  new-session = session.serialize!
-  patch.apply new-session, it
-  receive-last := it |> map -> JSON.stringify it
-  session.deep-merge new-session
-  session.trim new-session
-  # Load the session only after we have received the initial stuff
-  if not receive-count
-    if id = session-storage.get-item \id
-      session.set \id, id
-  receive-count := receive-count + 1
-  info \SESSION, receive-count, session.get!
+window.$session = session = rivulet socket, \session
+if id = session-storage.get-item \id
+  session.set \id, id
+session.observe \id, ->
+  info \OBSERVE-ID
+  # return if !it.data.current-data or it.data.current-data is \destroy
+  # info \SETTING-SESSION-STORAGE
+  # session-storage.set-item \id, it.data.current-data
 
-session.root.start-recording 1
-session.root.on \update, ->
-  # Don't send session changes that were just received from server
-  diff = patch.compare session.root.get-history!0, session.root.get!
-  |> filter -> JSON.stringify(it) not in receive-last
-  receive-last := []
-  if diff.length
-    info \EMIT, diff
-    socket.emit \session, diff if diff.length
-session.select \id
-.on \update, ->
-  return if !it.data.current-data or it.data.current-data is \destroy
-  info \SETTING-SESSION-STORAGE
-  session-storage.set-item \id, it.data.current-data
-
-window.session = (path) ->
-  obj =
-    cursor: session.select (path.split \. |> map -> (parse-int(it) and parse-int(it)) or it)
-    stream: s.stream (emitter) ->
-      if val = session.get path.split \.
-        emitter.emit val
-      # This isn't right, fix it (properly create/dispose)
-      obj.cursor.on \update, ->
-        emitter.emit obj.cursor.get!
-      ->
-
-window.destroy-session = ->
-  session-storage.remove-item \id
-  session.set \id, \destroy
+# window.destroy-session = ->
+#   session-storage.remove-item \id
+#   session.set \id, \destroy
 
 # History
 window.history = require \html5-history-api
@@ -103,87 +62,50 @@ q window .on \load, ->
   session.set \route, current-route!
 q window .on \popstate, ->
   session.set \route, current-route!
-session.select \route
-.on \update, ->
-  go session.root.get \route
+session.observe \route, ->
+  go session.get \route
 
 # Disable all form submits
 q document.body .on \submit, \form, false
 
 register-component = (name, component) ->
   prototype = Object.create HTMLElement.prototype
-  self = null
   prototype.attached-callback = ->
-    @merge = (what) ~>
-      what ?= state
-      render = false
-      for key, cursor of cursors
-        if what[key]?
-          cursor = cursor.up!
-          object = { (key): what[key] }
-          if cursor.get! is void
-            cursor.set {}
-          if (diff = patch.compare cursor.serialize!{(key)}, object).length
-            render = true
-            info \DIFF, @tag-name, cursor.serialize!{(key)}, object
-          cursor.deep-merge object
-      if render
-        m.render this, (eval m.convert @view state)
-    state = @start!
-    cursors = {}
-    info \RENDERING, @tag-name, state
-    m.render this, (eval m.convert @view state)
-    # Watchers
-    @$watchers = @watch!
-    wkeys = keys @$watchers
-    wvals = values @$watchers
-    [0 til wkeys.length] |> each (i) ->
-      cursors[wkeys[i]] = wvals[i].cursor
-      wvals[i] = wvals[i].stream.map -> (wkeys[i]): it
-    @merge!
-    @$watch-on-value = (val) ~>
-      old-state = {} <<< state
-      state <<< val
-      if (patch.compare old-state, state).length
-        info \RE-RENDERING, @tag-name, state
-        m.render this, (eval m.convert @view state)
-        set-timeout ~>
-          @react state, val
-    @$watch-merge = s.merge wvals
-    @$watch-merge.on-value @$watch-on-value
-    # Appliers
-    appliers = @apply state
-    akeys = keys appliers
-    avals = values appliers
-    [0 til akeys.length] |> each (i) ~>
-      akey = akeys[i].split \.
-      if typeof! avals[i] != \Array
-        avals[i] = [ avals[i] ]
-      avals[i] |> each (aval) ~>
-        if akey.0 is \react
-          aval.on-value (val) ~>
-            set-timeout ~>
-              @react state, val
-        else
-          aval.on-value (val) ~>
-            if cursor = cursors[head akey]
-              cursor.set (tail akey), val
-            else
-              session.root.set akey, val
-    @ready state
+    # @q = q(this)
+    @merge = -> session.merge it
+    @revise = -> session it
+    session(session! <<< @start!)
+    s.merge (@watch |> map (path) -> (session.observe path).map -> (path): session.get(path))
+    .on-value ~>
+      @react session!, it
+      info \Re-rendering, @tag-name
+      m.render this, (eval m.convert @view session!)
+      @paint session!
+    info \Rendering, @tag-name
+    m.render this, (eval m.convert @view session!)
+    @paint session!
+    obj-to-pairs @apply! |> each ([k, val]) ~>
+      if not is-array val
+        val = [ val ]
+      for v in val
+        v.on-value ~>
+          if k is \react
+            @react session!, it
+          else
+            session.set (camelize k), it
+    @ready!
   prototype.detached-callback = ->
     info \DETACHED, @tag-name
-    @$watch-merge.off-value @$watch-on-value
-  prototype.map = (path, func) ->
-    @$watchers[path].stream.map -> info \FIRING; func it
+    # XXX: TODO: off-value any of the above on-values
 
   prototype <<< do
     event: (query, name, transform) -> s.from-child-events this, query, name, transform
     event-value: (query, name) -> s.from-child-events this, query, name, -> q it.target .val!
-    ready: ->
-    watch: -> {}
-    apply: -> null
-    react: -> null
+    watch: []
     start: -> {}
+    apply: -> {}
+    react: ->
+    paint: ->
+    ready: ->
   prototype <<< component
   document.register-element name, prototype: prototype
