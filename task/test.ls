@@ -20,6 +20,7 @@ export test = ->*
     module._compile livescript.compile ([
       "export $local = {}"
       "$revise = -> $local.session it"
+      "$merge = -> $local.session.merge it"
       (fs.read-file-sync path .to-string!)
     ].join '\n'), { +bare }
     run = (name) ->
