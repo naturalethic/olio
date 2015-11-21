@@ -25,6 +25,7 @@ global  <<< prelude-ls
 array-replace = (it, a, b) -> index = it.index-of(a); it.splice(index, 1, b) if index > -1; it
 
 global <<< do
+  pp:            require './pp'
   co:            co
   fs:            fs <<< { path: path }
   glob:          glob

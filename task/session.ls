@@ -3,7 +3,6 @@ require! \node-static
 require! \http
 require! 'socket.io': socket-io
 require! \co
-require! \prettyjson
 require! \rethinkdbdash
 require! \rivulet
 
@@ -36,14 +35,10 @@ export session = ->*
       if is-string(args.0)
         args.0 = args.0.magenta
       args.unshift "#{date.0.blue}#{'T'.grey}#{date.1.blue} #{socket.handshake.address.yellow} #{'INFO'.green}"
-      obj = ''
       if is-object(last args) or is-array(last args)
         obj = args.pop!
       info ...args
-      info prettyjson.render obj,
-        keys-color: \grey
-        dash-color: \white
-        number-color: \blue
+      pp obj if obj
     $info 'Connection established'
     session = rivulet socket, \session
     session.observe \end, ->
@@ -55,6 +50,7 @@ export session = ->*
       module._compile livescript.compile ([
         "export $local = {}"
         "$revise = -> $local.session it"
+        "$merge = -> $local.session.merge it"
         "r = -> $local.r"
         "$uuid = ->* yield r!_r.uuid!"
         "$info = -> $local.info ...&"

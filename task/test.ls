@@ -1,15 +1,8 @@
 Module = (require \module).Module
 require! 'socket.io-client': socket-io
 require! \co
-require! \prettyjson
 require! \db
 require! \rivulet
-
-prettyprint = ->
-  info prettyjson.render it,
-    keys-color: \grey
-    dash-color: \white
-    number-color: \blue
 
 export test = ->*
   state = {}
@@ -43,9 +36,9 @@ export test = ->*
             if it.name is \AssertionError
               info "#{it.name.red} (#{it.operator})"
               info 'Expected'.yellow
-              prettyprint it.expected
+              pp it.expected
               info 'Actual'.yellow
-              prettyprint it.actual
+              pp it.actual
             else
               info it.to-string!red
             session.set \end, true
@@ -78,6 +71,8 @@ export test = ->*
           run-module paths.shift!
     run-next!
   paths = glob.sync 'test/*'
+  if 'test/seed.ls' in paths
+    paths = (require './test/seed.ls') |> map -> "test/#it.ls"
   if olio.task.1
     paths = paths |> filter -> //#{olio.task.1}\.ls$//.test it
   run-module paths.shift! if paths.length
