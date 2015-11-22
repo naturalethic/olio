@@ -75,15 +75,17 @@ register-component = (name, component) ->
     @find = ~> @q.find it
     @merge = -> session.merge it
     @revise = -> session it
+    render = ~>
+      m.render this, (eval m.convert @view (@dummy! <<< session!))
     session(session! <<< @start!)
     s.merge (@watch |> map (path) -> (session.observe path).map -> (path): session.get(path))
     .on-value ~>
       @react session!, it
       info \Re-rendering, @tag-name
-      m.render this, (eval m.convert @view session!)
+      render!
       @paint session!
     info \Rendering, @tag-name
-    m.render this, (eval m.convert @view session!)
+    render!
     @paint session!
     obj-to-pairs @apply! |> each ([k, val]) ~>
       if not is-array val
@@ -108,6 +110,7 @@ register-component = (name, component) ->
       true
     action-on-click: (query, action) -> s.from-child-events this, query, \click, -> action
     watch: []
+    dummy: -> {}
     start: -> {}
     apply: -> {}
     react: ->
