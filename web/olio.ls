@@ -45,10 +45,7 @@ session.logger = (...args) ->
 if id = session-storage.get-item \id
   session.set \id, id
 session.observe \id, ->
-  # info \OBSERVE-ID, session.get \id
-  # return if !it.data.current-data or it.data.current-data is \destroy
-  # info \SETTING-SESSION-STORAGE
-  # session-storage.set-item \id, it.data.current-data
+  session-storage.set-item \id, session.get \id
 
 # window.destroy-session = ->
 #   session-storage.remove-item \id
