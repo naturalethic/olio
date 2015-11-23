@@ -83,7 +83,7 @@ register-component = (name, component) ->
       m.render this, (eval m.convert @view (@dummy! <<< session!))
     if @start
       warn "START on '#{@tag-name}', be careful!"
-    session(session! <<< @start!)
+      session(session! <<< @start!)
     s.merge (@watch |> map (path) -> (session.observe path).map -> (path): session.get(path))
     .on-value ~>
       @react session!, it
@@ -121,7 +121,7 @@ register-component = (name, component) ->
         s.from-child-events this, query, \click, -> action
     watch: []
     dummy: -> {}
-    start: -> {}
+    start: null
     apply: -> {}
     react: ->
     paint: ->
