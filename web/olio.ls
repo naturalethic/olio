@@ -75,6 +75,7 @@ q document.body .on \submit, \form, false
 register-component = (name, component) ->
   prototype = Object.create HTMLElement.prototype
   prototype.attached-callback = ->
+    @$on-values = []
     @q = q this
     @find = ~> @q.find it
     @merge = -> session.merge it
@@ -84,12 +85,14 @@ register-component = (name, component) ->
     if @start
       warn "START on '#{@tag-name}', be careful!"
       session(session! <<< @start!)
-    s.merge (@watch |> map (path) -> (session.observe path).map -> (path): session.get(path))
-    .on-value ~>
+    stream = s.merge (@watch |> map (path) -> (session.observe path).map -> (path): session.get(path))
+    @$on-values.push [ stream, ~>
       @react session!, it
       info \Re-rendering, @tag-name
       render!
       @paint session!
+    ]
+    stream.on-value (last @$on-values).1
     info \Rendering, @tag-name
     render!
     @paint session!
@@ -97,15 +100,18 @@ register-component = (name, component) ->
       if not is-array val
         val = [ val ]
       for v in val
-        v.on-value ~>
+        @$on-values.push [ v, ~>
           if k is \react
             @react session!, it
           else
             session.set (camelize k), it
+        ]
+        v.on-value (last @$on-values).1
     @ready session!
   prototype.detached-callback = ->
     info \DETACHED, @tag-name
-    # XXX: TODO: off-value any of the above on-values
+    for on-value in @$on-values
+      on-value.0.off-value on-value.1
 
   prototype <<< do
     event:           (query, name, transform) -> s.from-child-events this, query, name, transform
