@@ -47,9 +47,9 @@ if id = session-storage.get-item \id
 session.observe \id, ->
   session-storage.set-item \id, session.get \id
 
-# window.destroy-session = ->
-#   session-storage.remove-item \id
-#   session.set \id, \destroy
+window.destroy-session = ->
+  session-storage.remove-item \id
+  session.del \id
 
 # History
 window.history = require \html5-history-api

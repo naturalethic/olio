@@ -68,15 +68,9 @@ export session = ->*
         session.observe ((dasherize key).replace /-/, '.'), ->
           $info "Reaction: #key", it
           module.exports[key] it
-    # XXX: Now we can change the semantics of this to just delete the id on the client instead
-    #      of setting to destroy
     session.observe \id, co.wrap ->*
-      id = session.get \id
-      $info \ID, id
-      return if id is undefined
-      if id is \destroy
-        info 'Session destroyed'
-        session.set route: session.get(\route)
+      if not id = session.get \id
+        session session!{route}
       else
         record = first (yield r.table(\session).filter(id: id))
         if record

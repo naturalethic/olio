@@ -4,10 +4,11 @@ write = -> process.stdout.write it
 
 ppval = (it, newline) ->
   switch typeof! it
-  | \Number   => write it.to-string!blue
-  | \String   => write it.green
-  | \Boolean  => write it.to-string!yellow
-  | otherwise => write it.to-string!brown
+  | \Number    => write it.to-string!blue
+  | \String    => write it.green
+  | \Boolean   => write it.to-string!yellow
+  | \Undefined => write it
+  | otherwise  => write it.to-string!brown
   write '\n' if newline
 
 pparr = (it, indent = 0) ->
