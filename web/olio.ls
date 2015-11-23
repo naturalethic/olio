@@ -62,7 +62,8 @@ window.go = ->
 # window.route = ->
 #   session.root.set \route, it
 q window .on \load, ->
-  session.set \route, current-route!
+  if not session.get \route
+    session.set \route, current-route!
 q window .on \popstate, ->
   session.set \route, current-route!
 session.observe \route, ->
