@@ -76,7 +76,7 @@ export session = ->*
         info 'Session destroyed'
         session.set route: session.get(\route)
       else
-        record = first (yield r.table(\session).filter(id: session.get(\id)))
+        record = first (yield r.table(\session).filter(id: id))
         if record
           $info 'Loading session', record
           session record
@@ -84,4 +84,5 @@ export session = ->*
           $info 'Creating session', it
           yield r.table(\session).insert it
         else
+          $info 'Deleting session id'
           session.del \id

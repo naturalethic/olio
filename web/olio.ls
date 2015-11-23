@@ -39,7 +39,7 @@ window.$session = session = rivulet socket, \session
 if id = session-storage.get-item \id
   session.set \id, id
 session.observe \id, ->
-  info \OBSERVE-ID
+  # info \OBSERVE-ID, session.get \id
   # return if !it.data.current-data or it.data.current-data is \destroy
   # info \SETTING-SESSION-STORAGE
   # session-storage.set-item \id, it.data.current-data
@@ -96,7 +96,7 @@ register-component = (name, component) ->
             @react session!, it
           else
             session.set (camelize k), it
-    @ready!
+    @ready session!
   prototype.detached-callback = ->
     info \DETACHED, @tag-name
     # XXX: TODO: off-value any of the above on-values
