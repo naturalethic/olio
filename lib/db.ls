@@ -13,3 +13,6 @@ export reset = (r) ->*
       yield r.table(table).delete!
       yield r.table-create table
   r._r.get-pool-master!drain! if disconnect-at-end
+
+export r = ->
+  (rethinkdbdash olio.config.db{host}).db olio.config.db.name

@@ -7,6 +7,7 @@ require! \rivulet
 export test = ->*
   state = {}
   yield db.reset!
+  r = db.r!
   run-module = (path) ->
     module = new Module
     module.paths = [ "#{process.cwd!}/node_modules", "#{process.cwd!}/lib" ]
@@ -14,8 +15,10 @@ export test = ->*
       "export $local = {}"
       "$revise = -> $local.session it"
       "$merge = -> $local.session.merge it"
+      "r = -> $local.r"
       (fs.read-file-sync path .to-string!)
     ].join '\n'), { +bare }
+    module.exports.$local.r = r
     run = (name) ->
       return run-next! if name.0 is \$
       info '=' * process.stdout.columns
@@ -66,6 +69,8 @@ export test = ->*
           run names.shift!
         else if paths.length
           run-module paths.shift!
+        else
+          r._r.get-pool-master!drain!
     run-next!
   paths = glob.sync 'test/*'
   if 'test/seed.ls' in paths
