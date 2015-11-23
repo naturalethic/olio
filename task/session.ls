@@ -82,3 +82,8 @@ export session = ->*
         else
           $info 'Deleting session id'
           session.del \id
+    session.observe-deep '', co.wrap ->*
+      return if not session.get \persistent
+      return if not session.get \id
+      yield r.table(\session).get(session.get \id).update session!
+      $info 'Session saved', session!
