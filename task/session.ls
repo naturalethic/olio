@@ -72,7 +72,8 @@ export session = ->*
     #      of setting to destroy
     session.observe \id, co.wrap ->*
       id = session.get \id
-      # return if id is undefined
+      $info \ID, id
+      return if id is undefined
       if id is \destroy
         info 'Session destroyed'
         session.set route: session.get(\route)
