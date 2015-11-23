@@ -36,6 +36,12 @@ require! 'socket.io-client': socket-io
 require! \rivulet
 socket = socket-io!
 window.$session = session = rivulet socket, \session
+session.logger = (...args) ->
+  if is-object(last args) or is-array(last args)
+    obj = args.pop!
+  args.push JSON.stringify obj
+  info ...args
+
 if id = session-storage.get-item \id
   session.set \id, id
 session.observe \id, ->

@@ -41,6 +41,7 @@ export session = ->*
       pp obj if obj
     $info 'Connection established'
     session = rivulet socket, \session
+    session.logger = $info
     session.observe \end, ->
       $info 'Disconnecting'
       session.socket.disconnect!
