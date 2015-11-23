@@ -91,7 +91,7 @@ register-component = (name, component) ->
     info \Rendering, @tag-name
     render!
     @paint session!
-    obj-to-pairs @apply session! |> each ([k, val]) ~>
+    obj-to-pairs @apply! |> each ([k, val]) ~>
       if not is-array val
         val = [ val ]
       for v in val
