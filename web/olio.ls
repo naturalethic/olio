@@ -112,7 +112,11 @@ register-component = (name, component) ->
     truth-on-click:  (query) -> s.from-child-events this, query, \click, ->
       return (q event.target .prop \checked) if event.target.type in <[ checkbox radio ]>
       true
-    action-on-click: (query, action) -> s.from-child-events this, query, \click, -> action
+    action-on-click: (query, action) ->
+      if this[camelize action]
+        s.from-child-events this, query, \click, ~> this[camelize action] session!
+      else
+        s.from-child-events this, query, \click, -> action
     watch: []
     dummy: -> {}
     start: -> {}
