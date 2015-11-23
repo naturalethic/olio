@@ -81,6 +81,8 @@ register-component = (name, component) ->
     @revise = -> session it
     render = ~>
       m.render this, (eval m.convert @view (@dummy! <<< session!))
+    if @start
+      warn "START on '#{@tag-name}', be careful!"
     session(session! <<< @start!)
     s.merge (@watch |> map (path) -> (session.observe path).map -> (path): session.get(path))
     .on-value ~>
