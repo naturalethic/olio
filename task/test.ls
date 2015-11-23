@@ -16,6 +16,7 @@ export test = ->*
       "$revise = -> $local.session it"
       "$merge = -> $local.session.merge it"
       "r = -> $local.r"
+      "$done = -> $merge { +end }"
       (fs.read-file-sync path .to-string!)
     ].join '\n'), { +bare }
     module.exports.$local.r = r
