@@ -32,10 +32,8 @@ export test = ->*
         return if key is \session
         module.exports[name][key] = co.wrap(module.exports[name][key])
         module.exports[name][key].bind module.exports[name]
-        session.observe (dasherize key).replace(/-/, '.'), ->
+        session.observe (camelize key), ->
           module.exports[name][key] it
-          .then ->
-            info 'Success'.green
           .catch ->
             if it.name is \AssertionError
               info "#{it.name.red} (#{it.operator})"
@@ -55,6 +53,8 @@ export test = ->*
         clear-timeout state.timeout
         if state.fail
           info state.fail.red
+        else
+          info 'Success'.green
         run-next!
     names = keys module.exports
     run-next = ->
