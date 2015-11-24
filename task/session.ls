@@ -72,6 +72,8 @@ export session = ->*
       if not id = session.get \id
         session session!{route}
       else
+        if id == \nobody
+          session.set \route, ''
         record = first (yield r.table(\session).filter(id: id))
         if record
           $info 'Loading session', record
@@ -85,5 +87,6 @@ export session = ->*
     session.observe-deep '', co.wrap ->*
       return if not session.get \persistent
       return if not session.get \id
+      return if session.get(\id) is \nobody
       yield r.table(\session).get(session.get \id).update session!
       $info 'Session saved', session!

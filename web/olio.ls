@@ -44,7 +44,10 @@ session.logger = (...args) ->
 
 if id = session-storage.get-item \id
   session.set \id, id
+else
+  session.set \id, \nobody
 session.observe \id, ->
+  return if (session.get \id) is \nobody
   session-storage.set-item \id, session.get \id
 
 window.destroy-session = ->
