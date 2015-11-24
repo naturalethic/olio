@@ -47,6 +47,7 @@ if id = session-storage.get-item \id
 else
   session.set \id, \nobody
 session.observe \id, ->
+  return if not (session.get \id)
   return if (session.get \id) is \nobody
   session-storage.set-item \id, session.get \id
 
