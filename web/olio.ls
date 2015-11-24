@@ -81,7 +81,8 @@ register-component = (name, component) ->
     @merge = -> session.merge it
     @revise = -> session it
     render = ~>
-      m.render this, (eval m.convert @view (@dummy! <<< session!))
+      locals = q.extend true, @dummy!, session!
+      m.render this, (eval m.convert @view locals)
     if @start
       warn "START on '#{@tag-name}', be careful!"
       session(session! <<< @start!)
