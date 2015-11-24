@@ -45,6 +45,7 @@ export session = ->*
     session.observe \end, ->
       $info 'Disconnecting'
       session.socket.disconnect!
+    $info 'Note: You cannot observe camelCased properties.'
     glob.sync 'react/**/*' |> each ->
       module = new Module
       module.paths = [ "#{process.cwd!}/node_modules", "#{process.cwd!}/lib" ]
@@ -65,8 +66,9 @@ export session = ->*
         return if key.0 is \$
         module.exports[key] = co.wrap(module.exports[key])
         module.exports[key].bind module.exports
-        session.observe ((dasherize key).replace /-/, '.'), ->
-          $info "Reaction: #key", it
+        $info 'Observing', (dasherize key).replace(/-/g, '.')
+        session.observe ((dasherize key).replace /-/g, '.'), ->
+          $info "Reaction: #{dasherize key}", it
           module.exports[key] it
     session.observe \id, co.wrap ->*
       if not id = session.get \id
