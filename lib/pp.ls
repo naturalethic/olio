@@ -7,7 +7,7 @@ ppval = (it, newline) ->
   | \Number    => write it.to-string!blue
   | \String    => write it.green
   | \Boolean   => write it.to-string!yellow
-  | \Undefined => write it
+  | \Undefined => write 'undefined'.cyan
   | otherwise  => write it.to-string!brown
   write '\n' if newline
 
