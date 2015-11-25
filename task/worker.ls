@@ -1,5 +1,4 @@
 require! \browserify
-require! \inflection
 require! \livescript
 require! \watchify
 require! \node-notifier

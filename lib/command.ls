@@ -8,8 +8,6 @@ require! \optimist
 require! \chokidar
 require! \glob
 require! \co
-require! \harmony-reflect
-require! \deepmerge
 require! \deep-extend
 require! \livescript
 Module = (require \module).Module
@@ -30,7 +28,6 @@ global <<< do
   fs:            fs <<< { path: path }
   glob:          glob
   livescript:    livescript
-  merge:         deepmerge
   extend:        deep-extend
   watcher:       chokidar
   Promise:       bluebird
@@ -96,7 +93,7 @@ global.olio =
   option:  pairs-to-obj(obj-to-pairs(optimist.argv) |> map -> [camelize(it[0]), it[1]])
 
 if fs.exists-sync './host.ls'
-  olio.config = deepmerge olio.config, require "#{process.cwd!}/host.ls"
+  extend olio.config, require "#{process.cwd!}/host.ls"
 
 if olio.config.log?identifier
   global <<< do

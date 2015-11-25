@@ -1,7 +1,6 @@
 require! \stylus
 require! \nib
 require! \browserify
-require! \inflection
 require! \livescript
 require! \node-notifier
 require! \watchify
