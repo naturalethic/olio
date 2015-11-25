@@ -110,8 +110,9 @@ setup-bundler = ->*
   # info "#__dirname/node_modules/olio/node_modules"
   bundler = watchify browserify <[ ./tmp/index.js ]>, {
     paths:
-      fs.realpath-sync "#__dirname/../node_modules"
+      # fs.realpath-sync "#__dirname/../node_modules"
       fs.realpath-sync "#__dirname/../web"
+      ...
     no-parse: no-parse
     detect-globals: false
     cache: {}

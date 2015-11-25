@@ -123,7 +123,7 @@ if !olio.task.0 or !task-modules[camelize olio.task.0]
 
 task-module = new Module
 # task-module.paths = [ "#{process.cwd!}/node_modules/olio/node_modules", "#{process.cwd!}/node_modules", "#{process.cwd!}/lib" ]
-task-module.paths = [ "#{__dirname}/../node_modules", "#{process.cwd!}/node_modules", "#{process.cwd!}/lib", "#{__dirname}/../lib" ]
+task-module.paths = [ "#{process.cwd!}/node_modules", "#{process.cwd!}/lib", "#{__dirname}/../lib" ]
 task-module._compile (livescript.compile ([
   (fs.read-file-sync task-modules[camelize olio.task.0] .to-string!)
 ].join '\n'), { +bare }), task-modules[camelize olio.task.0]
