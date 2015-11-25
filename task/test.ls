@@ -6,7 +6,7 @@ require! \rivulet
 
 export test = ->*
   state = {}
-  yield db.reset!
+  yield db.reset! unless olio.option.keep
   r = db.r!
   run-module = (path) ->
     module = new Module
