@@ -34,7 +34,7 @@ export session = ->*
       date = (new Date).toISOString!split \T
       if is-string(args.0)
         args.0 = args.0.magenta
-      args.unshift "#{date.0.blue}#{'T'.grey}#{date.1.blue} #{socket.handshake.address.yellow} #{'INFO'.green}"
+      args.unshift "#{date.0.cyan}#{'T'.grey}#{date.1.cyan} #{socket.handshake.address.yellow} #{'INFO'.green}"
       if is-object(last args) or is-array(last args)
         obj = args.pop!
       info ...args
