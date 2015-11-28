@@ -59,7 +59,7 @@ global.exec = (command, async) ->
       child.on 'exit', -> resolve data.join('')
   else
     try
-      process.exec-sync command
+      (process.exec-sync command).to-string!
     catch
       false
 
@@ -119,8 +119,8 @@ if !olio.task.0 or !task-modules[camelize olio.task.0]
   process.exit!
 
 task-module = new Module
-# task-module.paths = [ "#{process.cwd!}/node_modules/olio/node_modules", "#{process.cwd!}/node_modules", "#{process.cwd!}/lib" ]
-task-module.paths = [ "#{process.cwd!}/node_modules", "#{process.cwd!}/lib", "#{__dirname}/../lib" ]
+task-module.paths = [ "#{process.cwd!}/node_modules", "#{process.cwd!}/lib", "#__dirname/../lib" ]
+task-module.paths.push "#__dirname/../node_modules" if fs.exists-sync "#__dirname/../node_modules"
 task-module._compile (livescript.compile ([
   (fs.read-file-sync task-modules[camelize olio.task.0] .to-string!)
 ].join '\n'), { +bare }), task-modules[camelize olio.task.0]
