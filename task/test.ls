@@ -1,39 +1,41 @@
 Module = (require \module).Module
 require! 'socket.io-client': socket-io
 require! \co
-require! \db
+# require! \db
 require! \rivulet
 
 export test = ->*
   state = {}
-  yield db.reset! unless olio.option.keep
-  r = db.r!
+  # yield db.reset! unless olio.option.keep
+  # r = db.r!
   run-module = (path) ->
+    info path
     module = new Module
     module.paths = [ "#{process.cwd!}/node_modules", "#{process.cwd!}/lib" ]
     module._compile livescript.compile ([
       "export $local = {}"
       "$revise = -> $local.session it"
       "$merge = -> $local.session.merge it"
-      "r = -> $local.r"
+      # "r = -> $local.r"
       "$done = -> $merge { +end }"
       (fs.read-file-sync path .to-string!)
     ].join '\n'), { +bare }
-    module.exports.$local.r = r
+    # module.exports.$local.r = r
     run = (name) ->
       return run-next! if name.0 is \$
       info '=' * process.stdout.columns
       info path, \:, (dasherize name)
       info '-' * process.stdout.columns
-      socket = socket-io 'http://localhost:8000', force-new: true
+      socket = socket-io 'http://localhost:9000', force-new: true
       session = rivulet socket, \session
       module.exports.$local.session = session
       keys module.exports[name] |> each (key) ->
         return if key is \session
         module.exports[name][key] = co.wrap(module.exports[name][key])
         module.exports[name][key].bind module.exports[name]
-        session.observe (camelize key), ->
-          module.exports[name][key] it
+        session.observe (camelize key), (it, diff) ->
+          it = it!
+          module.exports[name][key] it, diff
           .catch ->
             if it.name is \AssertionError
               info "#{it.name.red} (#{it.operator})"
@@ -70,8 +72,8 @@ export test = ->*
           run names.shift!
         else if paths.length
           run-module paths.shift!
-        else
-          r._r.get-pool-master!drain!
+        # else
+        #   r._r.get-pool-master!drain!
     run-next!
   paths = glob.sync 'test/*'
   if 'test/seed.ls' in paths

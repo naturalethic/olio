@@ -10,6 +10,7 @@ require! \glob
 require! \co
 require! \deep-extend
 require! \livescript
+require! \node-uuid
 Module = (require \module).Module
 
 # -----------------------------------------------------------------------------
@@ -30,10 +31,12 @@ global <<< do
   livescript:    livescript
   extend:        deep-extend
   watcher:       chokidar
+  rivulet:       require './rivulet'
   Promise:       bluebird
   promise:       bluebird
   promisify:     bluebird.promisify
   promisify-all: bluebird.promisify-all
+  uuid:          -> node-uuid.v4!
   is-array:      -> typeof! it is \Array
   is-function:   -> typeof! it is \Function
   is-number:     -> typeof! it is \Number
