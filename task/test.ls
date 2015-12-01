@@ -12,9 +12,7 @@ export test = ->*
     module.paths = [ "#{process.cwd!}/node_modules", "#{process.cwd!}/lib" ]
     module._compile livescript.compile ([
       "export $local = {}"
-      "$revise = -> $local.session it"
-      "$merge = -> $local.session.merge it"
-      "$done = -> $merge { +end }"
+      "$done = -> $local.session.merge { +end }"
       (fs.read-file-sync path .to-string!)
     ].join '\n'), { +bare }
     run = (name) ->
@@ -23,14 +21,15 @@ export test = ->*
       info path, \:, (dasherize name)
       info '-' * process.stdout.columns
       socket = socket-io 'http://localhost:8000', force-new: true
-      session = rivulet socket, \session
+      session = rivulet {}, socket, \session
       module.exports.$local.session = session
       keys module.exports[name] |> each (key) ->
         return if key is \session
         # reactor = co.wrap(module.exports[name][key])
         reactor = module.exports[name][key]
         reactor.bind module.exports[name]
-        session.observe key, co.wrap ->*
+        observe-func = co.wrap ->*
+          session.forget key, observe-func
           tx = yield world.transaction!
           try
             yield reactor tx, session, it
@@ -49,6 +48,7 @@ export test = ->*
             else
               state.fail = it.to-string!red
             session.merge end: true
+        session.observe key, observe-func
         # session.observe (camelize key), ->
         #   module.exports[name][key] it
         #   .catch ->

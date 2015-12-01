@@ -10,6 +10,8 @@ require! \glob
 require! \co
 require! \deep-extend
 require! \livescript
+require! \node-uuid
+require! \harmony-reflect
 Module = (require \module).Module
 
 # -----------------------------------------------------------------------------
@@ -27,6 +29,8 @@ global <<< do
   co:            co
   fs:            fs <<< { path: path }
   glob:          glob
+  uuid:          node-uuid.v4
+  shy:           (obj, props) -> (props |> filter -> obj[camelize it]).length < props.length
   livescript:    livescript
   extend:        deep-extend
   watcher:       chokidar

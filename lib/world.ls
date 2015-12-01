@@ -1,4 +1,5 @@
 require! \promise-mysql : mysql
+require! './rivulet' : rivulet
 
 olio.config.world          ?= {}
 olio.config.world.host     ?= \127.0.0.1
@@ -10,21 +11,35 @@ pool = mysql.create-pool olio.config.world
 export transaction = ->*
   connection = yield pool.get-connection!
   yield connection.begin-transaction!
-  merge: (data) ->*
-    # yield connection.query "update world, (select json_merge(data, '#{JSON.stringify data}') as data from world) merged set world.data = merged.data"
-    yield connection.query "update world, (select json_merge(data, ?) as data from world) merged set world.data = merged.data", JSON.stringify(data)
-  # add: (kind, data) ->*
-  #   { insert-id } = yield connection.query 'insert document set ?', kind: kind, data: JSON.stringify(data)
-  #   data <<< first(yield connection.query 'select * from document where i = ?', insert-id){id, created, updated}
-  # contains: (kind, val, path) ->*
-  #   yield connection.query "select json_contains"
-  #   select json_contains(data, '{"email":"captain@copsforhire.com"}', '$.emails') from document;
-  commit: ->*
-    yield connection.commit!
-    connection.release!
-  rollback: ->*
-    yield connection.rollback!
-    connection.release!
+  tx =
+    merge: (data) ->*
+      for entity in difference (keys data), (yield connection.query "select json_keys(data) from world")
+        yield connection.query "update world, (select json_merge(data, ?) as data from world) merged set world.data = merged.data", [ JSON.stringify({ (entity): [] }) ]
+      yield connection.query "update world, (select json_merge(data, ?) as data from world) merged set world.data = merged.data", [ JSON.stringify(data) ]
+    search: (value, path, extract) ->*
+      path = eval first values first yield connection.query "select json_search(data, 'one', ?, NULL, ?) from world", [ value, path ]
+      extract = extract.replace /([\$\.])/g, "\\$1"
+      yield tx.extract (//^(#extract\[\d+\])//.exec path).1
+    contains: (value, path) ->*
+      first values first yield connection.query "select json_contains(data, ?, ?) from world", [ JSON.stringify(value), path ]
+    extract: (path) ->*
+      JSON.parse(first values first yield connection.query "select json_extract(data, ?) from world", [ path ])
+    commit: ->*
+      yield connection.commit!
+      connection.release!
+    rollback: ->*
+      yield connection.rollback!
+      connection.release!
+    select: (value, path, extract) ->*
+      path = eval first values first yield connection.query "select json_search(data, 'one', ?, NULL, ?) from world", [ value, path ]
+      extract = extract.replace /([\$\.])/g, "\\$1"
+      path = (//^(#extract\[\d+\])//.exec path).1
+      cursor = rivulet!
+      cursor yield tx.extract path
+      cursor.observe '$', co.wrap ->*
+        yield connection.query "update world, (select json_replace(data, ?, ?) as data from world) replaced set world.data = replaced.data", [ path, JSON.stringify(cursor.state) ]
+      cursor
+  tx
 
 export end = ->*
   yield pool.end!

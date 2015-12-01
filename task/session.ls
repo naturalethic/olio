@@ -5,9 +5,8 @@ require! 'socket.io': socket-io
 require! \co
 require! \rivulet
 require! \world
-require! \node-uuid : uuid
 
-export watch = [ __filename, \olio.ls, \session.ls, \react, "#__dirname/../lib/rivulet.ls" ]
+export watch = [ __filename, \olio.ls, \session.ls, \react, "#__dirname/../lib" ]
 
 export session = ->*
   file = new node-static.Server './public'
@@ -32,7 +31,7 @@ export session = ->*
       info ...args
       pp obj if obj
     $info 'Connection established'
-    session = rivulet socket, \session
+    session = rivulet {}, socket, \session
     session.logger = $info
     session.observe \end, ->
       $info 'Disconnecting'
@@ -42,16 +41,10 @@ export session = ->*
       module.paths = [ "#{process.cwd!}/node_modules", "#{process.cwd!}/lib" ]
       module._compile livescript.compile ([
         "export $local = {}"
-        # "$revise = -> $local.session it"
-        # "$merge = -> $local.session.merge it"
         "$info = -> $local.info ...&"
-        "$uuid = -> $local.uuid.v4!"
-        "$shy = (obj, props) -> (props |> filter -> obj[camelize it]).length < props.length"
         (fs.read-file-sync it .to-string!)
       ].join '\n'), { +bare }
-      # module.exports.$local.session = session
       module.exports.$local.info = $info
-      module.exports.$local.uuid = uuid
       return if not module.exports.session
       keys module.exports.session |> each (key) ->
         # reactor = co.wrap(module.exports.session[key])
@@ -64,7 +57,8 @@ export session = ->*
           try
             yield reactor tx, session, it
             yield tx.commit!
-          catch
+          catch e
+            info e
             yield tx.rollback!
         # session.observe ((dasherize key).replace /-/g, '.'), co.wrap ->*
         #   $info "Session reaction '#{dasherize key}'", it
