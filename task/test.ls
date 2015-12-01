@@ -45,8 +45,9 @@ export test = ->*
               info 'Actual'.yellow
               pp it.actual
               info ''
+              state.fail = 'Fail'
             else
-              info it.to-string!red
+              state.fail = it.to-string!red
             session.merge end: true
         # session.observe (camelize key), ->
         #   module.exports[name][key] it
