@@ -3,21 +3,13 @@ require! \node-static
 require! \http
 require! 'socket.io': socket-io
 require! \co
-require! \rethinkdbdash
 require! \rivulet
+require! \world
+require! \node-uuid : uuid
 
 export watch = [ __filename, \olio.ls, \session.ls, \react, "#__dirname/../lib/rivulet.ls" ]
 
 export session = ->*
-  try
-    r = rethinkdbdash olio.config.db{host}
-    if olio.config.db.name not in (yield r.db-list!)
-      info "Creating database '#{olio.config.db.name}'"
-      yield r.db-create olio.config.db.name
-    r = r.db olio.config.db.name
-    for table in  difference (olio.config.db.tables ++ <[ session ]>), (yield r.table-list!)
-      info "Creating table '#table'"
-      yield r.table-create table
   file = new node-static.Server './public'
   server = http.create-server (request, response) ->
     if not fs.exists-sync "./public#{request.url}"
@@ -45,50 +37,75 @@ export session = ->*
     session.observe \end, ->
       $info 'Disconnecting'
       session.socket.disconnect!
-    $info 'Note: You cannot observe camelCased properties.'
     glob.sync 'react/**/*' |> each ->
       module = new Module
       module.paths = [ "#{process.cwd!}/node_modules", "#{process.cwd!}/lib" ]
       module._compile livescript.compile ([
         "export $local = {}"
-        "$revise = -> $local.session it"
-        "$merge = -> $local.session.merge it"
-        "r = -> $local.r"
-        "$uuid = ->* yield r!_r.uuid!"
+        # "$revise = -> $local.session it"
+        # "$merge = -> $local.session.merge it"
         "$info = -> $local.info ...&"
+        "$uuid = -> $local.uuid.v4!"
         "$shy = (obj, props) -> (props |> filter -> obj[camelize it]).length < props.length"
         (fs.read-file-sync it .to-string!)
       ].join '\n'), { +bare }
-      module.exports.$local.session = session
-      module.exports.$local.r = r
+      # module.exports.$local.session = session
       module.exports.$local.info = $info
-      keys module.exports |> each (key) ->
-        return if key.0 is \$
-        module.exports[key] = co.wrap(module.exports[key])
-        module.exports[key].bind module.exports
-        $info 'Observing', (dasherize key).replace(/-/g, '.')
-        session.observe ((dasherize key).replace /-/g, '.'), ->
-          $info "Reaction: #{dasherize key}", it
-          module.exports[key] it
-    session.observe \id, co.wrap ->*
-      if not id = session.get \id
-        session session!{route}
-      else
-        if id == \nobody
-          session.set \route, ''
-        record = first (yield r.table(\session).filter(id: id))
-        if record
-          $info 'Loading session', record
-          session record
-        else if session.get \persistent
-          $info 'Creating session', it
-          yield r.table(\session).insert it
-        else
-          $info 'Deleting session id'
-          session.del \id
-    session.observe-deep '', co.wrap ->*
-      return if not session.get \persistent
-      return if not session.get \id
-      return if session.get(\id) is \nobody
-      yield r.table(\session).get(session.get \id).update session!
-      $info 'Session saved', session!
+      module.exports.$local.uuid = uuid
+      return if not module.exports.session
+      keys module.exports.session |> each (key) ->
+        # reactor = co.wrap(module.exports.session[key])
+        reactor = module.exports.session[key]
+        reactor.bind module.exports
+        $info 'Observing', key
+        session.observe key, co.wrap ->*
+          $info "Session reaction '#key'", it
+          tx = yield world.transaction!
+          try
+            yield reactor tx, session, it
+            yield tx.commit!
+          catch
+            yield tx.rollback!
+        # session.observe ((dasherize key).replace /-/g, '.'), co.wrap ->*
+        #   $info "Session reaction '#{dasherize key}'", it
+        #   tx = yield world.transaction!
+        #   try
+        #     module.exports[key] tx, session
+        #     yield tx.commit!
+        #   catch
+        #     yield tx.rollback!
+        # module.exports[key] = co.wrap(module.exports[key])
+        # module.exports[key].bind module.exports
+        # $info 'Observing', (dasherize key).replace(/-/g, '.')
+        # session.observe ((dasherize key).replace /-/g, '.'), co.wrap ->*
+        #   $info "Reaction: #{dasherize key}", it
+        #   tx = yield world.transaction!
+        #   try
+        #     module.exports[key] tx, session
+        #     yield tx.commit!
+        #   catch
+        #     yield tx.rollback!
+
+
+    # session.observe \id, co.wrap ->*
+    #   if not id = session.get \id
+    #     session session!{route}
+    #   else
+    #     if id == \nobody
+    #       session.set \route, ''
+    #     record = first (yield r.table(\session).filter(id: id))
+    #     if record
+    #       $info 'Loading session', record
+    #       session record
+    #     else if session.get \persistent
+    #       $info 'Creating session', it
+    #       yield r.table(\session).insert it
+    #     else
+    #       $info 'Deleting session id'
+    #       session.del \id
+    # session.observe-deep '', co.wrap ->*
+    #   return if not session.get \persistent
+    #   return if not session.get \id
+    #   return if session.get(\id) is \nobody
+    #   yield r.table(\session).get(session.get \id).update session!
+    #   $info 'Session saved', session!

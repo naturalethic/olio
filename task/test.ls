@@ -1,13 +1,12 @@
 Module = (require \module).Module
 require! 'socket.io-client': socket-io
 require! \co
-require! \db
+require! \world
 require! \rivulet
 
 export test = ->*
   state = {}
-  yield db.reset! unless olio.option.keep
-  r = db.r!
+  yield world.reset! unless olio.option.keep
   run-module = (path) ->
     module = new Module
     module.paths = [ "#{process.cwd!}/node_modules", "#{process.cwd!}/lib" ]
@@ -15,11 +14,9 @@ export test = ->*
       "export $local = {}"
       "$revise = -> $local.session it"
       "$merge = -> $local.session.merge it"
-      "r = -> $local.r"
       "$done = -> $merge { +end }"
       (fs.read-file-sync path .to-string!)
     ].join '\n'), { +bare }
-    module.exports.$local.r = r
     run = (name) ->
       return run-next! if name.0 is \$
       info '=' * process.stdout.columns
@@ -30,23 +27,42 @@ export test = ->*
       module.exports.$local.session = session
       keys module.exports[name] |> each (key) ->
         return if key is \session
-        module.exports[name][key] = co.wrap(module.exports[name][key])
-        module.exports[name][key].bind module.exports[name]
-        session.observe (camelize key), ->
-          module.exports[name][key] it
-          .catch ->
+        # reactor = co.wrap(module.exports[name][key])
+        reactor = module.exports[name][key]
+        reactor.bind module.exports[name]
+        session.observe key, co.wrap ->*
+          tx = yield world.transaction!
+          try
+            yield reactor tx, session, it
+            yield tx.commit!
+          catch it
+            yield tx.rollback!
             if it.name is \AssertionError
               info "#{it.name.red} (#{it.operator})"
               info 'Expected'.yellow
               pp it.expected
+              info ''
               info 'Actual'.yellow
               pp it.actual
+              info ''
             else
               info it.to-string!red
-            session.set \end, true
+            session.merge end: true
+        # session.observe (camelize key), ->
+        #   module.exports[name][key] it
+        #   .catch ->
+        #     if it.name is \AssertionError
+        #       info "#{it.name.red} (#{it.operator})"
+        #       info 'Expected'.yellow
+        #       pp it.expected
+        #       info 'Actual'.yellow
+        #       pp it.actual
+        #     else
+        #       info it.to-string!red
+        #     session.merge end: true
       session module.exports[name].session
       state.timeout = set-timeout ->
-        session.set \end, true
+        session.merge end: true
         state.fail = 'Timed out'
       , 3000
       session.socket.on \disconnect, ->
@@ -57,7 +73,7 @@ export test = ->*
           info 'Success'.green
         run-next!
     names = keys module.exports
-    run-next = ->
+    run-next = co.wrap ->*
       if olio.task.2
         if olio.task.2 != \stop
           if (camelize olio.task.2) in names
@@ -65,13 +81,15 @@ export test = ->*
             olio.task.2 = \stop
           else
             info "Subtest '#{olio.task.2}' does not exist.".red
+        else
+          yield world.end!
       else
         if names.length
           run names.shift!
         else if paths.length
           run-module paths.shift!
         else
-          r._r.get-pool-master!drain!
+          yield world.end!
     run-next!
   paths = glob.sync 'test/*'
   if 'test/seed.ls' in paths

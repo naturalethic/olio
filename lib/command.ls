@@ -40,6 +40,7 @@ global <<< do
   is-object:     -> typeof! it is \Object
   is-string:     -> typeof! it is \String
   is-undefined:  -> typeof! it is \Undefined
+  is-null:       -> typeof! it is \Null
 
 global.require-dir = ->
   return fold1 (<<<), (& |> map -> require-dir it) if &.length > 1

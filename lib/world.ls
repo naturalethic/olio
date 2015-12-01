@@ -1,0 +1,106 @@
+require! \promise-mysql : mysql
+
+olio.config.world          ?= {}
+olio.config.world.host     ?= \127.0.0.1
+olio.config.world.user     ?= \root
+olio.config.world.database ?= \cfh
+
+pool = mysql.create-pool olio.config.world
+
+export transaction = ->*
+  connection = yield pool.get-connection!
+  yield connection.begin-transaction!
+  merge: (data) ->*
+    # yield connection.query "update world, (select json_merge(data, '#{JSON.stringify data}') as data from world) merged set world.data = merged.data"
+    yield connection.query "update world, (select json_merge(data, ?) as data from world) merged set world.data = merged.data", JSON.stringify(data)
+  # add: (kind, data) ->*
+  #   { insert-id } = yield connection.query 'insert document set ?', kind: kind, data: JSON.stringify(data)
+  #   data <<< first(yield connection.query 'select * from document where i = ?', insert-id){id, created, updated}
+  # contains: (kind, val, path) ->*
+  #   yield connection.query "select json_contains"
+  #   select json_contains(data, '{"email":"captain@copsforhire.com"}', '$.emails') from document;
+  commit: ->*
+    yield connection.commit!
+    connection.release!
+  rollback: ->*
+    yield connection.rollback!
+    connection.release!
+
+export end = ->*
+  yield pool.end!
+
+export reset = ->*
+  connection = yield mysql.create-connection olio.config.world{host, user}
+  if first((yield connection.query 'show databases') |> filter -> it.Database is olio.config.world.database)
+    info "Dropping database '#{olio.config.world.database}'"
+    yield connection.query "drop database if exists #{olio.config.world.database}"
+  info "Creating database '#{olio.config.world.database}'"
+  yield connection.query "create database #{olio.config.world.database}"
+  connection.end!
+  connection = yield mysql.create-connection olio.config.world{host, user, database}
+  info "Creating table 'world'"
+  yield connection.query "create table world (data json)"
+  info "Inserting record"
+  yield connection.query "insert world set data = '{}'"
+  # info "Creating table 'document'"
+  # yield connection.query """
+  #   create table document (
+  #     i       bigint not null auto_increment primary key,
+  #     id      char(36),
+  #     created datetime,
+  #     updated datetime,
+  #     kind    varchar(255),
+  #     data    json,
+  #     index   id (id),
+  #     index   kind (kind)
+  #   );
+  # """
+  # info "Creating insert trigger"
+  # yield connection.query """
+  #   create trigger before_insert_document before insert on document
+  #   for each row begin
+  #     set new.id = uuid(),
+  #         new.created = now(),
+  #         new.updated = now();
+  #     if (new.data is null) then
+  #       set new.data = '{}';
+  #     end if;
+  #   end;
+  # """
+  # info "Creating update trigger"
+  # yield connection.query """
+  #   create trigger before_update_document before update on document
+  #   for each row begin
+  #     set new.updated = now();
+  #   end;
+  # """
+  connection.end!
+
+#   tree = {}
+#   for document in yield connection.query 'select * from document'
+#     tree[document.kind] ?= []
+#     tree[document.kind].push document{id, created, updated} <<< JSON.parse(document.data)
+#   world = rivulet!
+#   world tree
+#   world.observe-deep '', co.wrap (world, diff) ->*
+#     inserts = {}
+#     updates = {}
+#     for change in diff
+#       continue if /^\w[\w\d\$]*\.\d+\.(id|created|update)$/.test change.path
+#       if change.op is \add
+#         if m = /^(\w[\w\d\$]*\.\d+)$/.exec change.path
+#           inserts[m.1] = world.get m.1
+#         else if m = /^(\w[\w\d\$]*\.\d+)/.exec change.path
+#           updates[m.1] = world.get m.1 if not inserts[m.1]
+#       else
+#         if m = /^(\w[\w\d\$]*\.\d+)/.exec change.path
+#           updates[m.1] = world.get m.1 if not inserts[m.1]
+#     for path, data of inserts
+#       info \INSERTING
+#       { insert-id } = yield connection.query 'insert document set ?', kind: path.split('.').0, data: JSON.stringify(data)
+#       document = first(yield connection.query 'select * from document where i = ?', insert-id){id, created, updated}
+#       world.set "path/id", document.id
+#       world.set "path/created", document.created
+#       world.set "path/updated", document.updated
+#     info world.state
+#   world
