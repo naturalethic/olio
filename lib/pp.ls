@@ -7,8 +7,8 @@ ppval = (it, newline) ->
   | \Number    => write it.to-string!blue
   | \String    => (it.length > 50 and it = it.substr(0, 100)); write it.green
   | \Boolean   => write it.to-string!yellow
-  | \Undefined => write 'undefined'.cyan
-  | otherwise  => write it.to-string!brown
+  | \Generator => write '*generator*'.red
+  | otherwise  => write String(it)!brown
   write '\n' if newline
 
 pparr = (it, indent = 0) ->
@@ -44,8 +44,8 @@ ppobj = (obj, indent = 0, second-indent, newline = false) ->
 
 pp = (it, indent = 0, second-indent, newline = false) ->
   switch typeof! it
-  | \Object   => ppobj it, indent, second-indent, newline
-  | \Array    => pparr it, indent, second-indent, newline
-  | otherwise => ppval it, newline
+  | \Object    => ppobj it, indent, second-indent, newline
+  | \Array     => pparr it, indent, second-indent, newline
+  | otherwise  => ppval it, newline
 
 module.exports = pp

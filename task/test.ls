@@ -9,10 +9,8 @@ export test = ->*
   yield world.reset! unless olio.option.keep
   run-module = (path) ->
     module = new Module
-    module.paths = [ "#{process.cwd!}/node_modules", "#{process.cwd!}/lib" ]
+    module.paths = [ "#{process.cwd!}/lib", "#{process.cwd!}/node_modules" ]
     module._compile livescript.compile ([
-      # "export $local = {}"
-      # "$done = -> $local.session.merge { +end }"
       (fs.read-file-sync path .to-string!)
     ].join '\n'), { +bare }
     run = (name) ->
@@ -22,10 +20,8 @@ export test = ->*
       info '-' * process.stdout.columns
       socket = socket-io 'http://localhost:8000', force-new: true
       session = rivulet {}, socket, \session
-      # module.exports.$local.session = session
       keys module.exports[name] |> each (key) ->
         return if key is \session
-        # reactor = co.wrap(module.exports[name][key])
         reactor = module.exports[name][key]
         reactor.bind module.exports[name]
         observe-func = co.wrap ->*
@@ -51,19 +47,6 @@ export test = ->*
               state.fail = it.to-string!red
             session.end = true
         session.$observe key, observe-func
-        # session.observe (camelize key), ->
-        #   module.exports[name][key] it
-        #   .catch ->
-        #     if it.name is \AssertionError
-        #       info "#{it.name.red} (#{it.operator})"
-        #       info 'Expected'.yellow
-        #       pp it.expected
-        #       info 'Actual'.yellow
-        #       pp it.actual
-        #     else
-        #       info it.to-string!red
-        #     session.merge end: true
-      # session module.exports[name].session
       session <<< module.exports[name].session
       state.timeout = set-timeout ->
         session.end = true

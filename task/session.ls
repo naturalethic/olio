@@ -38,7 +38,7 @@ export session = ->*
       session.$socket.disconnect!
     glob.sync 'react/**/*' |> each ->
       module = new Module
-      module.paths = [ "#{process.cwd!}/node_modules", "#{process.cwd!}/lib" ]
+      module.paths = [ "#{process.cwd!}/lib", "#{process.cwd!}/node_modules" ]
       module._compile livescript.compile ([
         "export $local = {}"
         "$info = -> $local.info ...&"
@@ -47,7 +47,6 @@ export session = ->*
       module.exports.$local.info = $info
       return if not module.exports.session
       keys module.exports.session |> each (key) ->
-        # reactor = co.wrap(module.exports.session[key])
         reactor = module.exports.session[key]
         reactor.bind module.exports
         $info 'Observing', key
