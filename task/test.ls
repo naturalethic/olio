@@ -11,8 +11,8 @@ export test = ->*
     module = new Module
     module.paths = [ "#{process.cwd!}/node_modules", "#{process.cwd!}/lib" ]
     module._compile livescript.compile ([
-      "export $local = {}"
-      "$done = -> $local.session.merge { +end }"
+      # "export $local = {}"
+      # "$done = -> $local.session.merge { +end }"
       (fs.read-file-sync path .to-string!)
     ].join '\n'), { +bare }
     run = (name) ->
@@ -22,14 +22,16 @@ export test = ->*
       info '-' * process.stdout.columns
       socket = socket-io 'http://localhost:8000', force-new: true
       session = rivulet {}, socket, \session
-      module.exports.$local.session = session
+      # module.exports.$local.session = session
       keys module.exports[name] |> each (key) ->
         return if key is \session
         # reactor = co.wrap(module.exports[name][key])
         reactor = module.exports[name][key]
         reactor.bind module.exports[name]
         observe-func = co.wrap ->*
-          session.forget key, observe-func
+          info key
+          info '-' * process.stdout.columns
+          session.$forget key, observe-func
           tx = yield world.transaction!
           try
             yield reactor tx, session, it
@@ -47,8 +49,8 @@ export test = ->*
               state.fail = 'Fail'
             else
               state.fail = it.to-string!red
-            session.merge end: true
-        session.observe key, observe-func
+            session.end = true
+        session.$observe key, observe-func
         # session.observe (camelize key), ->
         #   module.exports[name][key] it
         #   .catch ->
@@ -61,12 +63,13 @@ export test = ->*
         #     else
         #       info it.to-string!red
         #     session.merge end: true
-      session module.exports[name].session
+      # session module.exports[name].session
+      session <<< module.exports[name].session
       state.timeout = set-timeout ->
-        session.merge end: true
+        session.end = true
         state.fail = 'Timed out'
       , 3000
-      session.socket.on \disconnect, ->
+      session.$socket.on \disconnect, ->
         clear-timeout state.timeout
         if state.fail
           info state.fail.red

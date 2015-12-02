@@ -32,10 +32,10 @@ export session = ->*
       pp obj if obj
     $info 'Connection established'
     session = rivulet {}, socket, \session
-    session.logger = $info
-    session.observe \end, ->
+    session.$logger = $info
+    session.$observe \end, ->
       $info 'Disconnecting'
-      session.socket.disconnect!
+      session.$socket.disconnect!
     glob.sync 'react/**/*' |> each ->
       module = new Module
       module.paths = [ "#{process.cwd!}/node_modules", "#{process.cwd!}/lib" ]
@@ -51,7 +51,7 @@ export session = ->*
         reactor = module.exports.session[key]
         reactor.bind module.exports
         $info 'Observing', key
-        session.observe key, co.wrap ->*
+        session.$observe key, co.wrap ->*
           $info "Session reaction '#key'", it
           tx = yield world.transaction!
           try

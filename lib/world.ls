@@ -16,10 +16,10 @@ export transaction = ->*
       for entity in difference (keys data), (yield connection.query "select json_keys(data) from world")
         yield connection.query "update world, (select json_merge(data, ?) as data from world) merged set world.data = merged.data", [ JSON.stringify({ (entity): [] }) ]
       yield connection.query "update world, (select json_merge(data, ?) as data from world) merged set world.data = merged.data", [ JSON.stringify(data) ]
-    search: (value, path, extract) ->*
-      path = eval first values first yield connection.query "select json_search(data, 'one', ?, NULL, ?) from world", [ value, path ]
-      extract = extract.replace /([\$\.])/g, "\\$1"
-      yield tx.extract (//^(#extract\[\d+\])//.exec path).1
+    # search: (value, path, extract) ->*
+    #   path = eval first values first yield connection.query "select json_search(data, 'one', ?, NULL, ?) from world", [ value, path ]
+    #   extract = extract.replace /([\$\.])/g, "\\$1"
+    #   yield tx.extract (//^(#extract\[\d+\])//.exec path).1
     contains: (value, path) ->*
       first values first yield connection.query "select json_contains(data, ?, ?) from world", [ JSON.stringify(value), path ]
     extract: (path) ->*
@@ -30,15 +30,24 @@ export transaction = ->*
     rollback: ->*
       yield connection.rollback!
       connection.release!
-    select: (value, path, extract) ->*
       path = eval first values first yield connection.query "select json_search(data, 'one', ?, NULL, ?) from world", [ value, path ]
       extract = extract.replace /([\$\.])/g, "\\$1"
-      path = (//^(#extract\[\d+\])//.exec path).1
-      cursor = rivulet!
-      cursor yield tx.extract path
-      cursor.observe '$', co.wrap ->*
-        yield connection.query "update world, (select json_replace(data, ?, ?) as data from world) replaced set world.data = replaced.data", [ path, JSON.stringify(cursor.state) ]
-      cursor
+      yield tx.extract (//^(#extract\[\d+\])//.exec path).1
+    select: (extract, path, value) ->*
+      path = eval first values first yield connection.query "select json_search(data, 'one', ?, NULL, ?) from world", [ value, path ]
+      extract = extract.replace /([\$\.])/g, "\\$1"
+      if path = (//^(#extract\[\d+\])//.exec path)?1
+        cursor = rivulet yield tx.extract path
+        # Should only save this shit on commit
+        cursor.$observe '$', co.wrap ->*
+          info "Saving #path"
+          yield connection.query "update world, (select json_replace(data, ?, ?) as data from world) replaced set world.data = replaced.data", [ path, JSON.stringify(cursor.$get!) ]
+        return cursor
+      null
+    select-copy: (extract, path, value) ->*
+      if cursor = yield tx.select extract, path, value
+        return cursor.$get!
+      null
   tx
 
 export end = ->*
