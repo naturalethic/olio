@@ -15,7 +15,7 @@ export transaction = ->*
     merge: (data) ->*
       for entity in difference (keys data), (yield connection.query "select json_keys(data) from world")
         yield connection.query "update world, (select json_merge(data, ?) as data from world) merged set world.data = merged.data", [ JSON.stringify({ (entity): [] }) ]
-      yield connection.query "update world, (select json_merge(data, ?) as data from world) merged set world.data = merged.data", [ JSON.stringify(data) ]
+      yield connection.query "update world, (select json_merge(data, '#{JSON.stringify(data)}') as data from world) merged set world.data = merged.data"
     # search: (value, path, extract) ->*
     #   path = eval first values first yield connection.query "select json_search(data, 'one', ?, NULL, ?) from world", [ value, path ]
     #   extract = extract.replace /([\$\.])/g, "\\$1"
@@ -30,9 +30,6 @@ export transaction = ->*
     rollback: ->*
       yield connection.rollback!
       connection.release!
-      path = eval first values first yield connection.query "select json_search(data, 'one', ?, NULL, ?) from world", [ value, path ]
-      extract = extract.replace /([\$\.])/g, "\\$1"
-      yield tx.extract (//^(#extract\[\d+\])//.exec path).1
     select: (extract, path, value) ->*
       path = eval first values first yield connection.query "select json_search(data, 'one', ?, NULL, ?) from world", [ value, path ]
       extract = extract.replace /([\$\.])/g, "\\$1"
@@ -41,7 +38,8 @@ export transaction = ->*
         # Should only save this shit on commit
         cursor.$observe '$', co.wrap ->*
           info "Saving #path"
-          yield connection.query "update world, (select json_replace(data, ?, ?) as data from world) replaced set world.data = replaced.data", [ path, JSON.stringify(cursor.$get!) ]
+          # yield connection.query "update world, (select json_replace(data, ?, '#{JSON.stringify(cursor.$get!)}') as data from world) replaced set world.data = replaced.data", [ path ]
+          yield connection.query "update world, (select json_set(data, ?, '#{JSON.stringify(cursor.$get!)}') as data from world) replaced set world.data = replaced.data", [ path ]
         return cursor
       null
     select-copy: (extract, path, value) ->*

@@ -6,7 +6,10 @@ require! \assert
 require! \util
 
 json-extract = ($, path) ->
-  jsonpath json: $, path: path, wrap: false
+  if path = (jsonpath json: $, path: path, result-type: \path)?0
+    eval path
+  else
+    null
 
 proxify-base = (state, target, before-mutation, after-mutation) ->
   proxy = new Proxy target,
@@ -24,7 +27,7 @@ proxify-base = (state, target, before-mutation, after-mutation) ->
         target[key] = val
       else
         before-mutation!
-        val = val.$get! if val.$get
+        val = val.$get! if val?$get
         state[key] = proxify val, before-mutation, after-mutation
         after-mutation!
     delete-property: (target, key) ->
@@ -46,7 +49,7 @@ proxify-object = (state, before-mutation, after-mutation) ->
   target.$get = ->
     obj = {}
     for key, val of state
-      if val.$get
+      if val?$get
         obj[key] = val.$get!
       else
         obj[key] = val
@@ -61,14 +64,14 @@ proxify-array = (state, before-mutation, after-mutation) ->
   target.$get = ->
     arr = []
     for val, i in state
-      if val.$get
+      if val?$get
         arr[i] = val.$get!
       else
         arr[i] = val
     arr
   proxy
 
-proxify = (target = {}, before-mutation = ->, after-mutation = ->) ->
+proxify = (target = undefined, before-mutation = ->, after-mutation = ->) ->
   switch typeof! target
   | \Object   => proxify-object target, before-mutation, after-mutation
   | \Array    => proxify-array target, before-mutation, after-mutation

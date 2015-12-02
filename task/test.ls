@@ -18,7 +18,7 @@ export test = ->*
     run = (name) ->
       return run-next! if name.0 is \$
       info '=' * process.stdout.columns
-      info path, \:, (dasherize name)
+      info path.yellow, \:, (dasherize name).cyan
       info '-' * process.stdout.columns
       socket = socket-io 'http://localhost:8000', force-new: true
       session = rivulet {}, socket, \session
