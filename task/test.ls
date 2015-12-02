@@ -78,6 +78,7 @@ export test = ->*
         run-next!
     names = keys module.exports
     run-next = co.wrap ->*
+      delete state.fail
       if olio.task.2
         if olio.task.2 != \stop
           if (camelize olio.task.2) in names

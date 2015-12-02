@@ -5,7 +5,7 @@ write = -> process.stdout.write it
 ppval = (it, newline) ->
   switch typeof! it
   | \Number    => write it.to-string!blue
-  | \String    => write it.green
+  | \String    => (it.length > 50 and it = it.substr(0, 100)); write it.green
   | \Boolean   => write it.to-string!yellow
   | \Undefined => write 'undefined'.cyan
   | otherwise  => write it.to-string!brown

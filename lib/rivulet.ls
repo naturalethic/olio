@@ -102,6 +102,7 @@ module.exports = (state = {}, socket, channel) ->
   rivulet <<<
     $logger: null
     $observe: (path, func) ->
+      path = camelize path
       if not observers[path]
         observers[path] = {}
         observers[path].stream = kefir.stream -> observers[path].emitter = it
@@ -110,6 +111,7 @@ module.exports = (state = {}, socket, channel) ->
         .on-value func
       observers[path].stream
     $forget: (path, func) ->
+      path = camelize path
       observers[path].stream.off-value func
     $broadcast: (emit-to-socket = true) ->
       rivulet.$socket-emit-queue.push patch.compare(rivulet.$old-state, rivulet.$new-state) if emit-to-socket
