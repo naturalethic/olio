@@ -9,7 +9,7 @@ require! \esprima
 require! \esprima-walk
 require! \escodegen
 
-export watch = [ __filename, \olio.ls, "#__dirname/../web/olio.ls" ]
+export watch = [ __filename, \olio.ls, "#__dirname/../web", "#__dirname/../lib" ]
 
 compile-snippet = ->
   it = livescript.compile (camelize it), { +bare, -header } .slice 0, -1
@@ -32,6 +32,7 @@ prep = ->
   exec "rsync -maz --exclude '*.js' --exclude '*.css' tmp/ public/"
 
 stitch = ->
+  fs.write-file-sync('tmp/rivulet.js', livescript.compile fs.read-file-sync("#__dirname/../lib/rivulet.ls").to-string!)
   style = []
   script = [
     fs.read-file-sync("#__dirname/../web/olio.ls").to-string!
@@ -107,15 +108,18 @@ setup-bundler = ->*
   # try
   #   no-parse.push require.resolve("#{process.cwd!}/node_modules/jquery")
   # info "#__dirname/node_modules/olio/node_modules"
-  bundler = watchify browserify <[ ./tmp/index.js ]>, {
-    paths:
+  b = browserify <[ ./tmp/index.js ]>, {
+    paths: [
       fs.realpath-sync "#__dirname/../node_modules"
       fs.realpath-sync "#__dirname/../web"
+      fs.realpath-sync "tmp"
+    ]
     no-parse: no-parse
     detect-globals: false
     cache: {}
     package-cache: {}
   }
+  bundler = watchify b
   bundle = ->
     info 'Browserify -> public/index.js'
     bundler.bundle (err, buf) ->
