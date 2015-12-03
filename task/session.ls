@@ -53,6 +53,7 @@ export session = ->*
         session.$observe key, co.wrap ->*
           $info "Session reaction '#key'", it
           tx = yield world.transaction!
+          tx.$info = $info
           try
             yield reactor tx, session, it
             yield tx.commit!
@@ -88,4 +89,4 @@ export session = ->*
     session.$observe '$', debounce 300, co.wrap ->*
       return if not session.persistent
       yield world.save \session, session
-      $info 'Session saved', session.$get!
+      # $info 'Session saved', session.$get!

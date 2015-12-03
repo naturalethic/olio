@@ -23,9 +23,11 @@ export transaction = ->*
     save: (kind, doc) ->*
       json = doc.$get?! or doc
       if doc.id
+        tx.$info "Updating #kind", doc.id
         yield connection.query "update document set ? where id = ?", [ { data: JSON.stringify(json) }, doc.id ]
       else
         doc.id = uuid!
+        tx.$info "Inserting #kind", doc.id
         yield connection.query "insert document set ?", [ { kind: kind, id: doc.id, data: JSON.stringify(json) } ]
     extant: (path, value) ->*
       [ kind, path ] = divy-path path
@@ -33,8 +35,8 @@ export transaction = ->*
     commit: ->*
       try
         for kind, cursors of save-queue
+          info kind
           for cursor in cursors
-            info "Saving #kind", cursor.id
             yield tx.save kind, cursor
         yield connection.commit!
       catch
