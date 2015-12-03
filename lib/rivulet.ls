@@ -11,164 +11,86 @@ json-extract = ($, path) ->
   else
     null
 
-try
-  global.process.arch
-
-  proxify-base = (state, target) ->
-    target.$state = state
-    proxy = new Proxy target,
-      own-keys: (target) ->
-        keys target.$state
-      enumerate: (target) ->
-        keys(target.$state)[Symbol.iterator]!
-      get: (target, key) ->
-        if key is \$target
-          target
-        else if key.0 is \$ or key is \inspect
-          target[key]
-        else
-          target.$state[key]
-      set: (target, key, val) ->
-        if key is \$state
-          for k, v of val
-            val[k] = proxify v
-            if target.$mutation and (typeof! v is \Object or typeof! v is \Array)
-              val[k].$mutation = target.$mutation
-          target.$state = val
-        if key is \$mutation
-          target.$mutation = val
-          for k, v of target.$state
-            switch typeof! v
-            | \Object => v.$mutation = val
-            | \Array  => v.$mutation = val
-        else if key.0 is \$
-          target[key] = val
-        else
-          val = val.$get! if val?$get
-          target.$state[key] = proxify val, null, target.$mutation
-          target.$mutation?!
-      delete-property: (target, key) ->
-        if key.0 is \$
-          delete target[key]
-        else
-          delete target.$state[key]
-          target.$mutation?!
-        true
-    target.$set-mutation = ->
-      target.$mutation = it
-    target.inspect = (depth, opts) -> util.inspect target.$state, opts <<< depth: depth
-    proxy
-
-  proxify-object = (state) ->
-    for key, val of state
-      state[key] = proxify val
-    target ?= {}
-    proxy = proxify-base state, target
-    target.$get = ->
-      obj = {}
-      for key, val of target.$state
-        if val?$get
-          obj[key] = val.$get!
-        else
-          obj[key] = val
-      obj
-    proxy
-
-  proxify-array = (state) ->
-    for val, i in state
-      state[i] = proxify val
-    target = []
-    proxy = proxify-base state, target
-    target.$get = ->
-      arr = []
-      for val, i in target.$state
-        if val?$get
-          arr[i] = val.$get!
-        else
-          arr[i] = val
-      arr
-    proxy
-
-  reproxify = (old-state, new-state) ->
-    old-state.$state = new-state
-
-catch
-  require! \observe-js
-  proxify-base = (state, mutation) ->
-    state.$mutation = mutation
-    state.$set-mutation = ->
-      state.$mutation = it
-      for k, v of state
-        if k.0 != \$
+proxify-base = (state, target) ->
+  target.$state = state
+  proxy = new Proxy target,
+    own-keys: (target) ->
+      keys target.$state
+    enumerate: (target) ->
+      keys(target.$state)[Symbol.iterator]!
+    get: (target, key) ->
+      if key is \$target
+        target
+      else if key.0 is \$ or key is \inspect
+        target[key]
+      else
+        target.$state[key]
+    set: (target, key, val) ->
+      if key is \$state
+        for k, v of val
+          val[k] = proxify v
+          if target.$mutation and (typeof! v is \Object or typeof! v is \Array)
+            val[k].$mutation = target.$mutation
+        target.$state = val
+      if key is \$mutation
+        target.$mutation = val
+        for k, v of target.$state
           switch typeof! v
-          | \Object => v.$set-mutation it
-          | \Array  => v.$set-mutation it
+          | \Object => v.$mutation = val
+          | \Array  => v.$mutation = val
+      else if key.0 is \$
+        target[key] = val
+      else
+        val = val.$get! if val?$get
+        target.$state[key] = proxify val, null, target.$mutation
+        target.$mutation?!
+    delete-property: (target, key) ->
+      if key.0 is \$
+        delete target[key]
+      else
+        delete target.$state[key]
+        target.$mutation?!
+      true
+  target.$set-mutation = ->
+    target.$mutation = it
+  target.inspect = (depth, opts) -> util.inspect target.$state, opts <<< depth: depth
+  proxy
 
-  proxify-object = (state, mutation) ->
-    proxify-base state, mutation
-    for key, val of state
-      if key.0 != \$
-        info key
-        state[key] = proxify val, state.$mutation
-    state.$proxy = proxy = new observe-js.ObjectObserver state
-    proxy.open (added, removed, changed) ->
-      keys-mutated = filter (-> it.0 != \$), (keys added) ++ (keys changed)
-      keys-removed = filter (-> it.0 != \$), (keys removed)
-      if (keys-mutated ++ keys-removed).length
-        for k in keys-mutated
-          if typeof! state[k] in <[ Object Array ]>
-            if not state[k].$get
-              proxify state[k], state.$mutation
-        state.$mutation?!
-    state.$get = ->
-      obj = {}
-      for key, val of state
-        if key.0 != \$
-          if val?$get
-            obj[key] = val.$get!
-          else
-            obj[key] = val
-      obj
-    state
+proxify-object = (state) ->
+  for key, val of state
+    state[key] = proxify val
+  target ?= {}
+  proxy = proxify-base state, target
+  target.$get = ->
+    obj = {}
+    for key, val of target.$state
+      if val?$get
+        obj[key] = val.$get!
+      else
+        obj[key] = val
+    obj
+  proxy
 
-  proxify-array = (state, mutation) ->
-    proxify-base state, mutation
-    for val, i in state
-      state[i] = proxify val, state.$mutation
-    state.$proxy = proxy = new observe-js.ArrayObserver state
-    proxy.open (splices) ->
-      for splice in splices
-        for i in [0 til splice.added-count]
-          if typeof! state[splice.index + i] in <[ Object Array ]>
-            if not state[splice.index + i].$get
-              proxify state[splice.index + i], state.$mutation
-      state.$mutation?!
-    state.$get = ->
-      arr = []
-      for val, i in state
-        if val?$get
-          arr[i] = val.$get!
-        else
-          arr[i] = val
-      arr
-    state
+proxify-array = (state) ->
+  for val, i in state
+    state[i] = proxify val
+  target = []
+  proxy = proxify-base state, target
+  target.$get = ->
+    arr = []
+    for val, i in target.$state
+      if val?$get
+        arr[i] = val.$get!
+      else
+        arr[i] = val
+    arr
+  proxy
 
-  reproxify = (old-state, new-state) ->
-    info \REPROX
-    old-state.$proxy.close!
-    for key, val of old-state
-      if key.0 != \$
-        delete old-state[key]
-    old-state <<< new-state
-    proxify old-state
-    # old-state.$set-mutation old-state.$mutation
-
-proxify = (state, mutation) ->
+proxify = (state) ->
   switch typeof! state
-  | \Object   => proxify-object state, mutation
-  | \Array    => proxify-array state, mutation
+  | \Object   => proxify-object state
+  | \Array    => proxify-array state
   | otherwise => state
-
 
 module.exports = (state = {}, socket, channel) ->
   rivulet = proxify state
@@ -218,7 +140,7 @@ module.exports = (state = {}, socket, channel) ->
       rivulet.$logger 'Rivulet received', diff if rivulet.$logger
       state = rivulet.$get!
       patch.apply state, diff
-      reproxify rivulet, state
+      rivulet.$state = state
       rivulet.$new-state = rivulet.$get!
       rivulet.$broadcast false
     emit-stream = rivulet.$observe '$'
