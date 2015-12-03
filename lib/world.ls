@@ -51,6 +51,24 @@ export transaction = ->*
       null
   tx
 
+export select = ->*
+  tx = yield transaction!
+  try
+    val = yield tx.select ...&
+    tx.commit!
+  catch
+    yield tx.rollback!
+  val
+
+export save = ->*
+  tx = yield transaction!
+  try
+    val = yield tx.save ...&
+    tx.commit!
+  catch
+    yield tx.rollback!
+  val
+
 export end = ->*
   yield pool.end!
 
