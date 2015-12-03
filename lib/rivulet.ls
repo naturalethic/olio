@@ -122,12 +122,13 @@ module.exports = (state = {}, socket, channel) ->
             new-extract = json-extract rivulet.$new-state, path
             try
               assert.deep-equal old-extract, new-extract
-              extraction-cache[path] = false
+              extraction-cache[path] = undefined
             catch
               extraction-cache[path] = new-extract
-        if extraction-cache[path]
-          observer.emitter.emit extraction-cache[path]
       rivulet.$old-state = rivulet.$get!
+      for path, observer of observers
+        if extraction-cache[path] is not undefined
+          observer.emitter.emit extraction-cache[path]
     $socket-emit-queue: []
     $old-state: rivulet.$get!
   rivulet.$set-mutation ->
