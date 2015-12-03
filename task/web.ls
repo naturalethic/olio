@@ -32,7 +32,7 @@ prep = ->
   exec "rsync -maz --exclude '*.js' --exclude '*.css' tmp/ public/"
 
 stitch = ->
-  fs.write-file-sync('tmp/rivulet.js', livescript.compile fs.read-file-sync("#__dirname/../lib/rivulet.ls").to-string!)
+  fs.write-file-sync('tmp/rivulet.js', livescript.compile fs.read-file-sync("#__dirname/../web/rivulet.ls").to-string!)
   style = []
   script = [
     fs.read-file-sync("#__dirname/../web/olio.ls").to-string!
