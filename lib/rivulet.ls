@@ -11,8 +11,9 @@ json-extract = ($, path) ->
   else
     null
 
-proxify-base = (state, target) ->
+proxify-base = (state, target, mutation) ->
   target.$state = state
+  target.$mutation = mutation if mutation
   proxy = new Proxy target,
     own-keys: (target) ->
       keys target.$state
@@ -28,7 +29,7 @@ proxify-base = (state, target) ->
     set: (target, key, val) ->
       if key is \$state
         for k, v of val
-          val[k] = proxify v
+          val[k] = proxify v, target.$mutation
           if target.$mutation and (typeof! v is \Object or typeof! v is \Array)
             val[k].$mutation = target.$mutation
         target.$state = val
@@ -42,7 +43,7 @@ proxify-base = (state, target) ->
         target[key] = val
       else
         val = val.$get! if val?$get
-        target.$state[key] = proxify val, null, target.$mutation
+        target.$state[key] = proxify val, target.$mutation
         target.$mutation?!
     delete-property: (target, key) ->
       if key.0 is \$
@@ -56,11 +57,11 @@ proxify-base = (state, target) ->
   target.inspect = (depth, opts) -> util.inspect target.$state, opts <<< depth: depth
   proxy
 
-proxify-object = (state) ->
+proxify-object = (state, mutation) ->
   for key, val of state
     state[key] = proxify val
   target ?= {}
-  proxy = proxify-base state, target
+  proxy = proxify-base state, target, mutation
   target.$get = ->
     obj = {}
     for key, val of target.$state
@@ -71,11 +72,11 @@ proxify-object = (state) ->
     obj
   proxy
 
-proxify-array = (state) ->
+proxify-array = (state, mutation) ->
   for val, i in state
-    state[i] = proxify val
+    state[i] = proxify val, mutation
   target = []
-  proxy = proxify-base state, target
+  proxy = proxify-base state, target, mutation
   target.$get = ->
     arr = []
     for val, i in target.$state
@@ -86,10 +87,10 @@ proxify-array = (state) ->
     arr
   proxy
 
-proxify = (state) ->
+proxify = (state, mutation) ->
   switch typeof! state
-  | \Object   => proxify-object state
-  | \Array    => proxify-array state
+  | \Object   => proxify-object state, mutation
+  | \Array    => proxify-array state, mutation
   | otherwise => state
 
 module.exports = (state = {}, socket, channel) ->
