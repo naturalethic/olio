@@ -3,13 +3,14 @@
 write = -> process.stdout.write it
 
 ppval = (it, newline) ->
-  switch typeof! it
-  | \Number    => write it.to-string!blue
-  | \String    => (it.length > 50 and it = it.substr(0, 100)); write it.green
-  | \Boolean   => write it.to-string!yellow
-  | \Generator => write '<generator>'.red
-  | \Null      => write 'null'.red
-  | otherwise  => write String(it)!brown
+  if it is not undefined
+    switch typeof! it
+    | \Number    => write it.to-string!blue
+    | \String    => (it.length > 50 and it = it.substr(0, 100)); write it.green
+    | \Boolean   => write it.to-string!yellow
+    | \Generator => write '<generator>'.red
+    | \Null      => write 'null'.red
+    | otherwise  => write String(it)!brown
   write '\n' if newline
 
 pparr = (it, indent = 0) ->
