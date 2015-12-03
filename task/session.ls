@@ -33,7 +33,7 @@ export session = ->*
     $info 'Connection established'
     session = rivulet {}, socket, \session
     session.$logger = $info
-    session.$observe \end, ->
+    session.$observe '$.end', ->
       $info 'Disconnecting'
       session.$socket.disconnect!
     glob.sync 'react/**/*' |> each ->
@@ -59,46 +59,33 @@ export session = ->*
           catch e
             info e
             yield tx.rollback!
-        # session.observe ((dasherize key).replace /-/g, '.'), co.wrap ->*
-        #   $info "Session reaction '#{dasherize key}'", it
-        #   tx = yield world.transaction!
-        #   try
-        #     module.exports[key] tx, session
-        #     yield tx.commit!
-        #   catch
-        #     yield tx.rollback!
-        # module.exports[key] = co.wrap(module.exports[key])
-        # module.exports[key].bind module.exports
-        # $info 'Observing', (dasherize key).replace(/-/g, '.')
-        # session.observe ((dasherize key).replace /-/g, '.'), co.wrap ->*
-        #   $info "Reaction: #{dasherize key}", it
-        #   tx = yield world.transaction!
-        #   try
-        #     module.exports[key] tx, session
-        #     yield tx.commit!
-        #   catch
-        #     yield tx.rollback!
+    session.$observe '$.id', co.wrap (id) ->*
+      $info 'Session Id:', id
+      if id
+        if not session.persistent
+          record = yield world.select '$.session[*].id', id
+          if record
+            $info 'Loading session', record
+            session <<< record
 
-
-    # session.observe \id, co.wrap ->*
-    #   if not id = session.get \id
-    #     session session!{route}
-    #   else
-    #     if id == \nobody
-    #       session.set \route, ''
-    #     record = first (yield r.table(\session).filter(id: id))
-    #     if record
-    #       $info 'Loading session', record
-    #       session record
-    #     else if session.get \persistent
-    #       $info 'Creating session', it
-    #       yield r.table(\session).insert it
-    #     else
-    #       $info 'Deleting session id'
-    #       session.del \id
-    # session.observe-deep '', co.wrap ->*
-    #   return if not session.get \persistent
-    #   return if not session.get \id
-    #   return if session.get(\id) is \nobody
-    #   yield r.table(\session).get(session.get \id).update session!
-    #   $info 'Session saved', session!
+      # if not id
+      #   for key, val of session
+      #     delete session[key] if key is not \route
+      # else
+      #   if id == \nobody
+      #     session.route = ''
+      #   else
+      #     record = yield world.select '$.session[*].id', id
+      #     if record
+      #       $info 'Loading session', record
+      #       session <<< record
+      #     else if session.persistent
+      #       $info 'Creating session', id
+      #       yield world.save \session, session
+      #     # else
+      #     #   $info 'Deleting session id'
+      #     #   delete session.id
+    session.$observe '$', debounce 300, co.wrap ->*
+      return if not session.persistent
+      yield world.save \session, session
+      $info 'Session saved', session.$get!

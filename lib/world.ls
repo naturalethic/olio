@@ -18,19 +18,27 @@ divy-path = (path) ->
 export transaction = ->*
   connection = yield pool.get-connection!
   yield connection.begin-transaction!
+  save-queue = {}
   tx =
     save: (kind, doc) ->*
-      doc = doc.$get! if doc.$get
-      throw 'You must provide an id to save an entity' if not doc.id
-      if first(yield connection.query "select i from document where id = ?", [ doc.id ])
-        yield connection.query "update document set ? where id = ?", [ { data: JSON.stringify(doc) }, doc.id ]
+      json = doc.$get?! or doc
+      if doc.id
+        yield connection.query "update document set ? where id = ?", [ { data: JSON.stringify(json) }, doc.id ]
       else
-        yield connection.query "insert document set ?", [ { kind: kind, id: doc.id, data: JSON.stringify(doc) } ]
+        doc.id = uuid!
+        yield connection.query "insert document set ?", [ { kind: kind, id: doc.id, data: JSON.stringify(json) } ]
     extant: (path, value) ->*
       [ kind, path ] = divy-path path
       (first yield connection.query "select i from document where kind = ? and json_search(data, 'one', ?, NULL, ?) is not null limit 1", [ kind, value, path])?i
     commit: ->*
-      yield connection.commit!
+      try
+        for kind, cursors of save-queue
+          for cursor in cursors
+            info "Saving #kind", cursor.id
+            yield tx.save kind, cursor
+        yield connection.commit!
+      catch
+        yield connection.rollback!
       connection.release!
     rollback: ->*
       yield connection.rollback!
@@ -39,10 +47,9 @@ export transaction = ->*
       [ kind, path ] = divy-path path
       if data = (first yield connection.query "select data from document where kind = ? and json_search(data, 'one', ?, NULL, ?) is not null limit 1", [ kind, value, path])?data
         cursor = rivulet JSON.parse data
-        # Should only save this shit on commit
         cursor.$observe '$', co.wrap ->*
-          info "Saving #kind", cursor.id
-          yield tx.save kind, cursor.$get!
+          save-queue[kind] ?= []
+          save-queue[kind].push cursor if cursor not in save-queue[kind]
         return cursor
       null
     select-copy: (path, value) ->*
