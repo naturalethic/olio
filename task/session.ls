@@ -68,6 +68,12 @@ export session = ->*
           if record
             $info 'Loading session', record
             session <<< record
+          else
+            delete session.id
+
+    session.$observe '$.route', co.wrap (id) ->*
+      if not session.persistent and session.route and session.route not in <[ login signup]>
+        session.route = ''
 
       # if not id
       #   for key, val of session
