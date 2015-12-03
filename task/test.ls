@@ -21,7 +21,7 @@ export test = ->*
       socket = socket-io 'http://localhost:8000', force-new: true
       session = rivulet {}, socket, \session
       keys module.exports[name] |> each (key) ->
-        return if key is \session
+        return if key in <[ session timeout ]>
         reactor = module.exports[name][key]
         reactor.bind module.exports[name]
         observe-func = co.wrap ->*
@@ -47,11 +47,12 @@ export test = ->*
               state.fail = it.to-string!red
             session.end = true
         session.$observe key, observe-func
+      state.timeout-seconds = module.exports[name]?timeout or 3
       session <<< module.exports[name].session
       state.timeout = set-timeout ->
         session.end = true
         state.fail = 'Timed out'
-      , 3000
+      , state.timeout-seconds * 1000
       session.$socket.on \disconnect, ->
         clear-timeout state.timeout
         if state.fail
