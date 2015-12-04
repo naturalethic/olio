@@ -61,6 +61,7 @@ export session = ->*
             info e
             yield tx.rollback!
     session.$observe '$.id', co.wrap (id) ->*
+      $info 'Session Id', id
       if id
         if not session.persistent
           record = yield world.select '$.session[*].id', id

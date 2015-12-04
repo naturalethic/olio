@@ -53,7 +53,10 @@ session.observe \id, ->
 
 window.destroy-session = ->
   session-storage.remove-item \id
+  session.del \persistent
   session.del \id
+  for key of session!
+    session.del key
 
 # History
 window.history = require \html5-history-api
