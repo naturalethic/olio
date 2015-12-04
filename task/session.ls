@@ -5,6 +5,7 @@ require! 'socket.io': socket-io
 require! \co
 require! \rivulet
 require! \world
+require! \gcloud
 
 export watch = [ __filename, \olio.ls, \session.ls, \react, "#__dirname/../lib" ]
 
@@ -32,6 +33,7 @@ export session = ->*
       pp obj if obj
     $info 'Connection established'
     session = rivulet {}, socket, \session
+    storage = rivulet {}, socket, \storage
     session.$logger = $info
     session.$observe '$.end', ->
       $info 'Disconnecting'
@@ -74,29 +76,27 @@ export session = ->*
               # session <<< record
           else
             delete session.id
-
     session.$observe '$.route', co.wrap (route) ->*
       if (not session.persistent) and session.route and session.route not in <[ login signup]>
         session.route = ''
-
-      # if not id
-      #   for key, val of session
-      #     delete session[key] if key is not \route
-      # else
-      #   if id == \nobody
-      #     session.route = ''
-      #   else
-      #     record = yield world.select '$.session[*].id', id
-      #     if record
-      #       $info 'Loading session', record
-      #       session <<< record
-      #     else if session.persistent
-      #       $info 'Creating session', id
-      #       yield world.save \session, session
-      #     # else
-      #     #   $info 'Deleting session id'
-      #     #   delete session.id
     session.$observe '$', debounce 300, co.wrap ->*
       return if not session.persistent
       yield world.save \session, session
       # $info 'Session saved', session.$get!
+    storage.$observe '$.data', (data) ->
+      if m = /^data\:([\w\d\/]+)\;/.exec data
+        type = m.1
+      if /^data\:([\w\d\/]+)\;base64\,/.test data
+        data = new Buffer (data.replace /^data\:([\w\d\/]+)\;base64\,/, ''), 'base64'
+      bucket = gcloud.storage project-id: olio.config.gcloud.project, key-filename: olio.config.gcloud.keyfile .bucket olio.config.gcloud.bucket
+      file = bucket.file(id = uuid!)
+      writer = file.createWriteStream!
+      writer.end data
+      writer.on \error, -> info it
+      writer.on \finish, ->
+        file.make-public (error) ->
+          info error if error
+          if type
+            file.set-metadata content-type: type, (error) ->
+              info error if error
+      session.storage-uri = "blackmaria.storage.googleapis.com/#id"

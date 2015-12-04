@@ -20,6 +20,7 @@ export test = ->*
       info '-' * process.stdout.columns
       socket = socket-io 'http://localhost:8000', force-new: true
       session = rivulet {}, socket, \session
+      storage = rivulet {}, socket, \storage
       keys module.exports[name] |> each (key) ->
         return if key in <[ session timeout ]>
         reactor = module.exports[name][key]
@@ -29,6 +30,7 @@ export test = ->*
           info '-' * process.stdout.columns
           session.$forget key, observe-func
           tx = yield world.transaction!
+          tx.storage = storage
           try
             yield reactor tx, session, it
             yield tx.commit!
