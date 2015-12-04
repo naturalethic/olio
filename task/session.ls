@@ -99,4 +99,6 @@ export session = ->*
           if type
             file.set-metadata content-type: type, (error) ->
               info error if error
-      session.storage-uri = "blackmaria.storage.googleapis.com/#id"
+              session.storage-uri = "blackmaria.storage.googleapis.com/#id"
+          else
+            session.storage-uri = "blackmaria.storage.googleapis.com/#id"
