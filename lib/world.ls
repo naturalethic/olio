@@ -40,6 +40,7 @@ export transaction = ->*
         doc.id = uuid!
         tx.$info "Inserting #kind", doc.id
         yield connection.query "insert document set ?", [ { kind: kind, id: doc.id, data: JSON.stringify(json) } ]
+
     extant: (path, value) ->*
       [ kind, path ] = divy-path path
       (first yield connection.query "select i from document where kind = ? and json_search(data, 'one', ?, NULL, ?) is not null limit 1", [ kind, value, path])?i
@@ -119,7 +120,18 @@ export reset = ->*
       index   kind (kind)
     );
   """
-  info "Creating insert trigger"
+  info "Creating table 'history'"
+  yield connection.query """
+    create table history (
+      i       bigint not null auto_increment primary key,
+      id      char(36),
+      created datetime,
+      kind    varchar(255),
+      data    json,
+      index   created (created)
+    );
+  """
+  info "Creating before insert trigger"
   yield connection.query """
     create trigger before_insert_document before insert on document
     for each row begin
@@ -127,10 +139,11 @@ export reset = ->*
           new.updated = now();
     end;
   """
-  info "Creating update trigger"
+  info "Creating before update trigger"
   yield connection.query """
     create trigger before_update_document before update on document
     for each row begin
+      insert history (id, created, kind, data) values (old.id, now(), old.kind, old.data);
       set new.updated = now();
     end;
   """
