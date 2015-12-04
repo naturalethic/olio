@@ -61,18 +61,21 @@ export session = ->*
             info e
             yield tx.rollback!
     session.$observe '$.id', co.wrap (id) ->*
-      $info 'Session Id:', id
       if id
         if not session.persistent
           record = yield world.select '$.session[*].id', id
           if record
             $info 'Loading session', record
-            session <<< record
+            session.persistent = true
+            for key, val of record
+              session[key] = val
+            # XXX: FIX THIS
+              # session <<< record
           else
             delete session.id
 
-    session.$observe '$.route', co.wrap (id) ->*
-      if not session.persistent and session.route and session.route not in <[ login signup]>
+    session.$observe '$.route', co.wrap (route) ->*
+      if (not session.persistent) and session.route and session.route not in <[ login signup]>
         session.route = ''
 
       # if not id

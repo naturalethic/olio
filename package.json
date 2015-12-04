@@ -39,6 +39,7 @@
     "co": "^4.6.0",
     "colors": "^1.0.3",
     "deep-extend": "^0.4.0",
+    "fast-json-patch": "^0.5.4",
     "glob": "^5.0.5",
     "harmony-reflect": "^1.4.2",
     "kefir": "^3.1.0",

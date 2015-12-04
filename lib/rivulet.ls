@@ -19,6 +19,12 @@ proxify-base = (state, target, mutation) ->
       keys target.$state
     enumerate: (target) ->
       keys(target.$state)[Symbol.iterator]!
+    # has: (target, key) ->
+    #   info \HAS
+    #   ``key in target``
+    # has-own: (target, key) ->
+    #   info \HAS-OWN
+    #   target.has-own-property key
     get: (target, key) ->
       if key is \$target
         target

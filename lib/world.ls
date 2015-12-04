@@ -1,5 +1,6 @@
 require! \promise-mysql : mysql
 require! './rivulet' : rivulet
+require! './pp' : pp
 
 olio.config.world          ?= {}
 olio.config.world.host     ?= \127.0.0.1
@@ -14,6 +15,16 @@ divy-path = (path) ->
   [ kind, path ] = re-path.exec path .slice 1
   path = (path and "$#path") or '$'
   [ kind, path ]
+
+$info = (...args) ->
+  date = (new Date).toISOString!split \T
+  if is-string(args.0)
+    args.0 = args.0.magenta
+  args.unshift "#{date.0.cyan}#{'T'.grey}#{date.1.cyan} #{'0.0.0.0'.yellow} #{'INFO'.green}"
+  if is-object(last args) or is-array(last args)
+    obj = args.pop!
+  info ...args
+  pp obj if obj
 
 export transaction = ->*
   connection = yield pool.get-connection!
@@ -35,7 +46,6 @@ export transaction = ->*
     commit: ->*
       try
         for kind, cursors of save-queue
-          info kind
           for cursor in cursors
             yield tx.save kind, cursor
         yield connection.commit!
@@ -62,6 +72,7 @@ export transaction = ->*
 
 export select = ->*
   tx = yield transaction!
+  tx.$info = $info
   try
     val = yield tx.select ...&
     yield tx.commit!
@@ -71,6 +82,7 @@ export select = ->*
 
 export save = ->*
   tx = yield transaction!
+  tx.$info = $info
   try
     val = yield tx.save ...&
     yield tx.commit!
