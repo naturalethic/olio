@@ -70,10 +70,7 @@ export session = ->*
           if record
             $info 'Loading session', record
             session.persistent = true
-            for key, val of record
-              session[key] = val
-            # XXX: FIX THIS
-              # session <<< record
+            session <<< record
           else
             delete session.id
     session.$observe '$.route', co.wrap (route) ->*
@@ -99,6 +96,6 @@ export session = ->*
           if type
             file.set-metadata content-type: type, (error) ->
               info error if error
-              session.storage-uri = "blackmaria.storage.googleapis.com/#id"
+              session.storage-uri = "#{olio.config.gcloud.bucket}.storage.googleapis.com/#id"
           else
-            session.storage-uri = "blackmaria.storage.googleapis.com/#id"
+            session.storage-uri = "#{olio.config.gcloud.bucket}.storage.googleapis.com/#id"

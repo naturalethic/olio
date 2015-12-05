@@ -58,6 +58,8 @@ proxify-base = (state, target, mutation) ->
         delete target.$state[key]
         target.$mutation?!
       true
+    get-own-property-descriptor: (target, key) ->
+      Object.get-own-property-descriptor target.$state, key
   target.$set-mutation = ->
     target.$mutation = it
   target.inspect = (depth, opts) -> util.inspect target.$state, opts <<< depth: depth
