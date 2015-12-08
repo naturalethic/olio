@@ -131,7 +131,7 @@ register-component = (name, component) ->
       true
     action-on-click: (query, action) ->
       if this[camelize action]
-        s.from-child-events this, query, \click, ~> this[camelize action] session!
+        s.from-child-events this, query, \click, ~> this[camelize action] session!, it.target
       else
         s.from-child-events this, query, \click, -> action
     watch: []
