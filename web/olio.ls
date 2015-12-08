@@ -27,7 +27,7 @@ require! \kefir
 window.s = ^^kefir
 s.from-child-events = (target, query, event-name, transform = id) ->
   s.stream (emitter) ->
-    handler = -> emitter.emit transform it
+    handler = -> it.stop-propagation!; emitter.emit transform it
     q target .on event-name, query, handler
     -> q target .off event-name, query, handler
 

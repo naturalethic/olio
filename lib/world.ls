@@ -31,7 +31,9 @@ export transaction = ->*
   yield connection.begin-transaction!
   save-queue = {}
   tx =
-    save: (kind, doc) ->*
+    query: (statement, params) ->*
+      yield connection.query statement, params
+    save: (kind, doc = {}) ->*
       json = doc.$get?! or doc
       if doc.id
         tx.$info "Updating #kind", doc.id
@@ -40,7 +42,7 @@ export transaction = ->*
         doc.id = uuid!
         tx.$info "Inserting #kind", doc.id
         yield connection.query "insert document set ?", [ { kind: kind, id: doc.id, data: JSON.stringify(json) } ]
-
+      tx.cursor kind, doc
     extant: (path, value) ->*
       [ kind, path ] = divy-path path
       (first yield connection.query "select i from document where kind = ? and json_search(data, 'one', ?, NULL, ?) is not null limit 1", [ kind, value, path])?i
@@ -58,17 +60,25 @@ export transaction = ->*
       connection.release!
     select: (path, value) ->*
       [ kind, path ] = divy-path path
-      if data = (first yield connection.query "select data from document where kind = ? and json_search(data, 'one', ?, NULL, ?) is not null limit 1", [ kind, value, path])?data
-        cursor = rivulet JSON.parse data
-        cursor.$observe '$', co.wrap ->*
-          save-queue[kind] ?= []
-          save-queue[kind].push cursor if cursor not in save-queue[kind]
-        return cursor
+      if value
+        data = (first yield connection.query "select data from document where kind = ? and json_search(data, 'one', ?, NULL, ?) is not null limit 1", [ kind, value, path])?data
+      else
+        data = (first yield connection.query "select data from document where kind = ? limit 1", [ kind ])?data
+      if data
+        return tx.cursor kind, data
       null
     select-copy: (path, value) ->*
       if cursor = yield tx.select path, value
         return cursor.$get!
       null
+    cursor: (kind, data) ->
+      data = JSON.parse data if is-string data
+      data = data.$get! if data.$get
+      cursor = rivulet data
+      cursor.$observe '$', co.wrap ->*
+        save-queue[kind] ?= []
+        save-queue[kind].push cursor if cursor not in save-queue[kind]
+      cursor
   tx
 
 export select = ->*
