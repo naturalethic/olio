@@ -23,12 +23,16 @@ export test = ->*
       storage = rivulet {}, socket, \storage
       keys module.exports[name] |> each (key) ->
         return if key in <[ session timeout ]>
-        reactor = module.exports[name][key]
-        reactor.bind module.exports[name]
+        reactors = module.exports[name][key]
+        reactors = [ reactors ] if !is-array reactors
+        for reactor in reactors
+          reactor.bind module.exports[name]
         observe-func = co.wrap ->*
           info key
           info '-' * process.stdout.columns
-          session.$forget key, observe-func
+          reactor = reactors.pop!
+          if empty reactors
+            session.$forget key, observe-func
           tx = yield world.transaction!
           tx.storage = storage
           try
