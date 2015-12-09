@@ -36,8 +36,6 @@ proxify-base = (state, target, mutation) ->
       if key is \$state
         for k, v of val
           val[k] = proxify v, target.$mutation
-          if target.$mutation and (typeof! v is \Object or typeof! v is \Array)
-            val[k].$mutation = target.$mutation
         target.$state = val
       if key is \$mutation
         target.$mutation = val
@@ -61,13 +59,14 @@ proxify-base = (state, target, mutation) ->
     get-own-property-descriptor: (target, key) ->
       Object.get-own-property-descriptor target.$state, key
   target.$set-mutation = ->
-    target.$mutation = it
+    proxy.$mutation = it
+
   target.inspect = (depth, opts) -> util.inspect target.$state, opts <<< depth: depth
   proxy
 
 proxify-object = (state, mutation) ->
   for key, val of state
-    state[key] = proxify val
+    state[key] = proxify val, mutation
   target ?= {}
   proxy = proxify-base state, target, mutation
   target.$get = ->
