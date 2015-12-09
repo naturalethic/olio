@@ -30,7 +30,7 @@ export test = ->*
         observe-func = co.wrap ->*
           info key
           info '-' * process.stdout.columns
-          reactor = reactors.pop!
+          reactor = reactors.shift!
           if empty reactors
             session.$forget key, observe-func
           tx = yield world.transaction!
