@@ -40,9 +40,7 @@ proxify-base = (state, target, mutation) ->
       if key is \$mutation
         target.$mutation = val
         for k, v of target.$state
-          switch typeof! v
-          | \Object => v.$mutation = val
-          | \Array  => v.$mutation = val
+          v.$mutation = val if v?$get
       else if key.0 is \$
         target[key] = val
       else
@@ -58,9 +56,6 @@ proxify-base = (state, target, mutation) ->
       true
     get-own-property-descriptor: (target, key) ->
       Object.get-own-property-descriptor target.$state, key
-  target.$set-mutation = ->
-    proxy.$mutation = it
-
   target.inspect = (depth, opts) -> util.inspect target.$state, opts <<< depth: depth
   proxy
 
@@ -139,7 +134,7 @@ module.exports = (state = {}, socket, channel) ->
           observer.emitter.emit extraction-cache[path]
     $socket-emit-queue: []
     $old-state: rivulet.$get!
-  rivulet.$set-mutation ->
+  rivulet.$mutation = ->
     rivulet.$new-state = rivulet.$get!
     rivulet.$broadcast!
   observers = {}

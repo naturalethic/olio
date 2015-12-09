@@ -42,7 +42,8 @@ export transaction = ->*
         doc.id = uuid!
         tx.$info "Inserting #kind", doc.id
         yield connection.query "insert document set ?", [ { kind: kind, id: doc.id, data: JSON.stringify(json) } ]
-      tx.cursor kind, doc
+      json = doc.$get?! or ({} <<< doc)
+      tx.cursor kind, json
     extant: (path, value) ->*
       [ kind, path ] = divy-path path
       (first yield connection.query "select i from document where kind = ? and json_search(data, 'one', ?, NULL, ?) is not null limit 1", [ kind, value, path])?i
