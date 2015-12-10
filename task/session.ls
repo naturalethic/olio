@@ -10,6 +10,7 @@ require! \gcloud
 export watch = [ __filename, \olio.ls, \session.ls, \react, "#__dirname/../lib" ]
 
 export session = ->*
+  info 'Starting session server'
   file = new node-static.Server './public'
   server = http.create-server (request, response) ->
     if not fs.exists-sync "./public#{request.url}"

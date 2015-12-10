@@ -1,11 +1,8 @@
 require! \world
 require! \later
 require! \transport
-require! \elasticsearch
 
 export watch = [ __filename, "#__dirname/../lib" ]
-
-state = {}
 
 $info = (...args) ->
   date = (new Date).toISOString!split \T
@@ -18,8 +15,6 @@ $info = (...args) ->
   pp obj if obj
 
 export sentinel = ->*
-  if not yield world.select '$.sentinel'
-    yield world.save \sentinel
   sentinel-config = olio.config?sentinel or {}
   keys sentinel-config |> each (ticker) ->
     config = sentinel-config[ticker]
@@ -32,6 +27,8 @@ tick = (ticker, config) ->*
   return if config.ticking
   config.ticking = true
   try
+    if not yield world.select '$.sentinel'
+      yield world.save \sentinel
     $info \Tick, ticker
     tx = yield world.transaction!
     tx.$info = $info
@@ -57,21 +54,16 @@ tickers =
     for notification in notifications
       yield transport.dispatch world, notification
   secretary: (world, config) ->*
-    if not state.elastic
-      state.elastic = new elasticsearch.Client host: "#{olio.config.secretary.host}:#{olio.config.secretary.port}", log: \trace
-      promisify-all state.elastic
-      promisify-all state.elastic.indices
-    elastic = state.elastic
     sentinel = yield world.select '$.sentinel'
     if not sentinel.secretary
-      yield elastic.indices.delete index: \document
+      yield world.secretary.indices.delete index: \document
       sentinel.secretary = updated: new Date
       documents = yield world.query "select * from document"
       bulk = []
       for document in documents
         bulk.push index: { _index: \document, _type: document.kind, _id: document.id }
         bulk.push JSON.parse(document.data)
-      yield elastic.bulk-async body: bulk
+      yield world.secretary.bulk-async body: bulk
     else
       documents = yield world.query "select * from document where updated > ?", [ sentinel.secretary.updated ]
       if documents.length
@@ -80,4 +72,4 @@ tickers =
         for document in documents
           bulk.push index: { _index: \document, _type: document.kind, _id: document.id }
           bulk.push JSON.parse(document.data)
-        yield elastic.bulk-async body: bulk
+        yield world.secretary.bulk-async body: bulk

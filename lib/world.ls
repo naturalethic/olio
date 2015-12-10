@@ -1,6 +1,7 @@
 require! \promise-mysql : mysql
 require! './rivulet' : rivulet
 require! './pp' : pp
+require! \elasticsearch
 
 olio.config.world          ?= {}
 olio.config.world.host     ?= \127.0.0.1
@@ -27,12 +28,22 @@ $info = (...args) ->
   pp obj if obj
 
 export transaction = ->*
+  elastic = new elasticsearch.Client host: "#{olio.config.secretary.host}:#{olio.config.secretary.port}"
+  promisify-all elastic
+  promisify-all elastic.indices
   connection = yield pool.get-connection!
   yield connection.begin-transaction!
   save-queue = {}
   tx =
+    secretary: elastic
     query: (statement, params) ->*
       yield connection.query statement, params
+    search: (kind, query) ->*
+      result = first yield elastic.search-async index: \document, type: kind, body: { query: query }
+      records = []
+      for hit in result.hits.hits
+        records.push yield tx.get hit._source.id
+      records
     save: (kind, doc = {}) ->*
       json = doc.$get?! or doc
       if doc.id
@@ -59,6 +70,9 @@ export transaction = ->*
     rollback: ->*
       yield connection.rollback!
       connection.release!
+    get: (id) ->*
+      return null if not result = first yield connection.query "select kind, data from document where id = ?", [ id ]
+      return tx.cursor result.kind, result.data
     select: (path, value) ->*
       [ kind, path ] = divy-path path
       if value
