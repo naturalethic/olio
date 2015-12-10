@@ -10,13 +10,6 @@ olio.config.world.database ?= \cfh
 
 pool = mysql.create-pool olio.config.world
 
-re-path = /^\$\.(\w+)(\..*)?/
-divy-path = (path) ->
-  throw "Bad path: '#path'\nWorld paths must match the form '$.entity..'" if not re-path.test path
-  [ kind, path ] = re-path.exec path .slice 1
-  path = (path and "$#path") or '$'
-  [ kind, path ]
-
 $info = (...args) ->
   date = (new Date).toISOString!split \T
   if is-string(args.0)
@@ -55,9 +48,8 @@ export transaction = ->*
         yield connection.query "insert document set ?", [ { kind: kind, id: doc.id, data: JSON.stringify(json) } ]
       json = doc.$get?! or ({} <<< doc)
       tx.cursor kind, json
-    extant: (path, value) ->*
-      [ kind, path ] = divy-path path
-      (first yield connection.query "select i from document where kind = ? and json_search(data, 'one', ?, NULL, ?) is not null limit 1", [ kind, value, path])?i
+    extant: (kind, key, val) ->*
+      (first yield connection.query "select i from document where kind = ? and data like ? limit 1", [ kind, "%\"#key\":\"#val\"%" ])?i
     commit: ->*
       try
         for kind, cursors of save-queue
@@ -73,18 +65,13 @@ export transaction = ->*
     get: (id) ->*
       return null if not result = first yield connection.query "select kind, data from document where id = ?", [ id ]
       return tx.cursor result.kind, result.data
-    select: (path, value) ->*
-      [ kind, path ] = divy-path path
-      if value
-        data = (first yield connection.query "select data from document where kind = ? and json_search(data, 'one', ?, NULL, ?) is not null limit 1", [ kind, value, path])?data
+    select: (kind, key, val) ->*
+      if key
+        data = (first yield connection.query "select data from document where kind = ? and data like ? limit 1", [ kind, "%\"#key\":\"#val\"%" ])?data
       else
         data = (first yield connection.query "select data from document where kind = ? limit 1", [ kind ])?data
       if data
         return tx.cursor kind, data
-      null
-    select-copy: (path, value) ->*
-      if cursor = yield tx.select path, value
-        return cursor.$get!
       null
     cursor: (kind, data) ->
       data = JSON.parse data if is-string data
@@ -128,10 +115,6 @@ export reset = ->*
   yield connection.query "create database #{olio.config.world.database}"
   connection.end!
   connection = yield mysql.create-connection olio.config.world{host, user, database}
-  # info "Creating table 'world'"
-  # yield connection.query "create table world (data json)"
-  # info "Inserting record"
-  # yield connection.query "insert world set data = '{}'"
   info "Creating table 'document'"
   yield connection.query """
     create table document (
@@ -140,7 +123,7 @@ export reset = ->*
       created datetime,
       updated datetime,
       kind    varchar(255),
-      data    json,
+      data    text,
       index   id (id),
       index   kind (kind)
     );
@@ -152,7 +135,7 @@ export reset = ->*
       id      char(36),
       created datetime,
       kind    varchar(255),
-      data    json,
+      data    text,
       index   created (created)
     );
   """
