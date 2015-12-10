@@ -80,6 +80,7 @@ export session = ->*
       return if not session.persistent
       yield world.save \session, session
       # $info 'Session saved', session.$get!
+    storage.$logger = $info
     storage.$observe '$.data', (data) ->
       if m = /^data\:([\w\d\/]+)\;/.exec data
         type = m.1
