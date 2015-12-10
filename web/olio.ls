@@ -26,8 +26,14 @@ m.convert = require \template-converter
 require! \kefir
 window.s = ^^kefir
 s.from-child-events = (target, query, event-name, transform = id) ->
+  propagate = false
+  if last(event-name) is \!
+    event-name = event-name.substr(0, event-name.length - 1)
+    propagate = true
   s.stream (emitter) ->
-    handler = -> it.stop-propagation!; emitter.emit transform it
+    handler = ->
+      it.stop-propagation! if !propagate
+      emitter.emit transform it
     q target .on event-name, query, handler
     -> q target .off event-name, query, handler
 
