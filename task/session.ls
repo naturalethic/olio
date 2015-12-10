@@ -81,22 +81,22 @@ export session = ->*
       yield world.save \session, session
       # $info 'Session saved', session.$get!
     storage.$logger = $info
-    storage.$observe '$.data', (data) ->
-      if m = /^data\:([\w\d\/]+)\;/.exec data
-        type = m.1
-      if /^data\:([\w\d\/]+)\;base64\,/.test data
-        data = new Buffer (data.replace /^data\:([\w\d\/]+)\;base64\,/, ''), 'base64'
-      bucket = gcloud.storage project-id: olio.config.gcloud.project, key-filename: olio.config.gcloud.keyfile .bucket olio.config.gcloud.bucket
-      file = bucket.file(id = uuid!)
-      writer = file.createWriteStream!
-      writer.end data
-      writer.on \error, -> info it
-      writer.on \finish, ->
-        file.make-public (error) ->
-          info error if error
-          if type
-            file.set-metadata content-type: type, (error) ->
+    storage.$observe '$', ->
+      (keys storage) |> each (key) ->
+        val = storage[key]
+        if m = /^data\:([\w\d\/]+)\;/.exec val
+          type = m.1
+          data = new Buffer (val.replace /^data\:([\w\d\/]+)\;base64\,/, ''), 'base64'
+          delete storage[key]
+          bucket = gcloud.storage project-id: olio.config.gcloud.project, key-filename: olio.config.gcloud.keyfile .bucket olio.config.gcloud.bucket
+          file = bucket.file(id = uuid!)
+          writer = file.create-write-stream!
+          writer.end data
+          writer.on \error, -> info it
+          writer.on \finish, ->
+            file.make-public (error) ->
               info error if error
-              session.storage-uri = "#{olio.config.gcloud.bucket}.storage.googleapis.com/#id"
-          else
-            session.storage-uri = "#{olio.config.gcloud.bucket}.storage.googleapis.com/#id"
+              file.set-metadata content-type: type, (error) ->
+                info error if error
+                session.storage ?= {}
+                session.storage[key] = "#{olio.config.gcloud.bucket}.storage.googleapis.com/#id"
