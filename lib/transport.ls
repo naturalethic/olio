@@ -21,6 +21,7 @@ export dispatch = (world, notification) ->*
   for t in olio.config.notification.transport?[camelize notification.name] or []
     continue if notification["dispatched#{capitalize t}"]
     try
+      continue if not transport[t]
       yield transport[t] world, notification
       notification["dispatched#{capitalize t}"] = true
     catch e
