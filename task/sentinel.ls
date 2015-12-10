@@ -19,6 +19,7 @@ export sentinel = ->*
   keys sentinel-config |> each (ticker) ->
     config = sentinel-config[ticker]
     return if not config.schedule
+    return if not tickers[ticker]
     co tick ticker, config
     later.set-interval (co.wrap ->* yield tick ticker, config), later.parse.text(config.schedule)
 
@@ -41,7 +42,7 @@ tick = (ticker, config) ->*
     delete config.ticking
 
 tickers =
-  notifications: (world, config) ->*
+  postmaster: (world, config) ->*
     notifications = (yield world.query """
       select * from document
        where kind = 'notification'
