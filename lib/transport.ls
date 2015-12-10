@@ -38,8 +38,8 @@ transport =
     html = jade.render-file path, notification.data.$get!
     subject = (fs.read-file-sync path).to-string!split(/\n/).0.substr(4)
     yield transport.instance.send-async do
-      from:     'support@copsforhire.com'
-      fromname: 'CopsForHire'
+      from:     transport.sender-email
+      fromname: transport.sender-name
       to:       person.emails.0.email
       toname:   "#{person.name} #{person.surname}"
       subject:  subject
@@ -47,7 +47,7 @@ transport =
     if dump = olio.config.transport.dump
       if dump.instance
         yield dump.instance.send-mail do
-          from:    "Alacrity <#{dump.identifier}>"
+          from:    dump.identifier
           to:      dump.identifier.replace('@', "+#{notification.id}@")
           subject: "#{subject} | #{person.name} #{person.surname} <#{person.emails.0.email}>"
           html:    html
