@@ -67,7 +67,7 @@ export session = ->*
       $info 'Session Id', id
       if id
         if not session.persistent
-          record = yield world.select '$.session[*].id', id
+          record = yield world.get id
           if record
             $info 'Loading session', record
             session.persistent = true
