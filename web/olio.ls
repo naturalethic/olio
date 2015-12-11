@@ -32,7 +32,9 @@ s.from-child-events = (target, query, event-name, transform = id) ->
     propagate = true
   s.stream (emitter) ->
     handler = ->
-      it.stop-propagation! if !propagate
+      if !propagate
+        it.stop-propagation!
+        it.prevent-default!
       emitter.emit transform it
     q target .on event-name, query, handler
     -> q target .off event-name, query, handler
