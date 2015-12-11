@@ -145,6 +145,11 @@ register-component = (name, component) ->
         s.from-child-events this, query, \click, ~> this[camelize action] session!, it.current-target
       else
         s.from-child-events this, query, \click, -> action
+    action-on-event: (query, name, action) ->
+      if this[camelize action]
+        s.from-child-events this, query, name, ~> this[camelize action] session!, it.current-target
+      else
+        s.from-child-events this, query, name, -> action
     watch: []
     dummy: -> {}
     start: null
