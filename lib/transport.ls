@@ -33,7 +33,7 @@ transport =
   mail: (world, notification) ->*
     return if not transport = olio.config.transport.mail
     return if not transport.instance
-    person = yield world.select '$.person.id', notification.recipient
+    person = yield world.get notification.recipient
     return if transport.whitelist and person.emails.0.email.replace(/\+[^\@]+/, '') not in transport.whitelist
     return if not fs.exists-sync (path = "notification/#{notification.name}.mail")
     html = jade.render-file path, notification.data.$get!

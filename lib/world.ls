@@ -33,9 +33,11 @@ export transaction = ->*
       yield connection.query statement, params
     search: (kind, query) ->*
       result = first yield elastic.search-async index: \document, type: kind, body: { query: query }
-      records = []
-      for hit in result.hits.hits
-        records.push yield tx.get hit._source.id
+      result.hits.hits |> map -> it._source
+    search-select: (kind, query) ->*
+      records = yield tx.search kind, query
+      for i in [0 til records.length]
+        records[i] = yield tx.get records[i].id
       records
     save: (kind, doc = {}) ->*
       json = doc.$get?! or doc

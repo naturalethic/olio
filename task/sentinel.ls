@@ -27,11 +27,11 @@ tick = (ticker, config) ->*
   return if config.ticking
   config.ticking = true
   try
-    if not yield world.select '$.sentinel'
-      yield world.save \sentinel
     $info \Tick, ticker
     tx = yield world.transaction!
     tx.$info = $info
+    if not yield tx.select \sentinel
+      yield tx.save \sentinel
     try
       yield tickers[ticker] tx, config
       yield tx.commit!
@@ -45,16 +45,21 @@ tick = (ticker, config) ->*
 
 tickers =
   postmaster: (world, config) ->*
-    notifications = (yield world.query """
-      select * from document
-       where kind = 'notification'
-         and json_extract(data, '$.dispatched') is null
-         and str_to_date(json_unquote(data->'$.schedule'), '%Y-%m-%dT%H:%i:%S') < now()
-    """) |> map -> world.cursor \notification, it.data
+    notifications = yield world.search-select \notification,
+      bool:
+        must: [
+          range:
+            schedule:
+              lt: \now
+        ]
+        must_not: [
+          term:
+            dispatched: true
+        ]
     for notification in notifications
       yield transport.dispatch world, notification
   secretary: (world, config) ->*
-    sentinel = yield world.select '$.sentinel'
+    sentinel = yield world.select \sentinel
     if not sentinel.secretary
       yield world.secretary.indices.delete index: \document
       sentinel.secretary = updated: new Date
