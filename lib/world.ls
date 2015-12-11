@@ -93,6 +93,16 @@ export select = ->*
     yield tx.rollback!
   val
 
+export get = ->*
+  tx = yield transaction!
+  tx.$info = $info
+  try
+    val = yield tx.get ...&
+    yield tx.commit!
+  catch
+    yield tx.rollback!
+  val
+
 export save = ->*
   tx = yield transaction!
   tx.$info = $info
