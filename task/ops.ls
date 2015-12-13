@@ -25,6 +25,18 @@ export push = ->*
   product = olio.task.3
   spawn "gcloud docker push us.gcr.io/copsforhire.com/copsforhire/#{env}-#{product}:latest"
 
+export push-static = ->*
+  if olio.task.length < 3
+    return info "Usage: #{olio.task.0} #{olio.task.1} <env>"
+  env = olio.task.2
+  spawn "gsutil -m rsync -d -r public gs://#{env}.copsforhire.com"
+
+export fix-static = ->*
+  if olio.task.length < 3
+    return info "Usage: #{olio.task.0} #{olio.task.1} <env>"
+  spawn "gsutil -m acl ch -r -u AllUsers:R gs://#{env}.copsforhire.com"
+  spawn "gsutil -m web set -m index.html -e index.html gs://#{env}.copsforhire.com"
+
 export shell = ->*
   if olio.task.length < 4
     return info "Usage: #{olio.task.0} #{olio.task.1} <env> <product>"

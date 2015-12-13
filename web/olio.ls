@@ -42,7 +42,10 @@ s.from-child-events = (target, query, event-name, transform = id) ->
 # Session
 require! 'socket.io-client': socket-io
 require! \rivulet
-socket = socket-io!
+if config.env
+  socket = socket-io "http://session.#{config.env}.copsforhire.com"
+else
+  socket = socket-io!
 window.$session = session = rivulet socket, \session
 window.$storage = rivulet socket, \storage
 session.logger = (...args) ->
