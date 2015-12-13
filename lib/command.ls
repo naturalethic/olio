@@ -86,9 +86,7 @@ global.debounce = ->
 
 global.spawn = ->
   words = it.match(/[^"'\s]+|"[^"]+"|'[^'']+'/g)
-  child = process.spawn (head words), (tail words)
-  child.stdout.on 'data', -> process.stdout.write it
-  child.stderr.on 'data', -> process.stderr.write it
+  process.spawn-sync (head words), (tail words), stdio: 'inherit'
 
 global.exit = (message) ->
   error new String(message).red if message

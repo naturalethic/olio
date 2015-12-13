@@ -10,15 +10,21 @@ require! \gcloud
 export watch = [ __filename, \olio.ls, \session.ls, \react, "#__dirname/../lib" ]
 
 export session = ->*
-  info 'Starting session server'
-  file = new node-static.Server './public'
-  server = http.create-server (request, response) ->
-    if not fs.exists-sync "./public#{request.url}"
-      request.url = '/'
-    request.add-listener \end, ->
-      file.serve request, response
-    .resume!
+  if olio.config.web.static
+    file = new node-static.Server './public'
+    server = http.create-server (request, response) ->
+      if not fs.exists-sync "./public#{request.url}"
+        request.url = '/'
+      request.add-listener \end, ->
+        file.serve request, response
+      .resume!
+  else
+    server = http.create-server (request, response) ->
+      request.add-listener \end, ->
+        response.end 'Session'
+      .resume!
   port = olio.option.port or olio.config.web?port or 8000
+  info 'Starting session server on port', port
   schema = require "#{process.cwd!}/session"
   server.listen port, '0.0.0.0'
   server = socket-io server
