@@ -3,16 +3,19 @@ require! 'socket.io-client': socket-io
 require! \co
 require! \world
 require! \rivulet
+require! \stack-trace
+require! \source-map
 
 export test = ->*
   state = {}
   yield world.reset! unless olio.option.keep
   run-module = (path) ->
     module = new Module
-    module.paths = [ "#{process.cwd!}/lib", "#{process.cwd!}/node_modules" ]
-    module._compile livescript.compile ([
-      (fs.read-file-sync path .to-string!)
-    ].join '\n'), { +bare }
+    module.paths = [ "#{process.cwd!}/lib", "#{process.cwd!}/node_modules", "#__dirname/../node_modules" ]
+    source = fs.read-file-sync path, 'utf8'
+    compiled = livescript.compile source, { +bare, -header, map: 'linked', filename: path }
+    map-consumer = new source-map.SourceMapConsumer compiled.map.to-string!
+    module._compile compiled.code
     run = (name) ->
       return run-next! if name.0 is \$
       info '=' * process.stdout.columns
@@ -41,13 +44,17 @@ export test = ->*
           catch it
             yield tx.rollback!
             if it.name is \AssertionError
-              info "#{it.name.red} (#{it.operator})"
-              info 'Expected'.yellow
-              pp it.expected
-              info ''
-              info 'Actual'.yellow
-              pp it.actual
-              info ''
+              trace = stack-trace.parse it
+              info "#{it.name.red} #{it.message.yellow}"
+              position = map-consumer.original-position-for(line: trace.0.line-number, column: trace.0.column-number)
+              info "#{position.source}:#{position.line.to-string!yellow}", source.split('\n')[position.line - 1].trim!cyan
+              if is-array(it.expected) or is-object(it.expected)
+                info 'Expected'.yellow
+                pp it.expected
+                info ''
+                info 'Actual'.yellow
+                pp it.actual
+                info ''
               state.fail = 'Fail'
             else
               state.fail = it.to-string!red
