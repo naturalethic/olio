@@ -20,7 +20,7 @@ $info = (...args) ->
   info ...args
   pp obj if obj
 
-export transaction = ->*
+export transaction = (lock = false) ->*
   elastic = new elasticsearch.Client host: "#{olio.config.secretary.host}:#{olio.config.secretary.port}"
   promisify-all elastic
   promisify-all elastic.indices
@@ -28,6 +28,7 @@ export transaction = ->*
   yield connection.begin-transaction!
   save-queue = {}
   tx =
+    $info: $info
     secretary: elastic
     query: (statement, params) ->*
       yield connection.query statement, params
@@ -60,9 +61,11 @@ export transaction = ->*
         yield connection.commit!
       catch
         yield connection.rollback!
+      yield tx.query 'unlock tables' if lock
       connection.release!
     rollback: ->*
       yield connection.rollback!
+      yield tx.query 'unlock tables' if lock
       connection.release!
     get: (id) ->*
       return null if not result = first yield connection.query "select kind, data from document where id = ?", [ id ]
@@ -83,6 +86,7 @@ export transaction = ->*
         save-queue[kind] ?= []
         save-queue[kind].push cursor if cursor not in save-queue[kind]
       cursor
+  yield tx.query 'lock tables document write' if lock
   tx
 
 export select = ->*

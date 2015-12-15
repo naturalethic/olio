@@ -47,7 +47,8 @@ export test = ->*
               trace = stack-trace.parse it
               info "#{it.name.red} #{it.message.yellow}"
               position = map-consumer.original-position-for(line: trace.0.line-number, column: trace.0.column-number)
-              info "#{position.source}:#{position.line.to-string!yellow}", source.split('\n')[position.line - 1].trim!cyan
+              try
+                info "#{position.source}:#{position.line.to-string!yellow}", source.split('\n')[position.line - 1].trim!cyan
               if is-array(it.expected) or is-object(it.expected)
                 info 'Expected'.yellow
                 pp it.expected

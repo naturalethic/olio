@@ -14,7 +14,18 @@ $info = (...args) ->
   info ...args
   pp obj if obj
 
+ensure-world-record = ->*
+  tx = yield world.transaction true
+  try
+    if not yield tx.select \sentinel
+      yield tx.save \sentinel
+    yield tx.commit!
+  catch e
+    info e
+    yield tx.rollback!
+
 export sentinel = ->*
+  yield ensure-world-record!
   sentinel-config = olio.config?sentinel or {}
   keys sentinel-config |> each (ticker) ->
     config = sentinel-config[ticker]
@@ -26,17 +37,16 @@ export sentinel = ->*
 tick = (ticker, config) ->*
   return if config.ticking
   config.ticking = true
+  if olio.config.sentinel.allow-background-reset
+    yield ensure-world-record!
   try
     $info \Tick, ticker
     tx = yield world.transaction!
     tx.$info = $info
-    if not yield tx.select \sentinel
-      yield tx.save \sentinel
     try
       yield tickers[ticker] tx, config
       yield tx.commit!
     catch e
-      info e
       yield tx.rollback!
   catch e
     info e
@@ -45,23 +55,25 @@ tick = (ticker, config) ->*
 
 tickers =
   postmaster: (world, config) ->*
-    notifications = yield world.search-select \notification,
-      bool:
-        must: [
-          range:
-            schedule:
-              lt: \now
-        ]
-        must_not: [
-          term:
-            dispatched: true
-        ]
-    for notification in notifications
-      yield transport.dispatch world, notification
+    if yield world.secretary.indices.exists index: \document
+      notifications = yield world.search-select \notification,
+        bool:
+          must: [
+            range:
+              schedule:
+                lt: \now
+          ]
+          must_not: [
+            term:
+              dispatched: true
+          ]
+      for notification in notifications
+        yield transport.dispatch world, notification
   secretary: (world, config) ->*
     sentinel = yield world.select \sentinel
     if not sentinel.secretary
-      yield world.secretary.indices.delete index: \document
+      if yield world.secretary.indices.exists index: \document
+        yield world.secretary.indices.delete index: \document
       sentinel.secretary = updated: new Date
       documents = yield world.query "select * from document"
       bulk = []
