@@ -137,6 +137,8 @@ register-component = (name, component) ->
     info \DETACHED, @tag-name
     for on-value in @$on-values
       on-value.0.off-value on-value.1
+  prototype.attribute-changed-callback = (name, o, n) ->
+    @trait name, o, n
 
   prototype <<< do
     event:           (query, name, transform) -> s.from-child-events this, query, name, transform
@@ -162,5 +164,6 @@ register-component = (name, component) ->
     react: ->
     paint: ->
     ready: ->
+    trait: ->
   prototype <<< component
   document.register-element name, prototype: prototype
