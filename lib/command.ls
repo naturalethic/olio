@@ -69,12 +69,17 @@ global.exec = (command, async) ->
       false
 
 global.debounce = ->
-  if &.length == 2
-    wait = &0
-    func = &1
-  else
-    wait = 300
+  return if &.length < 1
+  wait = 1
+  if is-function &0
     func = &0
+  else
+    wait = &0
+  if &.length > 1
+    if is-function &1
+      func = &1
+    else
+      wait = &1
   timeout = null
   ->
     args = arguments

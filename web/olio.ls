@@ -16,6 +16,27 @@ window <<< do
   is-string:    -> typeof! it is \String
   is-undefined: -> typeof! it is \Undefined
 
+global.debounce = ->
+  return if &.length < 1
+  wait = 1
+  if is-function &0
+    func = &0
+  else
+    wait = &0
+  if &.length > 1
+    if is-function &1
+      func = &1
+    else
+      wait = &1
+  timeout = null
+  ->
+    args = arguments
+    clear-timeout timeout
+    timeout := set-timeout (~>
+      timeout := null
+      func.apply this, args
+    ), wait
+
 # Templates
 require 'webcomponents.js'
 window.jade = require 'jade/runtime'
