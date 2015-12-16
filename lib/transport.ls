@@ -52,18 +52,21 @@ transport =
           to:      dump.identifier.replace('@', "+#{notification.id}@")
           subject: "#{subject} | #{person.name} #{person.surname} <#{person.emails.0.email}>"
           html:    html
-
-# export process-text = (job, person) ->*
-#   if olio.config.twilio.whitelist and person.phone not in olio.config.twilio.whitelist
-#     throw "Non-whitelisted recipient: #{person.phone}"
-#   yield state.twilio.sms.messages.post do
-#     to: "+1#{person.phone}"
-#     from: olio.config.twilio.phone
-#     body: job.data.summary
-#   if state.dump
-#     state.dump.send-mail do
-#       from:    "Alacrity <#{olio.config.alacrity.user}>"
-#       to:      olio.config.alacrity.user.replace('@', "+#{job.id}@")
-#       subject: "#{job.data.summary} | #{person.name} | #{person.phone}"
-#       html:    "#{job.data.summary} | #{person.name} | #{person.phone}"
-#     job.log 'Sent copy to alacrity dump'
+  sms: (world, notification) ->*
+    return if not transport = olio.config.transport.sms
+    return if not transport.instance
+    person = yield world.get notification.recipient
+    return if transport.whitelist and person.phones.0.phone not in transport.whitelist
+    return if not fs.exists-sync (path = "notification/#{notification.name}.sms")
+    text = jade.render-file path, notification.data.$get!
+    yield transport.instance.sms.messages.post do
+      to: "+1#{person.phones.0.phone}"
+      from: transport.phone
+      body: text
+    if dump = olio.config.transport.dump
+      if dump.instance
+        yield dump.instance.send-mail do
+          from:    dump.identifier
+          to:      dump.identifier.replace('@', "+#{notification.id}@")
+          subject: "SMS Sent | #{person.name} #{person.surname} <#{person.phones.0.phone}>"
+          html:    text
