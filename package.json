@@ -39,7 +39,6 @@
     "co": "^4.6.0",
     "colors": "^1.0.3",
     "deep-extend": "^0.4.0",
-    "elasticsearch": "^10.0.1",
     "fast-json-patch": "^0.5.4",
     "gcloud": "^0.25.1",
     "glob": "^5.0.5",
