@@ -61,7 +61,7 @@ export test = ->*
               state.fail = it.to-string!red
             session.end = true
         session.$observe key, observe-func
-      state.timeout-seconds = module.exports[name]?timeout or 3
+      state.timeout-seconds = module.exports[name]?timeout or 10
       session <<< module.exports[name].session
       state.timeout = set-timeout ->
         session.end = true

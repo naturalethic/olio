@@ -16,14 +16,16 @@ export build = ->*
     exec "rsync -maz react #root"
     exec "rsync -maz session.ls #root"
     exec "rsync -maz test #root"
-  spawn "docker build -t us.gcr.io/copsforhire.com/copsforhire/#{env}-#{product}:latest ops/#env/#product"
+  spawn "docker build -t us.gcr.io/#{olio.config.ops.project.replace /:/g, '/'}/#{env}-#{product}:latest ops/#env/#product"
+  if olio.option.push
+    yield push!
 
 export push = ->*
   if olio.task.length < 4
     return info "Usage: #{olio.task.0} #{olio.task.1} <env> <product>"
   env = olio.task.2
   product = olio.task.3
-  spawn "gcloud docker push us.gcr.io/copsforhire.com/copsforhire/#{env}-#{product}:latest"
+  spawn "gcloud docker push us.gcr.io/#{olio.config.ops.project.replace /:/g, '/'}/#{env}-#{product}:latest"
 
 export push-static = ->*
   if olio.task.length < 3
@@ -42,7 +44,7 @@ export shell = ->*
     return info "Usage: #{olio.task.0} #{olio.task.1} <env> <product>"
   env = olio.task.2
   product = olio.task.3
-  spawn "docker run --rm -ti us.gcr.io/copsforhire.com/copsforhire/#{env}-#{product} /bin/bash"
+  spawn "docker run --rm -ti us.gcr.io/#{olio.config.ops.project.replace /:/g, '/'}/#{env}-#{product} /bin/bash"
 
 export zone = ->*
   spawn "gcloud config set compute/zone us-central1-c"
