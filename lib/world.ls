@@ -185,8 +185,8 @@ export reset = ->*
   info "Creating table 'document'"
   yield connection.query """
     create table document (
-      created datetime not null,
-      updated datetime not null,
+      created datetime,
+      updated datetime,
       id      char(36) not null,
       kind    varchar(255) not null,
       path    varchar(255) not null,
