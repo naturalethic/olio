@@ -83,8 +83,8 @@ export transaction = (lock = false) ->*
     query: (statement, params) ->*
       yield connection.query statement, params
     save: (kind, doc = {}) ->*
+      doc.id ?= uuid!
       new-doc = doc.$get?! or doc
-      new-doc.id ?= uuid!
       path-values = yield connection.query "SELECT path, value FROM document WHERE id = ?", [ new-doc.id ]
       old-doc = object-from-path-values path-values
       diff = patch.compare old-doc, new-doc
