@@ -35,9 +35,9 @@
   "dependencies": {
     "JSONPath": "github:s3u/JSONPath#3e5a6820085c132cb2b50f88301fb9d2922db92a",
     "bluebird": "^2.9.24",
+    "chalk256": "^5.1.0",
     "chokidar": "^1.0.1",
     "co": "^4.6.0",
-    "colors": "^1.0.3",
     "deep-extend": "^0.4.0",
     "fast-json-patch": "^0.5.4",
     "gcloud": "^0.25.1",

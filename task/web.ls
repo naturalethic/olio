@@ -25,10 +25,14 @@ indent-source = (preamble, source, indent = 2) ->
   else
     "#{' ' * indent}#{source.split('\n').join('\n' + ' ' * indent)}"
 
+$info = (action, path) ->
+  info crayon(112)(action) + (' ' * (14 - action.length)) + crayon(231)('-> ') + crayon(220)(path)
+
+
 prep = ->
-  info 'Syncing    -> tmp'
+  $info \Syncing, \tmp
   exec "rsync -maz --exclude '*.ls' web/ tmp/"
-  info 'Syncing    -> public'
+  $info \Syncing, \public
   exec "rsync -maz --exclude '*.js' --exclude '*.css' tmp/ public/"
 
 stitch = ->
@@ -40,7 +44,7 @@ stitch = ->
   try
     for it in glob.sync 'web/**/*.ls'
       name = it.replace(/\//g, '-').substring(4, it.length - 3)
-      info "Writing    -> component/#name.js"
+      $info \Writing, "component/#name.js"
       syntax = esprima.parse livescript.compile(fs.read-file-sync(it).to-string!)
       state =
         component: null
@@ -61,7 +65,7 @@ stitch = ->
             style.unshift(prop.value.value.trim!)
           if prop = find (-> it.key.name == \view), it.properties
             it.properties.splice (it.properties.index-of prop), 1
-            info 'Writing    -> public/index.html'
+            $info \Writing, 'public/index.html'
             fs.write-file-sync \public/index.html, jade.render(prop.value.value, pretty: true)
           continue
         style.push state.component.name
@@ -88,15 +92,15 @@ stitch = ->
   # info '\nJAVASCRIPT'
   # info livescript.compile(script.join('\n'), { -header})
   script.unshift "window.config = #{JSON.stringify olio.config.web}"
-  info 'Writing    -> tmp/index.ls'
+  $info \Writing, 'tmp/index.ls'
   fs.write-file-sync \tmp/index.ls, script.join('\n')
-  info 'Writing    -> tmp/index.js'
+  $info \Writing, 'tmp/index.js'
   # XXX: chop out livescript utilities from this compile output
   fs.write-file-sync \tmp/index.js, livescript.compile(script.join('\n'), { -header })
-  info 'Writing    -> tmp/index.styl'
+  $info \Writing, 'tmp/index.styl'
   style = style.join '\n'
   fs.write-file-sync \tmp/index.styl, style
-  info 'Writing    -> public/index.css'
+  $info \Writing, 'public/index.css'
   style = stylus(style)
   style.use(nib!).import(\nib)
   style.get('paths').push \tmp
@@ -121,11 +125,11 @@ setup-bundler = ->*
   }
   bundler = watchify b
   bundle = ->
-    info 'Browserify -> public/index.js'
+    $info \Browserifying, 'public/index.js'
     bundler.bundle (err, buf) ->
       return info err if err
       fs.write-file-sync 'public/index.js', buf
-      info "--- Done in #{(Date.now! - bundler.time) / 1000} seconds ---"
+      info crayon(123)("--- Done in #{(Date.now! - bundler.time) / 1000} seconds ---")
       node-notifier.notify title: \Olio, message: "Site Rebuilt: #{(Date.now! - bundler.time) / 1000}s"
       process.exit 0 if olio.option.exit
   bundler.on \update, bundle

@@ -5,12 +5,12 @@ write = -> process.stdout.write it
 ppval = (it, newline) ->
   if it is not undefined
     switch typeof! it
-    | \Number    => write it.to-string!blue
-    | \String    => (it.length > 50 and it = it.substr(0, 100)); write it.green
-    | \Boolean   => write it.to-string!yellow
-    | \Generator => write '<generator>'.red
-    | \Null      => write 'null'.red
-    | otherwise  => write String(it)!brown
+    | \Number    => write crayon(39)(it.to-string!)
+    | \String    => (it.length > 50 and it = it.substr(0, 100)); write crayon(220)(it)
+    | \Boolean   => write crayon(117)(it.to-string!)
+    | \Generator => write crayon(88)('<generator>')
+    | \Null      => write crayon(245)('null')
+    | otherwise  => write crayon(94)(String(it))
   write '\n' if newline
 
 pparr = (it, indent = 0) ->
@@ -38,7 +38,7 @@ ppobj = (obj, indent = 0, second-indent, newline = false) ->
     it = k[i]
     indent = second-indent if i == 1
     write ' ' * indent
-    write "#{(dasherize it).grey}: #{' ' * (width - (dasherize it).length)}"
+    write "#{crayon(246)(dasherize it)}: #{' ' * (width - (dasherize it).length)}"
     switch typeof! obj[it]
     | \Object   => pp obj[it], indent + 2, null, true
     | \Array    => pp obj[it], indent

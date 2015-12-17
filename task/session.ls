@@ -32,8 +32,8 @@ export session = ->*
     $info = (...args) ->
       date = (new Date).toISOString!split \T
       if is-string(args.0)
-        args.0 = args.0.magenta
-      args.unshift "#{date.0.cyan}#{'T'.grey}#{date.1.cyan} #{socket.handshake.address.yellow} #{'INFO'.green}"
+        args.0 = crayon(198)(args.0)
+      args.unshift "#{crayon(81)(date.0)}#{crayon(239)('T')}#{crayon(81)(date.1)} #{crayon(226)(socket.handshake.address)} #{crayon(22)('INFO')}"
       if is-object(last args) or is-array(last args)
         obj = args.pop!
       info ...args
@@ -58,7 +58,7 @@ export session = ->*
       keys module.exports.session |> each (key) ->
         reactor = module.exports.session[key]
         reactor.bind module.exports
-        $info 'Observing', key
+        $info 'Observing', crayon(206)(key)
         session.$observe key, co.wrap ->*
           $info "Session reaction '#key'", it
           tx = yield world.transaction!

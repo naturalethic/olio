@@ -1,6 +1,6 @@
 require! \child_process
 require! \prelude-ls
-require! \colors
+require! \chalk256
 require! \bluebird
 require! \fs
 require! \path
@@ -25,6 +25,7 @@ global  <<< prelude-ls
 array-replace = (it, a, b) -> index = it.index-of(a); it.splice(index, 1, b) if index > -1; it
 
 global <<< do
+  crayon:        chalk256
   pp:            require './pp'
   co:            co
   fs:            fs <<< { path: path }
