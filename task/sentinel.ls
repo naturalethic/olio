@@ -7,8 +7,8 @@ export watch = [ __filename, "#__dirname/../lib" ]
 $info = (...args) ->
   date = (new Date).toISOString!split \T
   if is-string(args.0)
-    args.0 = args.0.magenta
-  args.unshift "#{date.0.cyan}#{'T'.grey}#{date.1.cyan} #{'INFO'.green}"
+    args.0 = crayon(170)(args.0)
+  args.unshift "#{crayon(81)(date.0)}#{crayon(239)('T')}#{crayon(81)(date.1)} #{crayon(22)('INFO')}"
   if is-object(last args) or is-array(last args)
     obj = args.pop!
   info ...args
@@ -40,7 +40,7 @@ tick = (ticker, config) ->*
   if olio.config.sentinel.allow-background-reset
     yield ensure-world-record!
   try
-    $info \Tick, ticker
+    $info \Tick, crayon(220)(ticker)
     tx = yield world.transaction!
     tx.$info = $info
     try
@@ -55,38 +55,13 @@ tick = (ticker, config) ->*
 
 tickers =
   postmaster: (world, config) ->*
-    if yield world.secretary.indices.exists index: \document
-      notifications = yield world.search-select \notification,
-        bool:
-          must: [
-            range:
-              schedule:
-                lt: \now
-          ]
-          must_not: [
-            term:
-              dispatched: true
-          ]
-      for notification in notifications
-        yield transport.dispatch world, notification
-  secretary: (world, config) ->*
-    sentinel = yield world.select \sentinel
-    if not sentinel.secretary
-      if yield world.secretary.indices.exists index: \document
-        yield world.secretary.indices.delete index: \document
-      sentinel.secretary = updated: new Date
-      documents = yield world.query "select * from document"
-      bulk = []
-      for document in documents
-        bulk.push index: { _index: \document, _type: document.kind, _id: document.id }
-        bulk.push JSON.parse(document.data)
-      yield world.secretary.bulk-async body: bulk
-    else
-      documents = yield world.query "select * from document where updated > ?", [ sentinel.secretary.updated ]
-      if documents.length
-        sentinel.secretary.updated = new Date
-        bulk = []
-        for document in documents
-          bulk.push index: { _index: \document, _type: document.kind, _id: document.id }
-          bulk.push JSON.parse(document.data)
-        yield world.secretary.bulk-async body: bulk
+    ids = (yield world.query """
+      SELECT id
+        FROM document
+       WHERE kind = 'notification'
+         AND path = 'schedule'
+         AND id NOT IN (SELECT id FROM document WHERE kind = 'notification' AND path = 'dispatched')
+         AND str_to_date(search, '%Y-%m-%dT%H:%i:%S') < now()
+    """) |> map -> it.id
+    for id in ids
+      yield transport.dispatch world, (yield world.get id)
