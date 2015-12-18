@@ -3,7 +3,7 @@ export build = ->*
     return info "Usage: #{olio.task.0} #{olio.task.1} <env> <product>"
   env = olio.task.2
   product = olio.task.3
-  if product is \base
+  if env != \base and product == \base
     root = "ops/#env/#product/root"
     info "Syncing -> #root"
     exec "rm -rf #root"
@@ -17,6 +17,8 @@ export build = ->*
     exec "rsync -maz session.ls #root"
     exec "rsync -maz test #root"
   spawn "docker build -t us.gcr.io/#{olio.config.ops.project.replace /:/g, '/'}/#{env}-#{product}:latest ops/#env/#product"
+  if env != \base and product == \base
+    exec "rm -rf #root"
   if olio.option.push
     yield push!
 
@@ -36,6 +38,7 @@ export push-static = ->*
 export fix-static = ->*
   if olio.task.length < 3
     return info "Usage: #{olio.task.0} #{olio.task.1} <env>"
+  env = olio.task.2
   spawn "gsutil -m acl ch -r -u AllUsers:R gs://#{env}.copsforhire.com"
   spawn "gsutil -m web set -m index.html -e index.html gs://#{env}.copsforhire.com"
 
