@@ -134,7 +134,7 @@ export transaction = ->*
         save-queue[kind] ?= []
         save-queue[kind].push cursor if cursor not in save-queue[kind]
       cursor
-  yield tx.query 'lock tables document write'
+  # yield tx.query 'lock tables document write'
   tx
 
 export select = ->*
