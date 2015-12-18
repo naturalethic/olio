@@ -37,7 +37,7 @@ object-from-path-values = (path-values = []) ->
     objectpath.set object, pv.path, JSON.parse(pv.value)
   object
 
-path-values-from-object = (object, path = '') ->
+export path-values-from-object = (object, path = '') ->
   path-values = []
   for key, val of object
     subpath = (path and "#path.#key") or key

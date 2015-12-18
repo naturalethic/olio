@@ -2,6 +2,7 @@ Module = (require \module).Module
 require! \node-static
 require! \http
 require! 'socket.io': socket-io
+require! 'socket.io-client': socket-io-client
 require! \co
 require! \rivulet
 require! \world
@@ -10,6 +11,17 @@ require! \gcloud
 export watch = [ __filename, \olio.ls, \session.ls, \react, "#__dirname/../lib" ]
 
 export session = ->*
+  shell = socket-io 8001
+  shell.on \connection, (socket) ->
+    socket.on \shell, ->
+      command = it.split(' ') |> map -> it.trim!
+      if empty difference command, <[ collect session paths ]>
+        shell.session-paths = []
+        socket.emit \shell, 'Ok.'
+      else if empty difference command, <[ list session paths ]>
+        socket.emit \shell, map((-> dasherize it), shell.session-paths).join('\n')
+      else
+        socket.emit 'Unknown command.'
   if olio.config.web.static
     file = new node-static.Server './public'
     server = http.create-server (request, response) ->
@@ -86,6 +98,9 @@ export session = ->*
     session.$observe '$', debounce 300, co.wrap ->*
       return if not session.persistent
       yield world.save \session, session
+      if shell.session-paths
+        paths = world.path-values-from-object(session.$get!) |> map -> it.path
+        shell.session-paths = unique shell.session-paths ++ paths
       # $info 'Session saved', session.$get!
     storage.$logger = $info
     storage.$observe '$', ->
@@ -107,3 +122,19 @@ export session = ->*
                 info error if error
                 session.storage ?= {}
                 session.storage[key] = "#{olio.config.gcloud.bucket}.storage.googleapis.com/#id"
+
+export shell = ->*
+  require! \readline
+  rl = readline.create-interface process.stdin, process.stdout
+  info \Hello.
+  rl.set-prompt '> '
+  rl.on \line, ->
+    socket.emit \shell, it.trim!
+  rl.on \close, ->
+    info '\nGoodbye.'
+    exit!
+  socket = socket-io-client 'http://localhost:8001'
+  socket.on \shell, ->
+    info it
+    rl.prompt!
+  rl.prompt!
