@@ -74,7 +74,7 @@ persist-delete-path-value = (connection, kind, old-doc, new-doc, path) ->*
   for pv in path-values
     yield connection.query "DELETE FROM document WHERE id = ? and path = ?", [ new-doc.id, pv.path ]
 
-export transaction = (lock = false) ->*
+export transaction = ->*
   connection = yield pool.get-connection!
   yield connection.begin-transaction!
   save-queue = {}
@@ -108,11 +108,11 @@ export transaction = (lock = false) ->*
         yield connection.commit!
       catch
         yield connection.rollback!
-      yield tx.query 'unlock tables' if lock
+      yield tx.query 'unlock tables'
       connection.release!
     rollback: ->*
       yield connection.rollback!
-      yield tx.query 'unlock tables' if lock
+      yield tx.query 'unlock tables'
       connection.release!
     get: (id) ->*
       path-values = yield connection.query "SELECT kind, path, value FROM document WHERE id = ?", [ id ]
@@ -120,7 +120,7 @@ export transaction = (lock = false) ->*
       return tx.cursor path-values.0.kind, (object-from-path-values(path-values) <<< id: id)
     select: (kind, path, value, limit) ->*
       selection = []
-      if ids = ((yield connection.query generate-search-query(kind, path, value, limit) + " LOCK IN SHARE MODE", [ kind, path, value ]) |> map -> it.id)
+      if ids = ((yield connection.query generate-search-query(kind, path, value, limit), [ kind, path, value ]) |> map -> it.id)
         for id in ids
           selection.push yield tx.get id
       selection
@@ -134,7 +134,7 @@ export transaction = (lock = false) ->*
         save-queue[kind] ?= []
         save-queue[kind].push cursor if cursor not in save-queue[kind]
       cursor
-  yield tx.query 'lock tables document write' if lock
+  yield tx.query 'lock tables document write'
   tx
 
 export select = ->*

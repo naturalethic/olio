@@ -15,7 +15,7 @@ $info = (...args) ->
   pp obj if obj
 
 ensure-world-record = ->*
-  tx = yield world.transaction true
+  tx = yield world.transaction
   try
     if not yield tx.select \sentinel
       yield tx.save \sentinel
