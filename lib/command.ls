@@ -1,6 +1,5 @@
 require! \child_process
 require! \prelude-ls
-require! \chalk256
 require! \bluebird
 require! \fs
 require! \path
@@ -25,7 +24,7 @@ global  <<< prelude-ls
 array-replace = (it, a, b) -> index = it.index-of(a); it.splice(index, 1, b) if index > -1; it
 
 global <<< do
-  crayon:        chalk256
+  color:         (c, v) -> "\x1b[38;5;#{c}m#{v}\x1b[0m"
   pp:            require './pp'
   co:            co
   fs:            fs <<< { path: path }
@@ -92,13 +91,12 @@ global.debounce = ->
 
 global.spawn = ->
   words = it.match(/[^"'\s]+|"[^"]+"|'[^'']+'/g)
-  process.spawn-sync (head words), (tail words), stdio: 'inherit'
+  process.spawn-sync (head words), (tail words), stdio: \inherit
 
 global.exit = (message) ->
   error new String(message).red if message
   process.exit 1
 
-# Require a configuration file.  It also proves `cwd` is an olio project root.
 if !fs.exists-sync './olio.ls'
   exit "You must provide a file named 'olio.ls' in your project root"
 
@@ -109,13 +107,6 @@ global.olio =
 
 if fs.exists-sync './host.ls'
   extend olio.config, require "#{process.cwd!}/host.ls"
-
-if olio.config.log?identifier
-  global <<< do
-    log:   (...args) -> args.unshift "[#{olio.config.log.identifier}]"; console.log ...args
-    info:  (...args) -> args.unshift "[#{olio.config.log.identifier}]"; console.info ...args
-    warn:  (...args) -> args.unshift "[#{olio.config.log.identifier}]"; console.warn ...args
-    error: (...args) -> args.unshift "[#{olio.config.log.identifier}]"; console.error ...args
 
 # -----------------------------------------------------------------------------
 # End global assignments.

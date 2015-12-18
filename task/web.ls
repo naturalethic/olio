@@ -26,7 +26,7 @@ indent-source = (preamble, source, indent = 2) ->
     "#{' ' * indent}#{source.split('\n').join('\n' + ' ' * indent)}"
 
 $info = (action, path) ->
-  info crayon(112)(action) + (' ' * (14 - action.length)) + crayon(231)('-> ') + crayon(220)(path)
+  info color(112, action) + (' ' * (14 - action.length)) + color(231, '-> ') + color(220, path)
 
 
 prep = ->
@@ -129,7 +129,7 @@ setup-bundler = ->*
     bundler.bundle (err, buf) ->
       return info err if err
       fs.write-file-sync 'public/index.js', buf
-      info crayon(123)("--- Done in #{(Date.now! - bundler.time) / 1000} seconds ---")
+      info color(123, "--- Done in #{(Date.now! - bundler.time) / 1000} seconds ---")
       node-notifier.notify title: \Olio, message: "Site Rebuilt: #{(Date.now! - bundler.time) / 1000}s"
       process.exit 0 if olio.option.exit
   bundler.on \update, bundle

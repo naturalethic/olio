@@ -7,8 +7,8 @@ export watch = [ __filename, "#__dirname/../lib" ]
 $info = (...args) ->
   date = (new Date).toISOString!split \T
   if is-string(args.0)
-    args.0 = crayon(170)(args.0)
-  args.unshift "#{crayon(81)(date.0)}#{crayon(239)('T')}#{crayon(81)(date.1)} #{crayon(22)('INFO')}"
+    args.0 = color(170, args.0)
+  args.unshift "#{color(81, date.0)}#{color(239, 'T')}#{color(81, date.1)} #{color(22, 'INFO')}"
   if is-object(last args) or is-array(last args)
     obj = args.pop!
   info ...args
@@ -40,7 +40,7 @@ tick = (ticker, config) ->*
   if olio.config.sentinel.allow-background-reset
     yield ensure-world-record!
   try
-    $info \Tick, crayon(220)(ticker)
+    $info \Tick, color(220, ticker)
     tx = yield world.transaction!
     tx.$info = $info
     try

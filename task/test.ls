@@ -18,9 +18,9 @@ export test = ->*
     module._compile compiled.code
     run = (name) ->
       return run-next! if name.0 is \$
-      info crayon(239)('=' * process.stdout.columns)
-      info crayon(226)(path), crayon(227)(\:), crayon(214)(dasherize name)
-      info crayon(238)('-' * process.stdout.columns)
+      info color(239, '=' * process.stdout.columns)
+      info color(226, path), color(227, \:), color(214, dasherize name)
+      info color(238, '-' * process.stdout.columns)
       socket = socket-io 'http://localhost:8000', force-new: true
       session = rivulet {}, socket, \session
       storage = rivulet {}, socket, \storage
@@ -31,8 +31,8 @@ export test = ->*
         for reactor in reactors
           reactor.bind module.exports[name]
         observe-func = co.wrap ->*
-          info crayon(51)(key)
-          info crayon(238)('-' * process.stdout.columns)
+          info color(51, key)
+          info color(238, '-' * process.stdout.columns)
           reactor = reactors.shift!
           if empty reactors
             session.$forget key, observe-func
@@ -45,20 +45,20 @@ export test = ->*
             yield tx.rollback!
             if it.name is \AssertionError
               trace = stack-trace.parse it
-              info "#{crayon(124)(it.name)} #{crayon(88)(it.message)}"
+              info "#{color(124, it.name)} #{color(88, it.message)}"
               position = map-consumer.original-position-for(line: trace.0.line-number, column: trace.0.column-number)
               try
-                info "#{crayon(241)(position.source)}:#{crayon(226)(position.line.to-string!)}", crayon(158)(source.split('\n')[position.line - 1].trim!)
+                info "#{color(241, position.source)}:#{color(226, position.line.to-string!)}", color(158, source.split('\n')[position.line - 1].trim!)
               if is-array(it.expected) or is-object(it.expected)
-                info crayon(220)('Expected')
+                info color(220, 'Expected')
                 pp it.expected
                 info ''
-                info crayon(222)('Actual')
+                info color(222, 'Actual')
                 pp it.actual
                 info ''
               state.fail = 'Fail'
             else
-              state.fail = crayon(88)(it.to-string!)
+              state.fail = color(88, it.to-string!)
             session.end = true
         session.$observe key, observe-func
       state.timeout-seconds = module.exports[name]?timeout or 10
@@ -70,9 +70,9 @@ export test = ->*
       session.$socket.on \disconnect, ->
         clear-timeout state.timeout
         if state.fail
-          info crayon(88)(state.fail)
+          info color(88, state.fail)
         else
-          info crayon(118)('Success')
+          info color(118, 'Success')
         run-next!
     names = keys module.exports
     run-next = co.wrap ->*
@@ -83,7 +83,7 @@ export test = ->*
             run camelize olio.task.2
             olio.task.2 = \stop
           else
-            info crayon(88)("Subtest '#{olio.task.2}' does not exist.")
+            info color(88, "Subtest '#{olio.task.2}' does not exist.")
         else
           yield world.end!
       else
