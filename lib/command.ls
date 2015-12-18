@@ -104,13 +104,14 @@ global.olio =
   task:    [last((delete optimist.argv.$0).split ' ')] ++ delete optimist.argv._
   option:  pairs-to-obj(obj-to-pairs(optimist.argv) |> map -> [camelize(it[0]), it[1]])
 
+if fs.exists-sync './host.ls'
+  extend olio.config, require "#{process.cwd!}/host.ls"
+
 olio.config.log ?= {}
 olio.config.log.color ?= true
 
 global.color = (c, v) -> (olio.config.log.color and "\x1b[38;5;#{c}m#{v}\x1b[0m") or v
 
-if fs.exists-sync './host.ls'
-  extend olio.config, require "#{process.cwd!}/host.ls"
 
 # -----------------------------------------------------------------------------
 # End global assignments.
