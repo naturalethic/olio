@@ -24,7 +24,6 @@ global  <<< prelude-ls
 array-replace = (it, a, b) -> index = it.index-of(a); it.splice(index, 1, b) if index > -1; it
 
 global <<< do
-  color:         (c, v) -> "\x1b[38;5;#{c}m#{v}\x1b[0m"
   pp:            require './pp'
   co:            co
   fs:            fs <<< { path: path }
@@ -104,6 +103,11 @@ global.olio =
   config:  require "#{process.cwd!}/olio.ls"
   task:    [last((delete optimist.argv.$0).split ' ')] ++ delete optimist.argv._
   option:  pairs-to-obj(obj-to-pairs(optimist.argv) |> map -> [camelize(it[0]), it[1]])
+
+olio.config.log ?= {}
+olio.config.log.color ?= true
+
+global.color = (c, v) -> (olio.config.log.color and "\x1b[38;5;#{c}m#{v}\x1b[0m") or v
 
 if fs.exists-sync './host.ls'
   extend olio.config, require "#{process.cwd!}/host.ls"
