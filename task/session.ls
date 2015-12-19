@@ -7,10 +7,32 @@ require! \co
 require! \rivulet
 require! \world
 require! \gcloud
+require! \jsonschema
+require! \object-path : \objectpath
 
-export watch = [ __filename, \olio.ls, \session.ls, \react, "#__dirname/../lib" ]
+export watch = [ __filename, \olio.ls, \schema, \react, "#__dirname/../lib" ]
 
 export session = ->*
+  # --- Validation ---
+  # Validation schemas are in ./schema
+  # Examples: https://github.com/tdegrunt/jsonschema/blob/master/examples/all.js
+  validator = new jsonschema.Validator
+  schemas = (glob.sync 'schema/*.ls') |> map -> fs.path.basename(it).slice 0, -3
+  for schema in schemas
+    validator.add-schema (require("./schema/#schema") <<< additional-properties: false), "/" + schema
+  root-schema =
+    type: \object
+    properties: {}
+    additional-properties: false
+  for schema in (schemas |> filter -> it.split('-').length is 1)
+    root-schema.properties[schema] =
+      $ref: schema
+  validate = (root) ->
+    validation = {}
+    for error in (validator.validate root, root-schema).errors
+      objectpath.set validation, error.property.replace('instance.', ''), error{schema, message}
+    validation
+  # --- Shell
   shell = socket-io 8001
   shell.on \connection, (socket) ->
     socket.on \shell, ->
@@ -22,6 +44,7 @@ export session = ->*
         socket.emit \shell, map((-> dasherize it), shell.session-paths).join('\n')
       else
         socket.emit 'Unknown command.'
+  # --- Static
   if olio.config.web.static
     file = new node-static.Server './public'
     server = http.create-server (request, response) ->
@@ -37,9 +60,9 @@ export session = ->*
       .resume!
   port = olio.option.port or olio.config.web?port or 8000
   info 'Starting session server on port', port
-  schema = require "#{process.cwd!}/session"
   server.listen port, '0.0.0.0'
   server = socket-io server
+  # --- Session
   server.on \connection, (socket) ->
     $info = (...args) ->
       date = (new Date).toISOString!split \T
@@ -53,6 +76,7 @@ export session = ->*
     $info 'Connection established'
     session = rivulet {}, socket, \session
     storage = rivulet {}, socket, \storage
+    validii = rivulet {}, socket, \validation
     session.$logger = $info
     session.$observe '$.end', ->
       $info 'Disconnecting'
@@ -97,6 +121,9 @@ export session = ->*
         session.route = ''
     session.$observe '$', debounce 300, co.wrap ->*
       return if not session.persistent
+      validation = validate session: session
+      if keys validation
+        $info color(124, '*** VALIDATION FAULT ***'), validation
       yield world.save \session, session
       if shell.session-paths
         paths = world.path-values-from-object(session.$get!) |> map -> it.path

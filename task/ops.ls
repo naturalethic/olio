@@ -14,7 +14,7 @@ export build = ->*
     exec "rsync -maz olio.ls #root"
     exec "rsync -maz package.json #root"
     exec "rsync -maz react #root"
-    exec "rsync -maz session.ls #root"
+    exec "rsync -maz schema #root"
     exec "rsync -maz test #root"
   spawn "docker build -t us.gcr.io/#{olio.config.ops.project.replace /:/g, '/'}/#{env}-#{product}:latest ops/#env/#product"
   if env != \base and product == \base
