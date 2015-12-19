@@ -35,15 +35,29 @@ export session = ->*
   # --- Shell
   shell = socket-io 8001
   shell.on \connection, (socket) ->
+    command-tree =
+      collect:
+        session:
+          paths: ->
+            shell.session-paths = []
+            socket.emit \shell, 'Ok.'
+      help: ->
+        socket.emit \shell, command-help!
+      list:
+        session:
+          paths: ->
+            socket.emit \shell, map((-> dasherize it), shell.session-paths).join('\n')
+    command-help = ->
+      ((world.path-values-from-object command-tree) |> map -> it.path.replace(/\./g, ' ')).join '\n'
     socket.on \shell, ->
-      command = it.split(' ') |> map -> it.trim!
-      if empty difference command, <[ collect session paths ]>
-        shell.session-paths = []
-        socket.emit \shell, 'Ok.'
-      else if empty difference command, <[ list session paths ]>
-        socket.emit \shell, map((-> dasherize it), shell.session-paths).join('\n')
+      if path = (it.split(' ') |> map -> it.trim!).join '.'
+        if command = objectpath.get command-tree, path
+          command!
+        else
+          socket.emit \shell, 'Unknown command.'
       else
-        socket.emit 'Unknown command.'
+        socket.emit \shell, ''
+    socket.emit \completion, command-help!
   # --- Static
   if olio.config.web.static
     file = new node-static.Server './public'
@@ -152,7 +166,11 @@ export session = ->*
 
 export shell = ->*
   require! \readline
-  rl = readline.create-interface process.stdin, process.stdout
+  rl = readline.create-interface process.stdin, process.stdout, ->
+    line = (it.split(' ') |> filter -> it).join(' ')
+    matches = rl.completion |> filter -> //^#line//.test it
+    [ matches, it ]
+  rl.completion = []
   info \Hello.
   rl.set-prompt '> '
   rl.on \line, ->
@@ -162,6 +180,8 @@ export shell = ->*
     exit!
   socket = socket-io-client 'http://localhost:8001'
   socket.on \shell, ->
-    info it
+    info it if it
     rl.prompt!
+  socket.on \completion, ->
+    rl.completion = it.split('\n')
   rl.prompt!
