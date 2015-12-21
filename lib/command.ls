@@ -38,7 +38,7 @@ global <<< do
   promisify:     bluebird.promisify
   promisify-all: bluebird.promisify-all
   is-array:      -> typeof! it is \Array
-  is-function:   -> typeof! it is \Function
+  is-function:   -> typeof! it in <[ Function GeneratorFunction ]>
   is-number:     -> typeof! it is \Number
   is-object:     -> typeof! it is \Object
   is-string:     -> typeof! it is \String
