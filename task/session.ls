@@ -12,6 +12,16 @@ require! \object-path : \objectpath
 
 export watch = [ __filename, \olio.ls, \schema, \react, "#__dirname/../lib" ]
 
+$info = (...args) ->
+  date = (new Date).toISOString!split \T
+  if is-string(args.0)
+    args.0 = color(198, args.0)
+  args.unshift "#{color(81, date.0)}#{color(239, 'T')}#{color(81, date.1)} #{color(226, '0.0.0.0')} #{color(22, 'INFO')}"
+  if is-object(last args) or is-array(last args)
+    obj = args.pop!
+  info ...args
+  pp obj if obj
+
 export session = ->*
   # --- Validation ---
   # Validation schemas are in ./schema
@@ -33,7 +43,9 @@ export session = ->*
       objectpath.set validation, error.property.replace('instance.', ''), error{schema, message}
     validation
   # --- Shell
-  shell = socket-io 8001
+  port = olio.config.session?shell?port or 8001
+  $info 'Starting session shell server on port', color(78, port)
+  shell = socket-io port
   shell.on \connection, (socket) ->
     command-tree =
       collect:
@@ -59,7 +71,8 @@ export session = ->*
         socket.emit \shell, ''
     socket.emit \completion, command-help!
   # --- Static
-  if olio.config.web.static
+  if olio.config.session.static
+    $info 'Serving static files'
     file = new node-static.Server './public'
     server = http.create-server (request, response) ->
       if not fs.exists-sync "./public#{request.url}"
@@ -72,8 +85,8 @@ export session = ->*
       request.add-listener \end, ->
         response.end 'Session'
       .resume!
-  port = olio.option.port or olio.config.web?port or 8000
-  info 'Starting session server on port', port
+  port = olio.option.port or olio.config.session?port or 8000
+  $info 'Starting session server on port', color(78, port)
   server.listen port, '0.0.0.0'
   server = socket-io server
   # --- Session
