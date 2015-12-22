@@ -5,6 +5,12 @@ require! \world
 require! \rivulet
 require! \stack-trace
 require! \source-map
+require! \nightmare
+
+# nightmare.action \blur, (selector, done) ->
+#   @evaluate_now ->
+#     q selector .blur!
+#   , done
 
 export test = ->*
   yield session!
@@ -20,18 +26,20 @@ export web = ->*
 run-directory = (directory) ->*
   state = {}
   yield world.reset! unless olio.option.keep
-  run-module = (path) ->
+  run-module = (path) ->*
     module = new Module
     module.paths = [ "#{process.cwd!}/lib", "#{process.cwd!}/node_modules", "#__dirname/../node_modules" ]
     source = fs.read-file-sync path, 'utf8'
     compiled = livescript.compile source, { +bare, -header, map: 'linked', filename: path }
     map-consumer = new source-map.SourceMapConsumer compiled.map.to-string!
     module._compile compiled.code
-    run = (name) ->
+    run = (name) ->*
       return run-next! if name.0 is \$
       info color(239, '=' * process.stdout.columns)
       info color(226, path), color(227, \:), color(214, dasherize name)
       info color(238, '-' * process.stdout.columns)
+      if is-function module.exports[name]
+        yield module.exports[name] nightmare show: true
       if is-object module.exports[name]
         socket = socket-io 'http://localhost:8000', force-new: true
         session = rivulet {}, socket, \session
@@ -87,13 +95,12 @@ run-directory = (directory) ->*
             info color(118, 'Success')
           run-next!
     names = keys module.exports
-    info names
     run-next = co.wrap ->*
       delete state.fail
       if olio.task.3
         if olio.task.3 != \stop
           if (camelize olio.task.3) in names
-            run camelize olio.task.3
+            yield run camelize olio.task.3
             olio.task.3 = \stop
           else
             info color(88, "Subtest '#{olio.task.3}' does not exist.")
@@ -101,9 +108,9 @@ run-directory = (directory) ->*
           yield world.end!
       else
         if names.length
-          run names.shift!
+          yield run names.shift!
         else if paths.length
-          run-module paths.shift!
+          yield run-module paths.shift!
         else
           yield world.end!
     run-next!
@@ -112,4 +119,4 @@ run-directory = (directory) ->*
     paths = (require "./test/#directory/seed.ls") |> map -> "test/session/#it.ls"
   if olio.task.2
     paths = paths |> filter -> //#{olio.task.2}\.ls$//.test it
-  run-module paths.shift! if paths.length
+  yield run-module paths.shift! if paths.length
