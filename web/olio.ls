@@ -38,7 +38,7 @@ global.debounce = ->
     ), wait
 
 # Templates
-require 'webcomponents.js'
+require 'webcomponents.js/CustomElements'
 window.jade = require 'jade/runtime'
 m = require 'mithril'
 m.convert = require \template-converter
