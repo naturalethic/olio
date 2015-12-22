@@ -34,7 +34,8 @@ run-directory = (directory) ->*
       info color(226, path), color(227, \:), color(214, dasherize name)
       info color(238, '-' * process.stdout.columns)
       if is-function module.exports[name]
-        yield module.exports[name] nightmare show: true
+        agent = nightmare show: true, width: 2200, height: 1300
+        yield module.exports[name] agent
       if is-object module.exports[name]
         socket = socket-io 'http://localhost:8000', force-new: true
         session = rivulet {}, socket, \session
