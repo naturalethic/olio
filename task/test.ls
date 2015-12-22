@@ -7,11 +7,6 @@ require! \stack-trace
 require! \source-map
 require! \nightmare
 
-# nightmare.action \blur, (selector, done) ->
-#   @evaluate_now ->
-#     q selector .blur!
-#   , done
-
 export test = ->*
   yield session!
   olio.option.keep = true
