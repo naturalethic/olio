@@ -71,6 +71,7 @@ module.exports = (socket, channel)->
       for change in diff
         emit-change change
     merge: (partial) ->
+      warn 'Deprecated: session.merge'
       revised = rivulet! <<< partial
       rivulet revised
   if socket and channel

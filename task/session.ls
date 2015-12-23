@@ -132,6 +132,8 @@ export session = ->*
           catch e
             info e
             yield tx.rollback!
+    session.$observe '$.no-id', co.wrap (id) ->*
+      session.persistent = false
     session.$observe '$.id', co.wrap (id) ->*
       $info 'Session Id', id
       if id

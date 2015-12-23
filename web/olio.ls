@@ -16,6 +16,8 @@ window <<< do
   is-string:    -> typeof! it is \String
   is-undefined: -> typeof! it is \Undefined
 
+window.uuid = require('uuid').v4
+
 global.debounce = ->
   return if &.length < 1
   wait = 1
@@ -82,6 +84,8 @@ $storage.logger = (...args) ->
 
 if id = session-storage.get-item \id
   session.set \id, id
+else
+  session.set \noId, true
 # else
 #   session.set \id, \nobody
 session.observe \id, ->
@@ -119,29 +123,33 @@ q document.body .on \submit, \form, false
 
 register-component = (name, component) ->
   prototype = Object.create HTMLElement.prototype
-  prototype.attached-callback = ->
+  prototype.initialize = ->
+    return if @initialized
+    @initialized = true
+    @local = {}
     @$on-values = []
     @q = q this
     @find = ~> @q.find it
     @merge = -> session.merge it
     @revise = -> session it
-    render = ~>
+    @render = ~>
+      info \Rendering, @tag-name
       locals = q.extend true, @dummy!, session!
-      m.render this, (eval m.convert @view locals)
+      locals = q.extend true, locals, @local
+      locals = q.extend true, locals, locals.trim
+      code = m.convert @view locals
+      return if code == '[)]'
+      m.render this, eval code
+      @paint session!
     if @start
       warn "START on '#{@tag-name}', be careful!"
-      session(session! <<< @start!)
+      session(q.extend true, session!, @start!)
     stream = s.merge (@watch |> map (path) -> (session.observe path).map -> (path): session.get(path))
     @$on-values.push [ stream, ~>
       @react session!, it
-      info \Re-rendering, @tag-name
-      render!
-      @paint session!
+      @render!
     ]
     stream.on-value (last @$on-values).1
-    info \Rendering, @tag-name
-    render!
-    @paint session!
     obj-to-pairs @apply! |> each ([k, val]) ~>
       if not is-array val
         val = [ val ]
@@ -153,13 +161,20 @@ register-component = (name, component) ->
             session.set (camelize k), it
         ]
         v.on-value (last @$on-values).1
+  prototype.attached-callback = ->
+    @initialize!
+    @render!
     @ready session!
+    @paint session!
   prototype.detached-callback = ->
-    info \DETACHED, @tag-name
     for on-value in @$on-values
       on-value.0.off-value on-value.1
-  prototype.attribute-changed-callback = (name, o, n) ->
-    @trait name, o, n
+  prototype.attribute-changed-callback = (an, o, n) ->
+    return if an is \id
+    @initialize!
+    @trait an, o, n
+    @render!
+
 
   prototype <<< do
     event:           (query, name, transform) -> s.from-child-events this, query, name, transform
