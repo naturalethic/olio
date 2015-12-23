@@ -161,6 +161,8 @@ register-component = (name, component) ->
             session.set (camelize k), it
         ]
         v.on-value (last @$on-values).1
+    for key in keys @latch
+      @q.on key, @latch[key] # kids!
   prototype.attached-callback = ->
     @initialize!
     @render!
@@ -174,7 +176,6 @@ register-component = (name, component) ->
     @initialize!
     @trait an, o, n
     @render!
-
 
   prototype <<< do
     event:           (query, name, transform) -> s.from-child-events this, query, name, transform
@@ -201,5 +202,6 @@ register-component = (name, component) ->
     paint: ->
     ready: ->
     trait: ->
+    latch: {}
   prototype <<< component
   document.register-element name, prototype: prototype
