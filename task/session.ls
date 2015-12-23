@@ -27,16 +27,15 @@ export session = ->*
   # Validation schemas are in ./schema
   # Examples: https://github.com/tdegrunt/jsonschema/blob/master/examples/all.js
   validator = new jsonschema.Validator
-  schemas = (glob.sync 'schema/*.ls') |> map -> fs.path.basename(it).slice 0, -3
+  schemas = (glob.sync 'schema/session/*.ls') |> map -> fs.path.basename(it).slice 0, -3
   for schema in schemas
-    validator.add-schema (require("./schema/#schema") <<< additional-properties: false), "/" + schema
-  root-schema =
-    type: \object
-    properties: {}
-    additional-properties: false
-  for schema in (schemas |> filter -> it.split('-').length is 1)
-    root-schema.properties[schema] =
-      $ref: schema
+    continue if schema is \index
+    try
+      validator.add-schema (require("./schema/session/#schema") <<< additional-properties: false), "/" + schema
+    catch e
+      $info 'Error reading schema', schema
+      throw e
+  root-schema = require("./schema/session/index") <<< additional-properties: false
   validate = (root) ->
     validation = {}
     for error in (validator.validate root, root-schema).errors
