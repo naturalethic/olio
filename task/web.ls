@@ -121,7 +121,7 @@ setup-bundler = ->*
       fs.realpath-sync "#__dirname/../web"
       fs.realpath-sync "tmp"
     ]
-    no-parse: no-parse
+    # no-parse: no-parse
     detect-globals: false
     cache: {}
     package-cache: {}
