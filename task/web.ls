@@ -28,14 +28,13 @@ indent-source = (preamble, source, indent = 2) ->
 $info = (action, path) ->
   info color(112, action) + (' ' * (14 - action.length)) + color(231, '-> ') + color(220, path)
 
-
 prep = ->
   $info \Syncing, \tmp
   exec "rsync -maz --exclude '*.ls' web/ tmp/"
   $info \Syncing, \public
   exec "rsync -maz --exclude '*.js' --exclude '*.css' tmp/ public/"
 
-stitch = ->
+stitch = (path) ->
   fs.write-file-sync('tmp/rivulet.js', livescript.compile fs.read-file-sync("#__dirname/../web/rivulet.ls").to-string!)
   style = []
   script = [
@@ -43,6 +42,7 @@ stitch = ->
   ]
   try
     for it in glob.sync 'web/**/*.ls'
+      continue if path and it is not path
       name = it.replace(/\//g, '-').substring(4, it.length - 3)
       $info \Writing, "component/#name.js"
       syntax = esprima.parse livescript.compile(fs.read-file-sync(it).to-string!)
@@ -108,10 +108,13 @@ stitch = ->
   fs.write-file-sync \public/index.css, style.render!
 
 setup-bundler = ->*
-  no-parse = []
-  # try
-  #   no-parse.push require.resolve("#{process.cwd!}/node_modules/jquery")
-  # info "#__dirname/node_modules/olio/node_modules"
+  no-parse =
+    * require.resolve 'jquery'
+    * require.resolve 'prelude-ls'
+    * require.resolve 'uuid'
+    * require.resolve 'webcomponents.js/CustomElements'
+    * require.resolve 'jade/runtime'
+    * require.resolve 'mithril'
   b = browserify <[ ./tmp/index.js ]>, {
     paths: [
       fs.realpath-sync "#__dirname/../node_modules"
@@ -133,11 +136,11 @@ setup-bundler = ->*
       node-notifier.notify title: \Olio, message: "Site Rebuilt: #{(Date.now! - bundler.time) / 1000}s"
       process.exit 0 if olio.option.exit
   bundler.on \update, bundle
-  bundler.build = ->
+  bundler.build = (path) ->
     try
       bundler.time = Date.now!
       prep!
-      stitch!
+      stitch path
     catch e
       info e
     bundle! if not bundler._bundled
@@ -150,5 +153,5 @@ export web = ->*
   build = debounce bundler.build
   watcher.watch <[ validate.ls olio.ls host.ls web ]>, persistent: true, ignore-initial: true .on 'all', (event, path) ->
     info "Change detected in '#path'..."
-    build!
+    build path
   build!
