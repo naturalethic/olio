@@ -34,7 +34,7 @@ run-directory = (directory) ->*
       info color(226, path), color(227, \:), color(214, dasherize name)
       info color(238, '-' * process.stdout.columns)
       if is-function module.exports[name]
-        agent = nightmare show: true, width: 2200, height: 1300
+        agent = nightmare show: true, width: (olio.config.test?web?width or 1000), height: (olio.config.test?web?height or 800)
         yield module.exports[name] agent
       if is-object module.exports[name]
         socket = socket-io 'http://localhost:8000', force-new: true
