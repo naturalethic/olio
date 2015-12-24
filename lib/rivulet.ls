@@ -95,7 +95,7 @@ proxify = (state, mutation) ->
   | \Array    => proxify-array state, mutation
   | otherwise => state
 
-module.exports = (state = {}, socket, channel) ->
+module.exports = (state = {}, socket, channel, validate) ->
   rivulet = proxify state
   rivulet <<<
     $logger: null
@@ -144,6 +144,8 @@ module.exports = (state = {}, socket, channel) ->
       rivulet.$logger 'Rivulet received', diff if rivulet.$logger
       state = rivulet.$get!
       patch.apply state, diff
+      if validate
+        rivulet.$validation = validate state
       rivulet.$state = state
       rivulet.$new-state = rivulet.$get!
       rivulet.$broadcast false
