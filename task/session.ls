@@ -144,7 +144,7 @@ export session = ->*
               info e
               yield tx.rollback!
           else
-            $info "Session reaction '#key' validation fault:", (session.$validation |> (filter -> it.property in fails) |> map -> "#{it.property}.#{it.argument}")
+            $info "Session reaction '#key' validation fault:", (session.$validation |> (filter -> it.property in fails) |> map -> "#{it.property}: #{it.message}")
     session.$observe '$.no-id', co.wrap (id) ->*
       session.persistent = false
     session.$observe '$.id', co.wrap (id) ->*
