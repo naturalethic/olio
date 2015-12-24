@@ -34,15 +34,15 @@ prep = ->
   $info \Syncing, \public
   exec "rsync -maz --exclude '*.js' --exclude '*.css' tmp/ public/"
 
-stitch = (path) ->
+stitch = (paths) ->
   fs.write-file-sync('tmp/rivulet.js', livescript.compile fs.read-file-sync("#__dirname/../web/rivulet.ls").to-string!)
-  if path
+  if paths.length
     components = JSON.parse(fs.read-file-sync 'tmp/components.json', 'utf8')
   else
     components = {}
   try
     for it in glob.sync 'web/**/*.ls'
-      continue if path and it is not path
+      continue if paths.length and it not in paths
       name = it.replace(/\//g, '-').substring(4, it.length - 3)
       $info \Writing, "component/#name"
       syntax = esprima.parse livescript.compile(fs.read-file-sync(it).to-string!)
@@ -133,22 +133,29 @@ setup-bundler = ->*
       node-notifier.notify title: \Olio, message: "Site Rebuilt: #{(Date.now! - bundler.time) / 1000}s"
       process.exit 0 if olio.option.exit
   bundler.on \update, bundle
-  bundler.build = (path) ->
+  bundler.build = ->
+    paths = unique bundler.build.paths
+    while bundler.build.paths.length
+      bundler.build.paths.pop!
+    if first(paths |> filter -> !(/\.ls$/.test it))
+      paths = []
     try
       bundler.time = Date.now!
       prep!
-      stitch path
+      stitch paths
     catch e
       info e
     bundle! if not bundler._bundled
+  bundler.build.paths = []
   bundler
 
 export web = ->*
   exec "mkdir -p tmp/component"
   exec "mkdir -p public"
   bundler = yield setup-bundler!
-  build = debounce bundler.build
+  build = debounce 300, bundler.build
   watcher.watch <[ validate.ls olio.ls host.ls web ]>, persistent: true, ignore-initial: true .on 'all', (event, path) ->
     info "Change detected in '#path'..."
-    build path
+    bundler.build.paths.push path
+    build!
   build!
