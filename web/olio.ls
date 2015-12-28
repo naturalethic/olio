@@ -89,7 +89,8 @@ else
 # else
 #   session.set \id, \nobody
 session.observe \id, ->
-  return if not (session.get \id)
+  if not (session.get \id)
+    return session.set \noId, true
   # return if (session.get \id) is \nobody
   session-storage.set-item \id, session.get \id
 
