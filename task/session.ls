@@ -99,7 +99,7 @@ export session = ->*
     session = rivulet {}, socket, \session, validator
     storage = rivulet {}, socket, \storage
     session.$logger = $info
-    session.$observe '$.end', ->
+    session.$observe 'end', ->
       $info 'Disconnecting'
       session.$socket.disconnect!
     glob.sync 'react/**/*' |> each ->
@@ -118,9 +118,9 @@ export session = ->*
         $info 'Observing', color(206, key)
         session.$observe key, co.wrap ->*
           validation = {}
-          for path in (session.$validation-paths |> filter -> //^#{key.substr(2)}//.test it)
+          for path in (session.$validation-paths |> filter -> //^#{key}//.test it)
             objectpath.set validation, path, (objectpath.get session.$validation, path)
-          if Obj.empty validation
+          if true #Obj.empty validation
             $info "Session reaction '#key'", it
             tx = yield world.transaction!
             tx.$info = $info
@@ -132,9 +132,10 @@ export session = ->*
               yield tx.rollback!
           else
             $info "Session reaction '#key' validation fault:", validation
-    session.$observe '$.no-id', co.wrap (id) ->*
+    session.$observe 'no-id', co.wrap (id) ->*
+      info \NO-ID-OBSERVED
       session.persistent = false
-    session.$observe '$.id', co.wrap (id) ->*
+    session.$observe 'id', co.wrap (id) ->*
       $info 'Session Id', id
       if id
         if not session.persistent
@@ -145,10 +146,10 @@ export session = ->*
             session <<< record
           else
             delete session.id
-    session.$observe '$.route', co.wrap (route) ->*
+    session.$observe 'route', co.wrap (route) ->*
       if (not session.persistent) and session.route and session.route not in <[ login signup]>
         session.route = ''
-    session.$observe '$', debounce 300, co.wrap ->*
+    session.$observe '', debounce 300, co.wrap ->*
       return if not session.persistent
       yield world.save \session, session
       if shell.session-paths
@@ -156,7 +157,7 @@ export session = ->*
         shell.session-paths = unique shell.session-paths ++ paths
       # $info 'Session saved', session.$get!
     storage.$logger = $info
-    storage.$observe '$', ->
+    storage.$observe '', ->
       (keys storage) |> each (key) ->
         val = storage[key]
         if m = /^data\:([\w\d\/]+)\;/.exec val

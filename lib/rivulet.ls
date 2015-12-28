@@ -1,15 +1,14 @@
 require! \kefir
 require! \fast-json-patch : \patch
 require! \object-path : objectpath
-require! \JSONPath : jsonpath
 require! \assert
 require! \util
 
-json-extract = ($, path) ->
-  if path = (jsonpath json: $, path: path, result-type: \path)?0
-    eval path
-  else
-    null
+extract = (obj, path) ->
+  val = objectpath.get obj, path
+  try
+    return JSON.parse JSON.stringify val
+  val
 
 proxify-base = (state, target, mutation) ->
   target.$state = state
@@ -19,12 +18,6 @@ proxify-base = (state, target, mutation) ->
       keys target.$state
     enumerate: (target) ->
       keys(target.$state)[Symbol.iterator]!
-    # has: (target, key) ->
-    #   info \HAS
-    #   ``key in target``
-    # has-own: (target, key) ->
-    #   info \HAS-OWN
-    #   target.has-own-property key
     get: (target, key) ->
       if key is \$target
         target
@@ -118,11 +111,11 @@ module.exports = (state = {}, socket, channel, validator) ->
       extraction-cache = {}
       for path, observer of observers
         if not extraction-cache[path]?
-          if path == \$
+          if path == ''
             extraction-cache[path] = rivulet.$new-state
           else
-            old-extract = json-extract rivulet.$old-state, path
-            new-extract = json-extract rivulet.$new-state, path
+            old-extract = extract rivulet.$old-state, path
+            new-extract = extract rivulet.$new-state, path
             try
               assert.deep-equal old-extract, new-extract
               extraction-cache[path] = undefined
@@ -153,10 +146,11 @@ module.exports = (state = {}, socket, channel, validator) ->
             path = "#path.#{error.params.missing-property}"
           objectpath.set rivulet.$validation, path, error{keyword, message}
           rivulet.$validation-paths.push path
+        # socket.emit \validation, validation
       rivulet.$state = state
       rivulet.$new-state = rivulet.$get!
       rivulet.$broadcast false
-    emit-stream = rivulet.$observe '$'
+    emit-stream = rivulet.$observe ''
     emit-stream.on-value debounce 1, ->
       return if empty rivulet.$socket-emit-queue
       diff = flatten rivulet.$socket-emit-queue

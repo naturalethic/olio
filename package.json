@@ -17,7 +17,6 @@
     "url": "git://github.com/naturalethic/olio"
   },
   "dependencies": {
-    "JSONPath": "github:s3u/JSONPath#3e5a6820085c132cb2b50f88301fb9d2922db92a",
     "ajv": "^3.0.3",
     "bluebird": "^3.1.1",
     "browserify": "^12.0.1",
