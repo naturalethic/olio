@@ -7,7 +7,7 @@ require! \co
 require! \rivulet
 require! \world
 require! \gcloud
-require! \jsonschema
+require! \ajv
 require! \object-path : \objectpath
 
 export watch = [ __filename, \olio.ls, \schema, \react, "#__dirname/../lib" ]
@@ -24,30 +24,19 @@ $info = (...args) ->
 
 export session = ->*
   # --- Validation ---
-  # Validation schemas are in ./schema
-  # Examples: https://github.com/tdegrunt/jsonschema/blob/master/examples/all.js
   read-schema = (schema) ->
     s = require "./schema/session/#schema"
     s.additional-properties = false
     s.required = (s.required |> map -> camelize it) if s.required
     s
-  validator = new jsonschema.Validator
+  validator = ajv all-errors: true
   schemas = (glob.sync 'schema/session/*.ls') |> map -> fs.path.basename(it).slice 0, -3
   for schema in schemas
-    continue if schema is \instance
     try
-      validator.add-schema (read-schema schema), "/#schema"
+      validator.add-schema (read-schema schema), schema
     catch e
       $info 'Error reading schema', schema
       throw e
-  root-schema = read-schema \instance
-  validate = (root) ->
-    (validator.validate root, root-schema).errors
-    # validation = {}
-    # for error in (validator.validate root, root-schema).errors
-    #   info error
-    #   objectpath.set validation, error.property.replace('instance.', ''), error{schema, name, property, message}
-    # validation
   # --- Shell
   port = olio.config.session?shell?port or 8001
   $info 'Starting session shell server on port', color(78, port)
@@ -107,7 +96,7 @@ export session = ->*
       info ...args
       pp obj if obj
     $info 'Connection established'
-    session = rivulet {}, socket, \session, validate
+    session = rivulet {}, socket, \session, validator
     storage = rivulet {}, socket, \storage
     session.$logger = $info
     session.$observe '$.end', ->
@@ -128,12 +117,10 @@ export session = ->*
         reactor.bind module.exports
         $info 'Observing', color(206, key)
         session.$observe key, co.wrap ->*
-          for error in session.$validation
-            error.property = error.property.replace /^instance/, \$
-          properties = unique(session.$validation |> map -> it.property)
-          re = //^#{key.replace(/\./g, '\\.').replace(/\$/, '\\$')}//
-          fails = properties |> filter -> re.test it
-          if empty fails
+          validation = {}
+          for path in (session.$validation-paths |> filter -> //^#{key.substr(2)}//.test it)
+            objectpath.set validation, path, (objectpath.get session.$validation, path)
+          if Obj.empty validation
             $info "Session reaction '#key'", it
             tx = yield world.transaction!
             tx.$info = $info
@@ -144,7 +131,7 @@ export session = ->*
               info e
               yield tx.rollback!
           else
-            $info "Session reaction '#key' validation fault:", (session.$validation |> (filter -> it.property in fails) |> map -> "#{it.property}: #{it.message}")
+            $info "Session reaction '#key' validation fault:", validation
     session.$observe '$.no-id', co.wrap (id) ->*
       session.persistent = false
     session.$observe '$.id', co.wrap (id) ->*

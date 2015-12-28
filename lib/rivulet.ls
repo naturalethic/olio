@@ -95,7 +95,7 @@ proxify = (state, mutation) ->
   | \Array    => proxify-array state, mutation
   | otherwise => state
 
-module.exports = (state = {}, socket, channel, validate) ->
+module.exports = (state = {}, socket, channel, validator) ->
   rivulet = proxify state
   rivulet <<<
     $logger: null
@@ -144,8 +144,15 @@ module.exports = (state = {}, socket, channel, validate) ->
       rivulet.$logger 'Rivulet received', diff if rivulet.$logger
       state = rivulet.$get!
       patch.apply state, diff
-      if validate
-        rivulet.$validation = validate state
+      rivulet.$validation = {}
+      rivulet.$validation-paths = []
+      if validator and not validator.validate \index, state
+        for error in validator.errors
+          path = error.data-path.replace /^\./, ''
+          if error.keyword is \required
+            path = "#path.#{error.params.missing-property}"
+          objectpath.set rivulet.$validation, path, error{keyword, message}
+          rivulet.$validation-paths.push path
       rivulet.$state = state
       rivulet.$new-state = rivulet.$get!
       rivulet.$broadcast false
