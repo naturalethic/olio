@@ -130,7 +130,7 @@ export transaction = ->*
       data = JSON.parse data if is-string data
       data = data.$get! if data.$get
       cursor = rivulet data
-      cursor.$observe '$', co.wrap ->*
+      cursor.$observe '', co.wrap ->*
         save-queue[kind] ?= []
         save-queue[kind].push cursor if cursor not in save-queue[kind]
       cursor
