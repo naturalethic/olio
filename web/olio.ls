@@ -153,7 +153,7 @@ register-component = (name, component) ->
     stream.on-value (last @$on-values).1
     @watch = (path, fn) ~>
       if fn
-        stream = session.observe path
+        stream = (session.observe path).map -> session.get(path)
         @$on-values.push [ stream, fn ]
         stream.on-value (last @$on-values).1
       else
