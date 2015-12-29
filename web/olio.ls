@@ -151,13 +151,18 @@ register-component = (name, component) ->
       @render!
     ]
     stream.on-value (last @$on-values).1
-    @watch = (path) ~>
-      stream = (session.observe path).map -> (path): session.get(path)
-      @$on-values.push [ stream, ~>
-        @react session!, it
-        @render!
-      ]
-      stream.on-value (last @$on-values).1
+    @watch = (path, fn) ~>
+      if fn
+        stream = session.observe path
+        @$on-values.push [ stream, fn ]
+        stream.on-value (last @$on-values).1
+      else
+        stream = (session.observe path).map -> (path): session.get(path)
+        @$on-values.push [ stream, ~>
+          @react session!, it
+          @render!
+        ]
+        stream.on-value (last @$on-values).1
     obj-to-pairs @apply! |> each ([k, val]) ~>
       if not is-array val
         val = [ val ]
