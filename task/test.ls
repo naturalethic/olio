@@ -112,7 +112,7 @@ run-directory = (directory) ->*
     run-next!
   paths = glob.sync "test/#directory/*.ls"
   if "test/#directory/seed.ls" in paths
-    paths = (require "./test/#directory/seed.ls") |> map -> "test/session/#it.ls"
+    paths = (require "./test/#directory/seed.ls") |> map -> "test/#directory/#it.ls"
   if olio.task.2
     paths = paths |> filter -> //#{olio.task.2}\.ls$//.test it
   yield run-module paths.shift! if paths.length

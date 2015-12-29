@@ -8,7 +8,6 @@ require! \rivulet
 require! \world
 require! \gcloud
 require! \ajv
-require! \object-path : \objectpath
 
 export watch = [ __filename, \olio.ls, \schema, \react, "#__dirname/../lib" ]
 
@@ -30,10 +29,11 @@ export session = ->*
     s.required = (s.required |> map -> camelize it) if s.required
     s
   validator = ajv all-errors: true
-  schemas = (glob.sync 'schema/session/*.ls') |> map -> fs.path.basename(it).slice 0, -3
+  schemas = (glob.sync 'schema/session/**/*.ls') |> map -> /^schema\/session\/(.*)\.ls$/.exec(it).1
   for schema in schemas
+    $info 'Adding validation', color(207, (schema.replace /\//g, '-'))
     try
-      validator.add-schema (read-schema schema), schema
+      validator.add-schema (read-schema schema), (schema.replace /\//g, '-')
     catch e
       $info 'Error reading schema', schema
       throw e
@@ -58,7 +58,7 @@ export session = ->*
       ((world.path-values-from-object command-tree) |> map -> it.path.replace(/\./g, ' ')).join '\n'
     socket.on \shell, ->
       if path = (it.split(' ') |> map -> it.trim!).join '.'
-        if command = objectpath.get command-tree, path
+        if command = $get command-tree, path
           command!
         else
           socket.emit \shell, 'Unknown command.'
@@ -103,7 +103,7 @@ export session = ->*
     session.$observe 'end', ->
       $info 'Disconnecting'
       session.$socket.disconnect!
-    glob.sync 'react/**/*' |> each ->
+    glob.sync 'react/**/*.ls' |> each ->
       module = new Module
       module.paths = [ "#{process.cwd!}/lib", "#{process.cwd!}/node_modules" ]
       module._compile livescript.compile ([
@@ -120,8 +120,8 @@ export session = ->*
         session.$observe key, co.wrap ->*
           validation = {}
           for path in (session.$validation-paths |> filter -> //^#{key}//.test it)
-            objectpath.set validation, path, (objectpath.get session.$validation, path)
-          if true #Obj.empty validation
+            $set validation, path, ($get session.validation, path)
+          if Obj.empty validation
             $info "Session reaction '#key'", it
             tx = yield world.transaction!
             tx.$info = $info
@@ -134,7 +134,6 @@ export session = ->*
           else
             $info "Session reaction '#key' validation fault:", validation
     session.$observe 'no-id', co.wrap (id) ->*
-      info \NO-ID-OBSERVED
       session.persistent = false
     session.$observe 'id', co.wrap (id) ->*
       $info 'Session Id', id

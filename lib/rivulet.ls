@@ -130,6 +130,10 @@ module.exports = (state = {}, socket, channel, validator) ->
   rivulet.$mutation = ->
     rivulet.$new-state = rivulet.$get!
     rivulet.$broadcast!
+  rivulet.$extend = ->
+    extend rivulet, it
+  rivulet.$become = ->
+    rivulet.$state = it
   observers = {}
   if socket and channel
     rivulet.$socket = socket
@@ -137,16 +141,21 @@ module.exports = (state = {}, socket, channel, validator) ->
       rivulet.$logger 'Rivulet received', diff if rivulet.$logger
       state = rivulet.$get!
       patch.apply state, diff
-      rivulet.$validation = {}
-      rivulet.$validation-paths = []
-      if validator and not validator.validate \index, state
-        for error in validator.errors
-          path = error.data-path.replace /^\./, ''
-          if error.keyword is \required
-            path = "#path.#{error.params.missing-property}"
-          objectpath.set rivulet.$validation, path, error{keyword, message}
-          rivulet.$validation-paths.push path
-        # socket.emit \validation, validation
+      if validator
+        validation = {}
+        rivulet.$validation-paths = []
+        if not validator.validate \index, state
+          for error in validator.errors
+            path = error.data-path.replace /^\./, ''
+            if error.keyword is \required
+              path = "#path.#{dasherize error.params.missing-property}"
+            if error.keyword is \additionalProperties
+              path = "#path.#{dasherize error.params.additional-property}"
+            if not $get validation, path
+              $set validation, path, error{keyword, message}
+              rivulet.$validation-paths.push path
+        rivulet.validation = validation
+        state.validation = validation
       rivulet.$state = state
       rivulet.$new-state = rivulet.$get!
       rivulet.$broadcast false

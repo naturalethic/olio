@@ -11,6 +11,7 @@ require! \deep-extend
 require! \livescript
 require! \node-uuid
 require! \harmony-reflect
+require! \object-path
 Module = (require \module).Module
 
 # -----------------------------------------------------------------------------
@@ -44,6 +45,8 @@ global <<< do
   is-string:     -> typeof! it is \String
   is-undefined:  -> typeof! it is \Undefined
   is-null:       -> typeof! it is \Null
+  $set:          (o, k, v) -> object-path.set o, k, v
+  $get:          (o, k)    -> object-path.get o, k
 
 global.require-dir = ->
   return fold1 (<<<), (& |> map -> require-dir it) if &.length > 1
