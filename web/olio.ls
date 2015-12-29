@@ -143,8 +143,8 @@ register-component = (name, component) ->
       m.render this, eval code
       @paint session!
     if @start
-      warn "START on '#{@tag-name}', be careful!"
-      session(q.extend true, session!, @start!)
+      warn "START no longer merges its return value, update '#{@tag-name}' to use $session.set instead."
+      @start!
     stream = s.merge (@watch |> map (path) -> (session.observe path).map -> (path): session.get(path))
     @$on-values.push [ stream, ~>
       @react session!, it
