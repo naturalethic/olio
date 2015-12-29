@@ -33,7 +33,8 @@ prep = ->
   exec "rsync -maz --exclude '*.ls' web/ tmp/"
   $info \Syncing, \public
   exec "rsync -maz --exclude '*.js' --exclude '*.css' tmp/ public/"
-  exec "rsync -maz web/vendor/ public/vendor"
+  if fs.exists-sync 'web/vendor'
+    exec "rsync -maz web/vendor/ public/vendor"
 
 stitch = (paths) ->
   fs.write-file-sync('tmp/rivulet.js', livescript.compile fs.read-file-sync("#__dirname/../web/rivulet.ls").to-string!)
