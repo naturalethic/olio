@@ -1,5 +1,6 @@
 require! \stylus
 require! \nib
+require! \rupture
 require! \browserify
 require! \livescript
 require! \node-notifier
@@ -100,7 +101,7 @@ stitch = (paths) ->
       continue if it is 'tmp/component/index.styl'
       style.push "@import \"#{it.replace(/^tmp\/component\//, '')}\""
   style = stylus(style.join '\n')
-  style.use(nib!).import(\nib)
+  style.use(nib!).use(rupture!).import(\nib).import(\rupture)
   style.get('paths').push 'tmp'
   style.get('paths').push 'tmp/component'
   style.set 'include css', true
