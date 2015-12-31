@@ -8,6 +8,7 @@ require! \chokidar
 require! \glob
 require! \co
 require! \deep-extend
+require! \clone
 require! \livescript
 require! \node-uuid
 require! \harmony-reflect
@@ -33,6 +34,7 @@ global <<< do
   shy:           (obj, props) -> (props |> filter -> obj[camelize it]).length < props.length
   livescript:    livescript
   extend:        deep-extend
+  clone:         clone
   watcher:       chokidar
   Promise:       bluebird
   promise:       bluebird

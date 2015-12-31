@@ -1,3 +1,5 @@
+require! \object-path
+
 module.exports = (options = {}) ->
   throw 'Socket required' if not options.socket
   socket    = options.socket
@@ -28,9 +30,11 @@ module.exports = (options = {}) ->
     else
       logger 'Validation fault', path, value, validation if logger
       socket.emit "#{channel}-validation", [ path, validation ]
-  do
+  wire =
+    cache: {}
     send: (path, value) ->
       logger 'Session sending', path, value if logger
+      object-path.set wire.cache, path, value
       socket.emit channel, [ path, value ]
     observe: (paths, fn) ->
       if not is-array paths

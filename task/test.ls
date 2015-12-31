@@ -54,10 +54,13 @@ run-directory = (directory) ->*
           mvals.shift!
           session.observe-all co.wrap (path, value) ->*
             return if state.fail
-            while observers.0 and observers.0.0 != path
-              observers.shift!
+            # while observers.0 and observers.0.0 != path
+            #   observers.shift!
             if observers.0
               observer = observers.shift!
+              if observer.0 != path
+                state.fail = "Unexpected path '#path' should be '#{observer.0}'"
+                return session.send \end, true
               info color(51, observer.0)
               info color(238, '-' * process.stdout.columns)
               try

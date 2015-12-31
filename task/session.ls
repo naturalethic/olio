@@ -104,6 +104,7 @@ export session = ->*
     $info 'Connection established'
     # session = rivulet {}, socket, \session, validator
     session = wire socket: socket, channel: \session, validator: validator, logger: $info
+    session-cache = {}
     storage = rivulet {}, socket, \storage
     # session.$logger = $info
     session.observe 'end', ->
@@ -132,6 +133,13 @@ export session = ->*
           tx.$info = $info
           try
             yield reactor tx, session, it
+            yield save-session-cache tx
+            id = session-cache.id
+            session-cache.public = clone session.cache
+            session-cache.private = clone(pairs-to-obj((keys session |> filter -> !is-function(session[it]) and it != \cache) |> map -> [ it, session[it] ]))
+            yield tx.save \session, session-cache
+            if not id
+              session.send \id, session-cache.id
             yield tx.commit!
           catch e
             yield tx.rollback!
@@ -142,11 +150,11 @@ export session = ->*
     session.observe 'id', co.wrap (id) ->*
       if id
         if record = yield world.get id
-          session.data = record.$get!
-          session.send '', session.data
+          session.send '', record.public
+          session <<< record.private
         else
           session.send \id, null
-          session.send \route, \login
+          # session.send \route, \login
         # if not session.persistent
         #   if record
         #     $info 'Loading session', record

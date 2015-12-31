@@ -74,21 +74,21 @@ m.convert = (markup) ->
   walk-children (q markup)
 
 # FRP
-require! \kefir
-window.s = ^^kefir
-s.from-child-events = (target, query, event-name, transform = id) ->
-  propagate = false
-  if last(event-name) is \!
-    event-name = event-name.substr(0, event-name.length - 1)
-    propagate = true
-  s.stream (emitter) ->
-    handler = ->
-      if !propagate
-        it.stop-propagation!
-        it.prevent-default!
-      emitter.emit transform it
-    q target .on event-name, query, handler
-    -> q target .off event-name, query, handler
+# require! \kefir
+# window.s = ^^kefir
+# s.from-child-events = (target, query, event-name, transform = id) ->
+#   propagate = false
+#   if last(event-name) is \!
+#     event-name = event-name.substr(0, event-name.length - 1)
+#     propagate = true
+#   s.stream (emitter) ->
+#     handler = ->
+#       if !propagate
+#         it.stop-propagation!
+#         it.prevent-default!
+#       emitter.emit transform it
+#     q target .on event-name, query, handler
+#     -> q target .off event-name, query, handler
 
 # Session
 require! 'socket.io-client': socket-io
@@ -98,41 +98,32 @@ if config.env
   socket = socket-io "http://session.#{config.env}.copsforhire.com"
 else
   socket = socket-io!
-# window.$session = window.session = rivulet socket, \session
 
 socket.on \session-validation, ->
   warn \Validation, it.0, '\n', JSON.stringify(it.1, null, 2)
 
-if session-cache = session-storage.get-item(\session)
-  session-cache = JSON.parse session-cache
-window.session = {}
-# if window.session
-#   window.session = JSON.parse window.session
-# else
-#   window.session = {}
+window.session = JSON.parse(session-storage.get-item(\session) or '{}')
 
 session-wire = wire socket: socket, channel: \session, logger: (...args) ->
-  if is-object(last args) or is-array(last args)
-    obj = args.pop!
-    args.push JSON.stringify obj
-  info ...args
+  info "#{args.0} %c#{args.1} %c#{JSON.stringify args.2, null, 2}", 'color: #D1843C', 'color: #D23A63'
 session-watchers = {}
 session-wire.observe-all (path, value) ->
-  if path is \id and value and session-cache
-    window.session = session-cache
+  # if path is \id and value and session.id == value
+  #   window.session = extend session-cache, window.session
   $set path, value
-  session-storage.set-item \session, JSON.stringify(session)
 
 global.$set = (path, value) ->
   old-value = object-path.get session, (camelize path)
   if value != old-value
     object-path.set session, (camelize path), value
-    for fn in (session-watchers[path] or [])
-      fn value, old-value
+    session-storage.set-item \session, JSON.stringify(session)
+  for fn in (session-watchers[path] or [])
+    fn value, old-value
 global.$sset = (path, value) ->
   $set path, value
   session-wire.send path, value
 global.$send = (path, value) ->
+  value ?= $get path
   session-wire.send path, value
 global.$watch = (paths, fn) ->
   if is-array paths
@@ -148,6 +139,7 @@ global.$get = (path) ->
   object-path.get session, (camelize path)
 global.$del = (path) ->
   object-path.del session, (camelize path)
+
 window.$storage = rivulet socket, \storage
 $storage.logger = (...args) ->
   if is-object(last args) or is-array(last args)
@@ -155,7 +147,10 @@ $storage.logger = (...args) ->
     args.push JSON.stringify obj
   info ...args
 
-$send \id, (session-cache?id or '00000000-0000-0000-0000-000000000000') #session-storage.get-item \id
+# $send \id, (session-storage.get-item(\id) or '00000000-0000-0000-0000-000000000000')
+$send \id, (session?id or '00000000-0000-0000-0000-000000000000') #session-storage.get-item \id
+# if session-cache = session-storage.get-item(\session)
+
 # else
 #   session.send \noId, true
 # else
@@ -321,16 +316,11 @@ register-component = (name, component) ->
           if options.extract
             value = object-path.get value, (camelize options.extract)
         info name.to-upper-case!, (query or @tag-name.to-lower-case!), options, value
-        if options.set-local
-          @set options.set-local, value
-        if options.set-session
-          $set options.set-session, value
-        if options.send-local
-          @send options.send-local
-        if options.call
-          options.call value
-        if options.render
-          @render!
+        options.set-local  and @set options.set-local, value
+        options.set        and $set options.set, value
+        options.send-local and @send options.send-local
+        options.call       and options.call value
+        options.render     and @render!
       if query
         @q.on name, query, fn
       else
