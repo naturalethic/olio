@@ -33,7 +33,7 @@ export session = ->*
       if k is \type and v is \object
         o.additional-properties = false
     s
-  validator = ajv all-errors: true
+  validator = ajv all-errors: true, v5: true
   schemas = (glob.sync 'schema/session/**/*.ls') |> map -> /^schema\/session\/(.*)\.ls$/.exec(it).1
   for schema in schemas
     $info 'Adding validation', color(207, (schema.replace /\//g, '.'))

@@ -100,14 +100,16 @@ else
   socket = socket-io!
 # window.$session = window.session = rivulet socket, \session
 
-window.session = session-storage.get-item(\session)
-if window.session
-  window.session = JSON.parse window.session
-else
-  window.session = {}
-
 socket.on \session-validation, ->
   warn \Validation, it.0, '\n', JSON.stringify(it.1, null, 2)
+
+if session-cache = session-storage.get-item(\session)
+  session-cache = JSON.parse session-cache
+window.session = {}
+# if window.session
+#   window.session = JSON.parse window.session
+# else
+#   window.session = {}
 
 session-wire = wire socket: socket, channel: \session, logger: (...args) ->
   if is-object(last args) or is-array(last args)
@@ -116,6 +118,8 @@ session-wire = wire socket: socket, channel: \session, logger: (...args) ->
   info ...args
 session-watchers = {}
 session-wire.observe-all (path, value) ->
+  if path is \id and value
+    window.session = session-cache
   $set path, value
   session-storage.set-item \session, JSON.stringify(session)
 
@@ -151,7 +155,7 @@ $storage.logger = (...args) ->
     args.push JSON.stringify obj
   info ...args
 
-$send \id, (session.id or '00000000-0000-0000-0000-000000000000') #session-storage.get-item \id
+$send \id, (session-cache.id or '00000000-0000-0000-0000-000000000000') #session-storage.get-item \id
 # else
 #   session.send \noId, true
 # else
