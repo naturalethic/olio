@@ -6,6 +6,7 @@ require! \rivulet
 require! \stack-trace
 require! \source-map
 require! \nightmare
+require! \wire
 
 export test = ->*
   yield session!
@@ -33,63 +34,113 @@ run-directory = (directory) ->*
       info color(239, '=' * process.stdout.columns)
       info color(226, path), color(227, \:), color(214, dasherize name)
       info color(238, '-' * process.stdout.columns)
-      if is-function module.exports[name]
+      if directory is \web
         agent = nightmare show: true, width: (olio.config.test?web?width or 1000), height: (olio.config.test?web?height or 800), web-preferences: { partition: \nopersist }
         yield module.exports[name] agent
-      if is-object module.exports[name]
+      else
         socket = socket-io 'http://localhost:8000', force-new: true
-        session = rivulet {}, socket, \session
+        # session = rivulet {}, socket, \session
+        session = wire socket: socket, channel: \session
         storage = rivulet {}, socket, \storage
-        keys module.exports[name] |> each (key) ->
-          return if key in <[ session timeout ]>
-          reactors = module.exports[name][key]
-          reactors = [ reactors ] if !is-array reactors
-          for reactor in reactors
-            reactor.bind module.exports[name]
-          observe-func = co.wrap ->*
-            info color(51, key)
-            info color(238, '-' * process.stdout.columns)
-            reactor = reactors.shift!
-            if empty reactors
-              session.$forget key, observe-func
-            tx = yield world.transaction!
-            tx.storage = storage
-            try
-              yield reactor tx, session, it
-              yield tx.commit!
-            catch it
-              yield tx.rollback!
-              if it.name is \AssertionError
-                trace = stack-trace.parse it
-                info "#{color(124, it.name)} #{color(88, it.message)}"
-                position = map-consumer.original-position-for(line: trace.0.line-number, column: trace.0.column-number)
-                try
-                  info "#{color(241, position.source)}:#{color(226, position.line.to-string!)}", color(158, source.split('\n')[position.line - 1].trim!)
-                if is-array(it.expected) or is-object(it.expected)
-                  info color(220, 'Expected')
-                  pp it.expected
-                  info ''
-                  info color(222, 'Actual')
-                  pp it.actual
-                  info ''
-                state.fail = 'Fail'
-              else
-                state.fail = color(88, it.to-string!)
-              session.end = true
-          session.$observe key, observe-func
-        state.timeout-seconds = module.exports[name]?timeout or 10
-        session <<< module.exports[name].session
-        state.timeout = set-timeout ->
-          session.end = true
-          state.fail = 'Timed out'
-        , state.timeout-seconds * 1000
-        session.$socket.on \disconnect, ->
-          clear-timeout state.timeout
-          if state.fail
-            info color(88, state.fail)
-          else
-            info color(118, 'Success')
-          run-next!
+        # state.timeout-seconds = (delete m[name].timeout) or 10
+        mkeys = keys module.exports
+        mvals = values module.exports
+        while mkeys.0
+          delete state.fail
+          state.timeout-seconds = 10
+          observers = []
+          yield mvals.0 world, session, (path, fn) -> observers.push [ path, fn ]
+          mkeys.shift!
+          mvals.shift!
+          session.observe-all co.wrap (path, value) ->*
+            return if state.fail
+            while observers.0 and observers.0.0 != path
+              observers.shift!
+            if observers.0
+              observer = observers.shift!
+              info color(51, observer.0)
+              info color(238, '-' * process.stdout.columns)
+              try
+                yield observer.1 value
+              catch it
+                if it.name is \AssertionError
+                  trace = stack-trace.parse it
+                  info "#{color(124, it.name)} #{color(88, it.message)}"
+                  position = map-consumer.original-position-for(line: trace.0.line-number, column: trace.0.column-number)
+                  try
+                    info "#{color(241, position.source)}:#{color(226, position.line.to-string!)}", color(158, source.split('\n')[position.line - 1].trim!)
+                  if is-array(it.expected) or is-object(it.expected)
+                    info color(220, 'Expected')
+                    pp it.expected
+                    info ''
+                    info color(222, 'Actual')
+                    pp it.actual
+                    info ''
+                  state.fail = 'Fail'
+                else
+                  state.fail = color(88, it.to-string!)
+                session.send \end, true
+          state.timeout = set-timeout ->
+            session.send \end, true
+            state.fail = 'Timed out'
+          , state.timeout-seconds * 1000
+          socket.on \disconnect, ->
+            clear-timeout state.timeout
+            if state.fail
+              info color(88, state.fail)
+            else
+              info color(118, 'Success')
+            run-next!
+
+
+
+
+        #     reactors = m[name][key]
+        #     reactors = [ reactors ] if !is-array reactors
+        #     for reactor in reactors
+        #       reactor.bind m[name]
+        #     observe-func = co.wrap ->*
+        #       info color(51, key)
+        #       info color(238, '-' * process.stdout.columns)
+        #       reactor = reactors.shift!
+        #       if empty reactors
+        #         session.forget key, observe-func
+        #       tx = yield world.transaction!
+        #       tx.storage = storage
+        #       try
+        #         yield reactor tx, session, it
+        #         yield tx.commit!
+        #       catch it
+        #         yield tx.rollback!
+        #         if it.name is \AssertionError
+        #           trace = stack-trace.parse it
+        #           info "#{color(124, it.name)} #{color(88, it.message)}"
+        #           position = map-consumer.original-position-for(line: trace.0.line-number, column: trace.0.column-number)
+        #           try
+        #             info "#{color(241, position.source)}:#{color(226, position.line.to-string!)}", color(158, source.split('\n')[position.line - 1].trim!)
+        #           if is-array(it.expected) or is-object(it.expected)
+        #             info color(220, 'Expected')
+        #             pp it.expected
+        #             info ''
+        #             info color(222, 'Actual')
+        #             pp it.actual
+        #             info ''
+        #           state.fail = 'Fail'
+        #         else
+        #           state.fail = color(88, it.to-string!)
+        #         session.send \end, true
+        #     session.observe key, observe-func
+        # state.timeout = set-timeout ->
+        #   session.send \end, true
+        #   state.fail = 'Timed out'
+        # , state.timeout-seconds * 1000
+        # socket.on \disconnect, ->
+        #   clear-timeout state.timeout
+        #   if state.fail
+        #     info color(88, state.fail)
+        #   else
+        #     info color(118, 'Success')
+        #   run-next!
     names = keys module.exports
     run-next = co.wrap ->*
       delete state.fail

@@ -79,8 +79,6 @@ module.exports = (socket, channel)->
     rivulet.socket.on channel, ->
       rivulet.logger 'Rivulet received', it if rivulet.logger
       rivulet.patch it, false
-    # rivulet.socket.on \validation, ->
-    #   rivulet.
     emit-stream = rivulet.observe-deep ''
     emit-stream.on-value ->
       while diff = emit-queue.pop!

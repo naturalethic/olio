@@ -39,6 +39,7 @@ prep = ->
 
 stitch = (paths) ->
   fs.write-file-sync('tmp/rivulet.js', livescript.compile fs.read-file-sync("#__dirname/../web/rivulet.ls").to-string!)
+  fs.write-file-sync('tmp/wire.js', livescript.compile fs.read-file-sync("#__dirname/../lib/wire.ls").to-string!)
   if paths.length
     components = JSON.parse(fs.read-file-sync 'tmp/components.json', 'utf8')
   else
@@ -147,7 +148,7 @@ setup-bundler = ->*
       prep!
       stitch paths
     catch e
-      info e
+      info e.stack
     bundle! if not bundler._bundled
   bundler.build.paths = []
   bundler

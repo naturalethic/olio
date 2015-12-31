@@ -8,6 +8,8 @@ require! \rivulet
 require! \world
 require! \gcloud
 require! \ajv
+require! \object-walk
+require! \wire
 
 export watch = [ __filename, \olio.ls, \schema, \react, "#__dirname/../lib" ]
 
@@ -25,15 +27,18 @@ export session = ->*
   # --- Validation ---
   read-schema = (schema) ->
     s = require "./schema/session/#schema"
-    s.additional-properties = false
-    s.required = (s.required |> map -> camelize it) if s.required
+    object-walk s, (v, k, o) ->
+      if k is \required
+        o[k] = (v |> map -> camelize it)
+      if k is \type and v is \object
+        o.additional-properties = false
     s
   validator = ajv all-errors: true
   schemas = (glob.sync 'schema/session/**/*.ls') |> map -> /^schema\/session\/(.*)\.ls$/.exec(it).1
   for schema in schemas
-    $info 'Adding validation', color(207, (schema.replace /\//g, '-'))
+    $info 'Adding validation', color(207, (schema.replace /\//g, '.'))
     try
-      validator.add-schema (read-schema schema), (schema.replace /\//g, '-')
+      validator.add-schema (read-schema schema), (schema.replace /\//g, '.')
     catch e
       $info 'Error reading schema', schema
       throw e
@@ -97,12 +102,13 @@ export session = ->*
       info ...args
       pp obj if obj
     $info 'Connection established'
-    session = rivulet {}, socket, \session, validator
+    # session = rivulet {}, socket, \session, validator
+    session = wire socket: socket, channel: \session, validator: validator, logger: $info
     storage = rivulet {}, socket, \storage
-    session.$logger = $info
-    session.$observe 'end', ->
+    # session.$logger = $info
+    session.observe 'end', ->
       $info 'Disconnecting'
-      session.$socket.disconnect!
+      socket.disconnect!
     glob.sync 'react/**/*.ls' |> each ->
       module = new Module
       module.paths = [ "#{process.cwd!}/lib", "#{process.cwd!}/node_modules" ]
@@ -117,45 +123,47 @@ export session = ->*
         reactor = module.exports.session[key]
         reactor.bind module.exports
         $info 'Observing', color(206, key)
-        session.$observe key, co.wrap ->*
+        session.observe key, co.wrap ->*
           validation = {}
-          for path in (session.$validation-paths |> filter -> //^#{key}//.test it)
-            $set validation, path, ($get session.validation, path)
-          if Obj.empty validation
-            $info "Session reaction '#key'", it
-            tx = yield world.transaction!
-            tx.$info = $info
-            try
-              yield reactor tx, session, it
-              yield tx.commit!
-            catch e
-              info e
-              yield tx.rollback!
-          else
-            $info "Session reaction '#key' validation fault:", validation
-    session.$observe 'no-id', co.wrap (id) ->*
-      session.persistent = false
-    session.$observe 'id', co.wrap (id) ->*
-      $info 'Session Id', id
+          # for path in (session.$validation-paths |> filter -> //^#{key}//.test it)
+          #   $set validation, path, ($get session.validation, path)
+          $info "Session reaction '#key'", it
+          tx = yield world.transaction!
+          tx.$info = $info
+          try
+            yield reactor tx, session, it
+            yield tx.commit!
+          catch e
+            yield tx.rollback!
+            throw e
+
+    # session.$observe 'no-id', co.wrap (id) ->*
+    #   session.persistent = false
+    session.observe 'id', co.wrap (id) ->*
       if id
-        if not session.persistent
-          record = yield world.get id
-          if record
-            $info 'Loading session', record
-            session.persistent = true
-            session <<< record
-          else
-            delete session.id
-    session.$observe 'route', co.wrap (route) ->*
-      if (not session.persistent) and session.route and session.route not in <[ login signup]>
-        session.route = ''
-    session.$observe '', debounce 300, co.wrap ->*
-      return if not session.persistent
-      yield world.save \session, session
-      if shell.session-paths
-        paths = world.path-values-from-object(session.$get!) |> map -> it.path
-        shell.session-paths = unique shell.session-paths ++ paths
-      # $info 'Session saved', session.$get!
+        if record = yield world.get id
+          session.data = record.$get!
+          session.send '', session.data
+        else
+          session.send \id, null
+          session.send \route, \login
+        # if not session.persistent
+        #   if record
+        #     $info 'Loading session', record
+        #     session.persistent = true
+        #     session <<< record
+        #   else
+        #     delete session.id
+    # session.$observe 'route', co.wrap (route) ->*
+    #   if (not session.persistent) and session.route and session.route not in <[ login signup]>
+    #     session.route = ''
+    # session.$observe '', debounce 300, co.wrap ->*
+    #   return if not session.persistent
+    #   yield world.save \session, session
+    #   if shell.session-paths
+    #     paths = world.path-values-from-object(session.$get!) |> map -> it.path
+    #     shell.session-paths = unique shell.session-paths ++ paths
+    #   # $info 'Session saved', session.$get!
     storage.$logger = $info
     storage.$observe '', ->
       (keys storage) |> each (key) ->

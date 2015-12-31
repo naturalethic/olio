@@ -148,6 +148,28 @@ export select = ->*
     yield tx.rollback!
   val
 
+export select-one = ->*
+  tx = yield transaction!
+  tx.$info = $info
+  try
+    val = yield tx.select-one ...&
+    yield tx.commit!
+  catch e
+    info e
+    yield tx.rollback!
+  val
+
+export query = ->*
+  tx = yield transaction!
+  tx.$info = $info
+  try
+    val = yield tx.query ...&
+    yield tx.commit!
+  catch e
+    info e
+    yield tx.rollback!
+  val
+
 export get = ->*
   tx = yield transaction!
   tx.$info = $info
