@@ -48,6 +48,7 @@ export path-values-from-object = (object, path = '') ->
   path-values
 
 persist-create-path-value = (connection, kind, old-doc, new-doc, path, value) ->*
+  # info kind, old-doc, new-doc, path, value
   return if is-undefined value
   if is-object(value) or is-array(value)
     path-values = path-values-from-object value, path

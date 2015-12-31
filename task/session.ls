@@ -133,13 +133,16 @@ export session = ->*
           tx.$info = $info
           try
             yield reactor tx, session, it
-            yield save-session-cache tx
-            id = session-cache.id
+            id = session.id
             session-cache.public = clone session.cache
             session-cache.private = clone(pairs-to-obj((keys session |> filter -> !is-function(session[it]) and it != \cache) |> map -> [ it, session[it] ]))
+            delete session-cache.public.id
+            delete session-cache.private.id
+            info JSON.stringify session-cache, null, 2
             yield tx.save \session, session-cache
+            session.id = session-cache.id
             if not id
-              session.send \id, session-cache.id
+              session.send \id, session.id
             yield tx.commit!
           catch e
             yield tx.rollback!
@@ -151,6 +154,7 @@ export session = ->*
       if id
         if record = yield world.get id
           session.send '', record.public
+          session.send \id, id
           session <<< record.private
         else
           session.send \id, null

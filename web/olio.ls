@@ -138,7 +138,11 @@ global.$watch = (paths, fn) ->
 global.$get = (path) ->
   object-path.get session, (camelize path)
 global.$del = (path) ->
+  old-value = object-path.get session, (camelize path)
   object-path.del session, (camelize path)
+  session-storage.set-item \session, JSON.stringify(session)
+  for fn in (session-watchers[path] or [])
+    fn value, old-value
 
 window.$storage = rivulet socket, \storage
 $storage.logger = (...args) ->
