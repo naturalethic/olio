@@ -99,12 +99,11 @@ report = (path, value, old-value) ->
     paths = (object-path.list value)
     if path
       paths = paths |> map -> "#path.#it"
-    for path in paths
-      for fn in (session-watchers[path] or [])
-        fn $get(path), undefined
-  else
-    for fn in (session-watchers[path] or [])
-      fn value, old-value
+    for p in paths
+      for fn in (session-watchers[camelize p] or [])
+        fn $get(p), undefined
+  for fn in (session-watchers[camelize path] or [])
+    fn value, old-value
 
 global.$set = (path, value, options) ->
   old-value = object-path.get session, (camelize path)
@@ -174,7 +173,7 @@ $watch \route, (route) ->
 q document.body .on \submit, \form, false
 
 register-component = (name, component) ->
-  return if name not in <[ cfh-root cfh-login cfh-signup cfh-address-input cfh-content cfh-inception cfh-wizard ]>
+  return if (name not in <[ cfh-root cfh-login cfh-signup cfh-address-input cfh-content cfh-inception cfh-wizard ]>) and (not /cfh\-inception/.test name) and (not /cfh\-proposal/.test name)
   info "Registering %c#name", 'color: #B184A1'
   prototype = Object.create HTMLElement.prototype
   attribute-queue = []
@@ -193,12 +192,8 @@ register-component = (name, component) ->
     @find = ~> @q.find it
     @attr = ~> @q.attr it
     @render = ~>
+      info "Rendering #{@tag-name}"
       data = (extend-new session, @local)
-      info \Rendering, @tag-name, data
-      # warn "#{@tag-name}: @dummy is deprecated.  Set @local in @start instead." if @dummy
-      # locals = q.extend true, @dummy!, session!
-      # locals = q.extend true, locals, @local
-      # locals = q.extend true, locals, locals.trim
       tree = m.convert @view data
       m.render this, tree
       # @paint!
@@ -232,6 +227,8 @@ register-component = (name, component) ->
         value = null
         if options.value
           value = options.value
+        if options.extract is \target
+          value = q(event.target)
         if options.extract is \value
           value = q(event.target).val!
         if options.extract is \truth
@@ -240,6 +237,7 @@ register-component = (name, component) ->
           value = data
           if options.extract
             value = object-path.get value, (camelize options.extract)
+        value ?= event
         info name.to-upper-case!, (query or @tag-name.to-lower-case!), options, value
         options.set-local  and @set options.set-local, value
         options.set        and $set options.set, value

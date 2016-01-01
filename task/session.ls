@@ -134,11 +134,10 @@ export session = ->*
           try
             yield reactor tx, session, it
             id = session.id
-            session-cache.public = clone session.cache
-            session-cache.private = clone(pairs-to-obj((keys session |> filter -> !is-function(session[it]) and it != \cache) |> map -> [ it, session[it] ]))
-            delete session-cache.public.id
-            delete session-cache.private.id
-            info JSON.stringify session-cache, null, 2
+            # session-cache.public = clone session.cache
+            session-cache = clone(pairs-to-obj((keys session |> filter -> !is-function(session[it]) and it != \cache) |> map -> [ it, session[it] ]))
+            # delete session-cache.public.id
+            delete session-cache.private?id
             yield tx.save \session, session-cache
             session.id = session-cache.id
             if not id
@@ -153,7 +152,7 @@ export session = ->*
     session.observe 'id', co.wrap (id) ->*
       if id
         if record = yield world.get id
-          session.send '', record.public
+          # session.send '', record.public
           session.send \id, id
           session <<< record.private
         else
