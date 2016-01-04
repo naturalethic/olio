@@ -173,7 +173,7 @@ window.go = ->
     info "Routing to: '#it'"
     history.push-state null, null, "/#{it.replace(/\-/g, '/')}"
 q window .on \popstate, ->
-  session.set \route, current-route!
+  $set \route, current-route!
 $watch \route, (route) ->
   go route
 
@@ -181,7 +181,7 @@ $watch \route, (route) ->
 q document.body .on \submit, \form, false
 
 register-component = (name, component) ->
-  return if (name not in <[ cfh-root cfh-login cfh-signup cfh-address-input cfh-content cfh-inception cfh-wizard ]>) and (not /cfh\-inception/.test name) and (not /cfh\-proposal/.test name)
+  return if (name not in <[ cfh-root cfh-login cfh-signup cfh-address-input cfh-content cfh-wizard cfh-image-upload ]>) and (not /cfh\-inception/.test name) and (not /cfh\-proposal/.test name)
   info "Registering %c#name", 'color: #B184A1'
   prototype = Object.create HTMLElement.prototype
   attribute-queue = []
