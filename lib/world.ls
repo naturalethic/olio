@@ -107,10 +107,12 @@ export transaction = ->*
           for cursor in cursors
             yield tx.save kind, cursor
         yield connection.commit!
-      catch
+      catch e
         yield connection.rollback!
-      yield tx.query 'unlock tables'
-      connection.release!
+        throw e
+      finally
+        yield tx.query 'unlock tables'
+        connection.release!
     rollback: ->*
       yield connection.rollback!
       yield tx.query 'unlock tables'

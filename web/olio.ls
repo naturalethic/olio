@@ -151,7 +151,7 @@ $send \id, (session?id or '00000000-0000-0000-0000-000000000000')
 
 window.destroy-session = ->
   for key of session
-    $del key
+    $del key if key is not \route
   $set \route, ''
   # session-storage.remove-item \session
   # session.del \persistent
@@ -161,6 +161,7 @@ window.destroy-session = ->
 
 $watch \id, ->
   if it is null
+    info \NULL
     destroy-session!
 
 # History

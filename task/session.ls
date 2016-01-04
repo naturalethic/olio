@@ -103,60 +103,104 @@ export session = ->*
       pp obj if obj
     $info 'Connection established'
     # session = rivulet {}, socket, \session, validator
-    session = wire socket: socket, channel: \session, validator: validator, logger: $info
-    session-cache = {}
+    session-wire = wire socket: socket, channel: \session, validator: validator, logger: $info
+    session-wire.session-id = null
+    # session = {}
     storage = rivulet {}, socket, \storage
     # session.$logger = $info
-    session.observe 'end', ->
+    session-wire.observe 'end', ->
       $info 'Disconnecting'
       socket.disconnect!
-    glob.sync 'react/**/*.ls' |> each ->
+    glob.sync 'react/**/*.ls' |> each (path) ->
       module = new Module
       module.paths = [ "#{process.cwd!}/lib", "#{process.cwd!}/node_modules" ]
       module._compile livescript.compile ([
-        "export $local = {}"
-        "$info = -> $local.info ...&"
-        (fs.read-file-sync it .to-string!)
+        # "export $local = {}"
+        # "$info = -> $local.info ...&"
+        (fs.read-file-sync path .to-string!)
       ].join '\n'), { +bare }
-      module.exports.$local.info = $info
+      # module.exports.$local.info = $info
+      # reaction-state =
+      #   $send: -> session.send ...&
       return if not module.exports.session
       keys module.exports.session |> each (key) ->
-        reactor = module.exports.session[key]
-        reactor.bind module.exports
+        # reactor = module.exports.session[key]
+        # reactor.bind module.exports
         $info 'Observing', color(206, key)
-        session.observe key, co.wrap ->*
+        session-wire.observe key, co.wrap ->*
+          $info "Session reaction '#key'", it
+          module = new Module
+          module.paths = [ "#{process.cwd!}/lib", "#{process.cwd!}/node_modules" ]
+          module._compile livescript.compile ([
+            "module.exports.$var = (key, val) -> eval \"$\#key = val\""
+            # "$info = -> $local.info ...&"
+            (fs.read-file-sync path .to-string!)
+          ].join '\n'), { +bare }
+          # module.exports.$local.info = $info
+          # module.exports.$send = -> session.send ...&
           validation = {}
           # for path in (session.$validation-paths |> filter -> //^#{key}//.test it)
           #   $set validation, path, ($get session.validation, path)
-          $info "Session reaction '#key'", it
+          sends = []
           tx = yield world.transaction!
           tx.$info = $info
+          module.exports.$var \info, $info
+          module.exports.$var \world, tx
+          module.exports.$var \send, (path, value) -> sends.push [ path, value ]
+          module.exports.$var \invalidate, session-wire.invalidate
+          # info module.exports.session[key].to-string!
+          # state =
+          #   # $call: eval(module.exports.session[key].to-string!)
+          #   $world: tx
+          #   $send: -> session.send ...&
+          # info reactor.$call
           try
-            yield reactor tx, session, it
-            id = session.id
-            # session-cache.public = clone session.cache
-            session-cache = clone(pairs-to-obj((keys session |> filter -> !is-function(session[it]) and it != \cache) |> map -> [ it, session[it] ]))
-            # delete session-cache.public.id
-            delete session-cache.private?id
-            yield tx.save \session, session-cache
-            session.id = session-cache.id
-            if not id
-              session.send \id, session.id
+            if session-wire.session-id
+              session = yield tx.get session-wire.session-id
+            else
+              session = yield tx.save \session, {}
+              sends.push [ \id, session.id ]
+              info \NEW-SESSION, session
+              # session-wire.send \id, session.id
+            # yield reactor tx, session, it
+            module.exports.$var \session, session
+            if session.person
+              module.exports.$var \person, (yield tx.get session.person)
+            yield module.exports.session[key] it
+            # yield fn.apply state, [ it ]
+            # id = session.id
+            # # session-cache.public = clone session.cache
+            # session-cache = clone(pairs-to-obj((keys session |> filter -> !is-function(session[it]) and it != \cache) |> map -> [ it, session[it] ]))
+            # # delete session-cache.public.id
+            # delete session-cache.private?id
+            # yield tx.save \session, session
+            # session.id = session-cache.id
+            # if not id
+            #   session-wire.send \id, session.id
             yield tx.commit!
           catch e
             yield tx.rollback!
             throw e
+          session-wire.session-id = session.id
+          for s in sends
+            session-wire.send s.0, s.1
 
     # session.$observe 'no-id', co.wrap (id) ->*
     #   session.persistent = false
-    session.observe 'id', co.wrap (id) ->*
+    session-wire.observe 'id', co.wrap (id) ->*
       if id
         if record = yield world.get id
           # session.send '', record.public
-          session.send \id, id
-          session <<< record.private
+          session-wire.send \id, id
+          session-wire.session-id = id
+          # for key of session
+          #   delete session[key]
+          # extend session, record.$get!
         else
-          session.send \id, null
+          session-wire.send \id, null
+          session-wire.session-id = null
+      else
+        session.send \route, ''
           # session.send \route, \login
         # if not session.persistent
         #   if record

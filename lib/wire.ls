@@ -49,5 +49,7 @@ module.exports = (options = {}) ->
       path = camelize path
       observers[path] = reject (-> it is fn), observers[path]
     invalidate: (path, validation) ->
-      socket.emit "#{channel}-validation", [ path, validation ]
+      obj = {}
+      object-path.set(obj, path, validation)
+      socket.emit "#{channel}-validation", [ path, obj ]
 
