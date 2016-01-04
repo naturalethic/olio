@@ -241,6 +241,7 @@ register-component = (name, component) ->
         info name.to-upper-case!, (query or @tag-name.to-lower-case!), options, value
         options.set-local  and @set options.set-local, value
         options.set        and $set options.set, value
+        options.send       and $send options.send, value
         options.send-local and @send options.send-local
         options.call       and options.call value
         options.render     and @render!

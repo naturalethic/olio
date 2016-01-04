@@ -15,7 +15,7 @@ module.exports = (options = {}) ->
       validation = {}
       if not validator.validate path, value
         for error in validator.errors
-          prop = error.data-path.replace /^\./, ''
+          prop = path + error.data-path
           if error.keyword is \required
             prop = "#prop.#{dasherize error.params.missing-property}"
           if error.keyword is \additionalProperties
