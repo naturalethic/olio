@@ -138,7 +138,7 @@ global.$del = (path) ->
   object-path.del session, (camelize path)
   session-storage.set-item \session, JSON.stringify(session)
   for fn in (session-watchers[path] or [])
-    fn value, old-value
+    fn undefined, old-value
 
 window.$storage = rivulet socket, \storage
 $storage.logger = (...args) ->
@@ -150,11 +150,18 @@ $storage.logger = (...args) ->
 $send \id, (session?id or '00000000-0000-0000-0000-000000000000')
 
 window.destroy-session = ->
-  session-storage.remove-item \id
-  session.del \persistent
-  session.del \id
-  for key of session!
-    session.del key
+  for key of session
+    $del key
+  $set \route, ''
+  # session-storage.remove-item \session
+  # session.del \persistent
+  # session.del \id
+  # for key of session!
+  #   session.del key
+
+$watch \id, ->
+  if it is null
+    destroy-session!
 
 # History
 window.history = require \html5-history-api
