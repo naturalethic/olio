@@ -53,25 +53,14 @@ global.extend-new = (...args) ->
 # Templates
 require 'webcomponents.js/CustomElements'
 window.jade = require 'jade/runtime'
-global.m = require 'mithril'
-m.old-convert = require \template-converter
 
-walk-children = (children, collection = []) ->
-  for child in children
-    if child.node-type is 1
-      el =
-        tag: child.tag-name.to-lower-case!
-        attrs: {}
-        children: walk-children(child.child-nodes)
-      for i in [0 til child.attributes.length]
-        el.attrs[child.attributes.item(i).name] = child.attributes.item(i).value
-      collection.push el
-    else if child.node-type is 3
-      collection.push child.node-value
-  collection
-
-m.convert = (markup) ->
-  walk-children (q markup)
+vdom =
+  convert:        require 'html-to-vdom'
+  vnode:          require 'virtual-dom/vnode/vnode'
+  vtext:          require 'virtual-dom/vnode/vtext'
+  diff:           require 'virtual-dom/diff'
+  patch:          require 'virtual-dom/patch'
+  create-element: require 'virtual-dom/create-element'
 
 # Session
 require! 'socket.io-client': socket-io
@@ -153,15 +142,9 @@ window.destroy-session = ->
   for key of session
     $del key if key is not \route
   $set \route, ''
-  # session-storage.remove-item \session
-  # session.del \persistent
-  # session.del \id
-  # for key of session!
-  #   session.del key
 
 $watch \id, ->
   if it is null
-    info \NULL
     destroy-session!
 
 # History
@@ -199,12 +182,21 @@ register-component = (name, component) ->
       object-path.del @local, (camelize path)
     @find = ~> @q.find it
     @attr = ~> @q.attr it
+    render-state = {}
     @render = ~>
       info "Rendering #{@tag-name}"
       data = (extend-new session, @local)
-      tree = m.convert @view data
-      m.render this, tree
-      # @paint!
+      html = @view data
+      last-tree = render-state.tree
+      render-state.tree = vdom.convert(VNode: vdom.vnode, VText: vdom.vtext)(html)
+      if not is-array render-state.tree
+        render-state.tree = [ render-state.tree ]
+      render-state.tree = a: render-state.tree
+      if not last-tree
+        for node in render-state.tree.a
+          @append-child vdom.create-element(node)
+      else
+        vdom.patch this, vdom.diff(last-tree, render-state.tree)
     @start!
     @render!
     @ready!

@@ -31,6 +31,7 @@
     "gcloud": "^0.26.1",
     "glob": "^6.0.1",
     "harmony-reflect": "^1.4.2",
+    "html-to-vdom": "^0.7.0",
     "html5-history-api": "^4.2.4",
     "jade": "^1.11.0",
     "jquery": "^2.1.4",
@@ -38,7 +39,6 @@
     "kefir": "^3.2.0",
     "later": "^1.2.0",
     "livescript": "^1.4.0",
-    "mithril": "github:naturalethic/mithril#polymer-property-fix",
     "nib": "^1.1.0",
     "nightmare": "^2.1.2",
     "node-notifier": "^4.4.0",
@@ -58,6 +58,7 @@
     "stack-trace": "0.0.9",
     "stylus": "^0.53.0",
     "twilio": "^2.8.0",
+    "virtual-dom": "^2.1.1",
     "watchify": "^3.6.1",
     "webcomponents.js": "^0.7.20"
   }
