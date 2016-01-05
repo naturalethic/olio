@@ -15,6 +15,7 @@ window <<< do
   is-object:    -> typeof! it is \Object
   is-string:    -> typeof! it is \String
   is-undefined: -> typeof! it is \Undefined
+  clone: require 'clone'
 
 window.uuid = require('uuid').v4
 
@@ -187,14 +188,14 @@ register-component = (name, component) ->
       info "Rendering #{@tag-name}"
       data = (extend-new session, @local)
       html = @view data
+      return if not html.trim!
+      html = '<div>' + html + '</div>'
       last-tree = render-state.tree
       render-state.tree = vdom.convert(VNode: vdom.vnode, VText: vdom.vtext)(html)
-      if not is-array render-state.tree
-        render-state.tree = [ render-state.tree ]
-      render-state.tree = a: render-state.tree
       if not last-tree
-        for node in render-state.tree.a
-          @append-child vdom.create-element(node)
+        node = vdom.create-element(render-state.tree)
+        while node.children.length
+          @append-child node.children.0
       else
         vdom.patch this, vdom.diff(last-tree, render-state.tree)
     @start!
@@ -241,10 +242,10 @@ register-component = (name, component) ->
         info name.to-upper-case!, (query or @tag-name.to-lower-case!), options, value
         options.set-local  and @set options.set-local, value
         options.set        and $set options.set, value
+        options.call       and options.call value
         options.send       and $send options.send, value
         options.send-local and @send options.send-local
         options.send-path  and $send options.send-path
-        options.call       and options.call value
         options.render     and @render!
       if query
         @q.on name, query, fn
