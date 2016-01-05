@@ -42,25 +42,14 @@ global.debounce = ->
 # Templates
 require 'webcomponents.js/CustomElements'
 window.jade = require 'jade/runtime'
-global.m = require 'mithril'
-m.old-convert = require \template-converter
 
-walk-children = (children, collection = []) ->
-  for child in children
-    if child.node-type is 1
-      el =
-        tag: child.tag-name.to-lower-case!
-        attrs: {}
-        children: walk-children(child.child-nodes)
-      for i in [0 til child.attributes.length]
-        el.attrs[child.attributes.item(i).name] = child.attributes.item(i).value
-      collection.push el
-    else if child.node-type is 3
-      collection.push child.node-value
-  collection
-
-m.convert = (markup) ->
-  walk-children (q markup)
+vdom =
+  convert:        require 'html-to-vdom'
+  vnode:          require 'virtual-dom/vnode/vnode'
+  vtext:          require 'virtual-dom/vnode/vtext'
+  diff:           require 'virtual-dom/diff'
+  patch:          require 'virtual-dom/patch'
+  create-element: require 'virtual-dom/create-element'
 
 # FRP
 require! \kefir
@@ -150,17 +139,21 @@ register-component = (name, component) ->
     @find = ~> @q.find it
     @merge = -> session.merge it
     @revise = -> session it
+    render-state = {}
     @render = ~>
       info \Rendering, @tag-name
       locals = q.extend true, @dummy!, session!
       locals = q.extend true, locals, @local
       locals = q.extend true, locals, locals.trim
-      tree = m.convert @view locals
-      # info \NEW, JSON.stringify(new-code, null, 2)
-      # code = m.old-convert @view locals
-      # info \OLD, JSON.stringify((eval code), null, 2)
-      # return if code == '[)]'
-      m.render this, tree
+      html = @view locals
+      html = '<div>' + html + '</div>'
+      last-tree = render-state.tree
+      render-state.tree = vdom.convert(VNode: vdom.vnode, VText: vdom.vtext)(html)
+      if not last-tree
+        render-state.root = vdom.create-element(render-state.tree)
+        @append-child render-state.root
+      else
+        render-state.root = vdom.patch render-state.root, vdom.diff(last-tree, render-state.tree)
       @paint session!
     if @start
       warn "START no longer merges its return value, update '#{@tag-name}' to use $session.set instead."
