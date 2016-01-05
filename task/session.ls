@@ -237,9 +237,7 @@ export session = ->*
               info error if error
               file.set-metadata content-type: type, (error) ->
                 info error if error
-                session.storage ?= {}
-                session-wire.send "storage.#key", "#{olio.config.gcloud.bucket}.storage.googleapis.com/#id"
-                # session.storage[key] = "#{olio.config.gcloud.bucket}.storage.googleapis.com/#id"
+                session-wire.send "storage.#key", id
 
 export shell = ->*
   require! \readline

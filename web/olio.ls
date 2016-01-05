@@ -251,13 +251,14 @@ register-component = (name, component) ->
         options.set        and $set options.set, value
         options.send       and $send options.send, value
         options.send-local and @send options.send-local
+        options.send-path  and $send options.send-path
         options.call       and options.call value
         options.render     and @render!
       if query
         @q.on name, query, fn
       else
         @q.on name, fn
-    send: (path, value) ->
+    send: (path) ->
       $send path, @get path
     start: ->
     ready: ->
