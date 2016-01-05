@@ -74,6 +74,7 @@ Template = function recurse() {
 
 module.exports = function(source) {
 	var code = Template('<div>' + source + '</div>')[0]
+	var output = '[' + code.substring(6, code.length - 1) + ']';
 	return '[' + code.substring(6, code.length - 1) + ']';
 };
 

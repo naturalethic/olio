@@ -42,8 +42,25 @@ global.debounce = ->
 # Templates
 require 'webcomponents.js/CustomElements'
 window.jade = require 'jade/runtime'
-m = require 'mithril'
-m.convert = require \template-converter
+global.m = require 'mithril'
+m.old-convert = require \template-converter
+
+walk-children = (children, collection = []) ->
+  for child in children
+    if child.node-type is 1
+      el =
+        tag: child.tag-name.to-lower-case!
+        attrs: {}
+        children: walk-children(child.child-nodes)
+      for i in [0 til child.attributes.length]
+        el.attrs[child.attributes.item(i).name] = child.attributes.item(i).value
+      collection.push el
+    else if child.node-type is 3
+      collection.push child.node-value
+  collection
+
+m.convert = (markup) ->
+  walk-children (q markup)
 
 # FRP
 require! \kefir
@@ -138,9 +155,12 @@ register-component = (name, component) ->
       locals = q.extend true, @dummy!, session!
       locals = q.extend true, locals, @local
       locals = q.extend true, locals, locals.trim
-      code = m.convert @view locals
-      return if code == '[)]'
-      m.render this, eval code
+      tree = m.convert @view locals
+      # info \NEW, JSON.stringify(new-code, null, 2)
+      # code = m.old-convert @view locals
+      # info \OLD, JSON.stringify((eval code), null, 2)
+      # return if code == '[)]'
+      m.render this, tree
       @paint session!
     if @start
       warn "START no longer merges its return value, update '#{@tag-name}' to use $session.set instead."

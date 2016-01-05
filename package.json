@@ -32,6 +32,7 @@
     "harmony-reflect": "^1.4.2",
     "html5-history-api": "^4.2.4",
     "jade": "^1.11.0",
+    "jade-mithrilier": "^0.14.0",
     "jquery": "^2.1.4",
     "jstransformer-stylus": "^1.0.0",
     "kefir": "^3.2.0",
