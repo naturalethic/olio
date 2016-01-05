@@ -102,12 +102,9 @@ export session = ->*
       info ...args
       pp obj if obj
     $info 'Connection established'
-    # session = rivulet {}, socket, \session, validator
     session-wire = wire socket: socket, channel: \session, validator: validator, logger: $info
     session-wire.session-id = null
-    # session = {}
     storage = rivulet {}, socket, \storage
-    # session.$logger = $info
     session-wire.observe 'end', ->
       $info 'Disconnecting'
       socket.disconnect!
@@ -115,17 +112,10 @@ export session = ->*
       module = new Module
       module.paths = [ "#{process.cwd!}/lib", "#{process.cwd!}/node_modules" ]
       module._compile livescript.compile ([
-        # "export $local = {}"
-        # "$info = -> $local.info ...&"
         (fs.read-file-sync path .to-string!)
       ].join '\n'), { +bare }
-      # module.exports.$local.info = $info
-      # reaction-state =
-      #   $send: -> session.send ...&
       return if not module.exports.session
       keys module.exports.session |> each (key) ->
-        # reactor = module.exports.session[key]
-        # reactor.bind module.exports
         $info 'Observing', color(206, key)
         session-wire.observe key, co.wrap ->*
           $info "Session reaction '#key'", it
@@ -133,14 +123,9 @@ export session = ->*
           module.paths = [ "#{process.cwd!}/lib", "#{process.cwd!}/node_modules" ]
           module._compile livescript.compile ([
             "module.exports.$var = (key, val) -> eval \"$\#key = val\""
-            # "$info = -> $local.info ...&"
             (fs.read-file-sync path .to-string!)
           ].join '\n'), { +bare }
-          # module.exports.$local.info = $info
-          # module.exports.$send = -> session.send ...&
           validation = {}
-          # for path in (session.$validation-paths |> filter -> //^#{key}//.test it)
-          #   $set validation, path, ($get session.validation, path)
           sends = []
           tx = yield world.transaction!
           tx.$info = $info
@@ -148,12 +133,6 @@ export session = ->*
           module.exports.$var \world, tx
           module.exports.$var \send, (path, value) -> sends.push [ path, value ]
           module.exports.$var \invalidate, session-wire.invalidate
-          # info module.exports.session[key].to-string!
-          # state =
-          #   # $call: eval(module.exports.session[key].to-string!)
-          #   $world: tx
-          #   $send: -> session.send ...&
-          # info reactor.$call
           try
             if session-wire.session-id
               session = yield tx.get session-wire.session-id
@@ -161,22 +140,10 @@ export session = ->*
               session = yield tx.save \session, {}
               sends.push [ \id, session.id ]
               info \NEW-SESSION, session
-              # session-wire.send \id, session.id
-            # yield reactor tx, session, it
             module.exports.$var \session, session
             if session.person
               module.exports.$var \person, (yield tx.get session.person)
             yield module.exports.session[key] it
-            # yield fn.apply state, [ it ]
-            # id = session.id
-            # # session-cache.public = clone session.cache
-            # session-cache = clone(pairs-to-obj((keys session |> filter -> !is-function(session[it]) and it != \cache) |> map -> [ it, session[it] ]))
-            # # delete session-cache.public.id
-            # delete session-cache.private?id
-            # yield tx.save \session, session
-            # session.id = session-cache.id
-            # if not id
-            #   session-wire.send \id, session.id
             yield tx.commit!
           catch e
             yield tx.rollback!
@@ -184,41 +151,16 @@ export session = ->*
           session-wire.session-id = session.id
           for s in sends
             session-wire.send s.0, s.1
-
-    # session.$observe 'no-id', co.wrap (id) ->*
-    #   session.persistent = false
     session-wire.observe 'id', co.wrap (id) ->*
       if id
         if record = yield world.get id
-          # session.send '', record.public
           session-wire.send \id, id
           session-wire.session-id = id
-          # for key of session
-          #   delete session[key]
-          # extend session, record.$get!
         else
           session-wire.send \id, null
           session-wire.session-id = null
       else
         session.send \route, ''
-          # session.send \route, \login
-        # if not session.persistent
-        #   if record
-        #     $info 'Loading session', record
-        #     session.persistent = true
-        #     session <<< record
-        #   else
-        #     delete session.id
-    # session.$observe 'route', co.wrap (route) ->*
-    #   if (not session.persistent) and session.route and session.route not in <[ login signup]>
-    #     session.route = ''
-    # session.$observe '', debounce 300, co.wrap ->*
-    #   return if not session.persistent
-    #   yield world.save \session, session
-    #   if shell.session-paths
-    #     paths = world.path-values-from-object(session.$get!) |> map -> it.path
-    #     shell.session-paths = unique shell.session-paths ++ paths
-    #   # $info 'Session saved', session.$get!
     storage.$logger = $info
     storage.$observe '', ->
       (keys storage) |> each (key) ->
