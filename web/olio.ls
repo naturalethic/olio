@@ -150,10 +150,11 @@ register-component = (name, component) ->
       last-tree = render-state.tree
       render-state.tree = vdom.convert(VNode: vdom.vnode, VText: vdom.vtext)(html)
       if not last-tree
-        render-state.root = vdom.create-element(render-state.tree)
-        @append-child render-state.root
+        node = vdom.create-element(render-state.tree)
+        while node.children.length
+          @append-child node.children.0
       else
-        render-state.root = vdom.patch render-state.root, vdom.diff(last-tree, render-state.tree)
+        vdom.patch this, vdom.diff(last-tree, render-state.tree)
       @paint session!
     if @start
       warn "START no longer merges its return value, update '#{@tag-name}' to use $session.set instead."
