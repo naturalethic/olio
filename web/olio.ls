@@ -175,7 +175,7 @@ $watch \route, (route) ->
 q document.body .on \submit, \form, false
 
 register-component = (name, component) ->
-  return if (name not in <[ cfh-root cfh-login cfh-signup cfh-address-input cfh-content cfh-wizard cfh-image-upload cfh-file-upload ]>) and (not /cfh\-inception/.test name) and (not /cfh\-proposal/.test name)
+  # return if (name not in <[ cfh-root cfh-login cfh-signup cfh-address-input cfh-content cfh-wizard cfh-image-upload cfh-file-upload ]>) and (not /cfh\-inception/.test name) and (not /cfh\-proposal/.test name)
   info "Registering %c#name", 'color: #B184A1'
   prototype = Object.create HTMLElement.prototype
   attribute-queue = []
@@ -229,7 +229,7 @@ register-component = (name, component) ->
       fn      = first(args |> filter -> is-function it)
       if fn
         options.call = fn
-      fn = (event, data) ~>
+      fn = (event, ...data) ~>
         event.prevent-default! if options.prevent-default
         event.stop-propagation! if options.stop-propagation
         value = null
@@ -241,10 +241,10 @@ register-component = (name, component) ->
           | \value    => q(event.current-target).val!
           | \truth    => q(event.current-target).prop \checked
           | otherwise => q(event.current-target).attr options.extract
-        if data
+        if data.length
           value = data
           if options.extract
-            value = object-path.get value, (camelize options.extract)
+            value = object-path.get data.0, (camelize options.extract)
         value ?= event
         if options.as
           value = switch options.as
@@ -252,7 +252,7 @@ register-component = (name, component) ->
         info name.to-upper-case!, (query or @tag-name.to-lower-case!), options, value
         options.set-local  and @set options.set-local, value
         options.set        and $set options.set, value
-        options.call       and options.call value
+        options.call       and (if is-array value then options.call ...value else options.call value)
         options.send       and $send options.send, value
         options.send-local and @send options.send-local
         options.send-path  and $send options.send-path
