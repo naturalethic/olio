@@ -101,6 +101,10 @@ global.$set = (path, value, options) ->
     object-path.set session, (camelize path), value
     session-storage.set-item \session, JSON.stringify(session)
     report path, value, old-value if not options?no-report
+
+global.$push = (path, value, options) ->
+  $set "{#path}.#{$get(path).length}", value, options
+
 global.$sset = (path, value) ->
   $set path, value
   session-wire.send path, value
@@ -125,6 +129,7 @@ global.$get = (path) ->
   object-path.get session, (camelize path)
 global.$del = (path) ->
   old-value = object-path.get session, (camelize path)
+  return if is-undefined old-value
   object-path.del session, (camelize path)
   session-storage.set-item \session, JSON.stringify(session)
   for fn in (session-watchers[path] or [])
@@ -165,7 +170,7 @@ $watch \route, (route) ->
 q document.body .on \submit, \form, false
 
 register-component = (name, component) ->
-  return if (name not in <[ cfh-root cfh-login cfh-signup cfh-address-input cfh-content cfh-wizard cfh-image-upload ]>) and (not /cfh\-inception/.test name) and (not /cfh\-proposal/.test name)
+  return if (name not in <[ cfh-root cfh-login cfh-signup cfh-address-input cfh-content cfh-wizard cfh-image-upload cfh-file-upload ]>) and (not /cfh\-inception/.test name) and (not /cfh\-proposal/.test name)
   info "Registering %c#name", 'color: #B184A1'
   prototype = Object.create HTMLElement.prototype
   attribute-queue = []
@@ -225,15 +230,17 @@ register-component = (name, component) ->
       if fn
         options.call = fn
       fn = (event, data) ~>
+        event.prevent-default! if options.prevent-default
+        event.stop-propagation! if options.stop-propagation
         value = null
         if options.value
           value = options.value
-        if options.extract is \target
-          value = q(event.target)
-        if options.extract is \value
-          value = q(event.target).val!
-        if options.extract is \truth
-          value = q(event.target).prop \checked
+        if options.extract
+          value = switch options.extract
+          | \target   => q(event.target)
+          | \value    => q(event.target).val!
+          | \truth    => q(event.target).prop \checked
+          | otherwise => q(event.target).attr options.extract
         if data
           value = data
           if options.extract
