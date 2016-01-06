@@ -246,6 +246,9 @@ register-component = (name, component) ->
           if options.extract
             value = object-path.get value, (camelize options.extract)
         value ?= event
+        if options.as
+          value = switch options.as
+          | \number => Number value
         info name.to-upper-case!, (query or @tag-name.to-lower-case!), options, value
         options.set-local  and @set options.set-local, value
         options.set        and $set options.set, value
