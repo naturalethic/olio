@@ -103,7 +103,7 @@ global.$set = (path, value, options) ->
     report path, value, old-value if not options?no-report
 
 global.$push = (path, value, options) ->
-  $set "{#path}.#{$get(path).length}", value, options
+  $set "#path.#{$get(path).length}", value, options
 
 global.$sset = (path, value) ->
   $set path, value
@@ -218,15 +218,10 @@ register-component = (name, component) ->
 
   prototype <<< do
     __olio__: true
-    on: (name, query, options, fn) ->
-      if is-object query
-        options = query
-        query = null
-      if is-function query
-        options = call: query
-        query = null
-      if is-function options
-        options = call: options
+    on: (name, ...args) ->
+      query   = first(args |> filter -> is-string it)
+      options = first(args |> filter -> is-object it)
+      fn      = first(args |> filter -> is-function it)
       if fn
         options.call = fn
       fn = (event, data) ~>
@@ -237,10 +232,10 @@ register-component = (name, component) ->
           value = options.value
         if options.extract
           value = switch options.extract
-          | \target   => q(event.target)
-          | \value    => q(event.target).val!
-          | \truth    => q(event.target).prop \checked
-          | otherwise => q(event.target).attr options.extract
+          | \target   => q(event.current-target)
+          | \value    => q(event.current-target).val!
+          | \truth    => q(event.current-target).prop \checked
+          | otherwise => q(event.current-target).attr options.extract
         if data
           value = data
           if options.extract
