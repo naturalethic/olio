@@ -102,6 +102,11 @@ global.$set = (path, value, options) ->
     session-storage.set-item \session, JSON.stringify(session)
     report path, value, old-value if not options?no-report
 
+global.$setq = (path, value, options) ->
+  old-value = object-path.get session, (camelize path)
+  if is-undefined old-value
+    $set path, value, options
+
 global.$push = (path, value, options) ->
   $set "#path.#{$get(path).length}", value, options
 
@@ -220,7 +225,7 @@ register-component = (name, component) ->
     __olio__: true
     on: (name, ...args) ->
       query   = first(args |> filter -> is-string it)
-      options = first(args |> filter -> is-object it)
+      options = first(args |> filter -> is-object it) or {}
       fn      = first(args |> filter -> is-function it)
       if fn
         options.call = fn
