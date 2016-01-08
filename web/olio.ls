@@ -94,7 +94,7 @@ report = (path, value, old-value) ->
       for watcher in (session-watchers[camelize p] or [])
         watcher.fn $get(p), undefined if watcher.fn
         watcher.options.render.render! if watcher.options.render
-  info '$on: ', path, value, old-value
+  info '$on:', path, value, old-value
   for watcher in (session-watchers[camelize path] or [])
     watcher.fn value, old-value if watcher.fn
     watcher.options.render.render! if watcher.options.render
@@ -123,6 +123,7 @@ global.$on = (paths, ...args) ->
   if is-array paths
     paths |> each (path) ->
       if !is-undefined(value = $get(path)) and fn
+        info '$on:', path, value, undefined
         fn path, value, undefined
         options.render.render! if options.render
       path = camelize path
@@ -130,6 +131,7 @@ global.$on = (paths, ...args) ->
       session-watchers[path].push fn: (fn and ((value, old-value) -> fn path, value, old-value)), options: options
   else
     if !is-undefined(value = $get(paths)) and fn
+      info '$on:', paths, value, undefined
       fn value, undefined
       options.render.render! if options.render
     path = camelize paths
@@ -154,8 +156,6 @@ $storage.logger = (...args) ->
     args.push JSON.stringify obj
   info ...args
 
-$send \id, (session?id or '00000000-0000-0000-0000-000000000000')
-
 window.destroy-session = ->
   for key in keys session
     delete session[key]
@@ -172,6 +172,10 @@ window.go = ->
     history.push-state null, null, "/#{it.replace(/\-/g, '/')}"
 q window .on \popstate, ->
   $set \route, current-route!
+
+
+$send \id, (session?id or '00000000-0000-0000-0000-000000000000')
+
 $watch \route, (route) ->
   go route
 
@@ -195,6 +199,8 @@ register-component = (name, component) ->
       object-path.get @local, (camelize path)
     @del = (path)    ->
       object-path.del @local, (camelize path)
+    @push = (path, value) ->
+      @set "#path.#{$get(path).length}", value
     @find = ~> @q.find it
     @attr = ~> @q.attr it
     render-state = {}
