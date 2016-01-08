@@ -48,6 +48,7 @@ export path-values-from-object = (object, path = '') ->
   path-values
 
 persist-create-path-value = (connection, kind, old-doc, new-doc, path, value) ->*
+  # info kind, old-doc, new-doc, path, value
   return if is-undefined value
   if is-object(value) or is-array(value)
     path-values = path-values-from-object value, path
@@ -106,10 +107,12 @@ export transaction = ->*
           for cursor in cursors
             yield tx.save kind, cursor
         yield connection.commit!
-      catch
+      catch e
         yield connection.rollback!
-      yield tx.query 'unlock tables'
-      connection.release!
+        throw e
+      finally
+        yield tx.query 'unlock tables'
+        connection.release!
     rollback: ->*
       yield connection.rollback!
       yield tx.query 'unlock tables'
@@ -142,6 +145,28 @@ export select = ->*
   tx.$info = $info
   try
     val = yield tx.select ...&
+    yield tx.commit!
+  catch e
+    info e
+    yield tx.rollback!
+  val
+
+export select-one = ->*
+  tx = yield transaction!
+  tx.$info = $info
+  try
+    val = yield tx.select-one ...&
+    yield tx.commit!
+  catch e
+    info e
+    yield tx.rollback!
+  val
+
+export query = ->*
+  tx = yield transaction!
+  tx.$info = $info
+  try
+    val = yield tx.query ...&
     yield tx.commit!
   catch e
     info e

@@ -15,6 +15,7 @@ window <<< do
   is-object:    -> typeof! it is \Object
   is-string:    -> typeof! it is \String
   is-undefined: -> typeof! it is \Undefined
+  clone: require 'clone'
 
 window.uuid = require('uuid').v4
 
@@ -39,6 +40,17 @@ global.debounce = ->
       func.apply this, args
     ), wait
 
+require! \object-path
+
+global.extend = (...args) ->
+  args.unshift true
+  q.extend ...args
+  args.1
+
+global.extend-new = (...args) ->
+  args.unshift {}
+  extend ...args
+
 # Templates
 require 'webcomponents.js/CustomElements'
 window.jade = require 'jade/runtime'
@@ -51,61 +63,99 @@ vdom =
   patch:          require 'virtual-dom/patch'
   create-element: require 'virtual-dom/create-element'
 
-# FRP
-require! \kefir
-window.s = ^^kefir
-s.from-child-events = (target, query, event-name, transform = id) ->
-  propagate = false
-  if last(event-name) is \!
-    event-name = event-name.substr(0, event-name.length - 1)
-    propagate = true
-  s.stream (emitter) ->
-    handler = ->
-      if !propagate
-        it.stop-propagation!
-        it.prevent-default!
-      emitter.emit transform it
-    q target .on event-name, query, handler
-    -> q target .off event-name, query, handler
-
 # Session
 require! 'socket.io-client': socket-io
 require! \rivulet
+require! \wire
 if config.env
   socket = socket-io "http://session.#{config.env}.copsforhire.com"
 else
   socket = socket-io!
-window.$session = session = rivulet socket, \session
+
+socket.on \session-validation, ->
+  warn \Validation, it.0, '\n', JSON.stringify(it.1, null, 2)
+
+window.session = JSON.parse(session-storage.get-item(\session) or '{}')
+
+session-wire = wire socket: socket, channel: \session, logger: (...args) ->
+  info "#{args.0} %c#{args.1} %c#{JSON.stringify args.2, null, 2}", 'color: #D1843C', 'color: #D23A63'
+session-watchers = {}
+session-wire.observe-all (path, value) ->
+  $set path, value, no-report: true
+  report path, value, undefined
+
+report = (path, value, old-value) ->
+  if is-object(value) or is-array(value)
+    paths = (object-path.list value)
+    if path
+      paths = paths |> map -> "#path.#it"
+    for p in paths
+      for fn in (session-watchers[camelize p] or [])
+        fn $get(p), undefined
+  for fn in (session-watchers[camelize path] or [])
+    fn value, old-value
+
+global.$set = (path, value, options) ->
+  old-value = object-path.get session, (camelize path)
+  if value != old-value
+    object-path.set session, (camelize path), value
+    session-storage.set-item \session, JSON.stringify(session)
+    report path, value, old-value if not options?no-report
+global.$setq = (path, value, options) ->
+  old-value = object-path.get session, (camelize path)
+  if is-undefined old-value
+    $set path, value, options
+global.$push = (path, value, options) ->
+  $set "#path.#{$get(path).length}", value, options
+global.$sset = (path, value) ->
+  $set path, value
+  session-wire.send path, value
+global.$send = (path, value) ->
+  value ?= $get path
+  session-wire.send path, value
+global.$watch = (paths, fn) ->
+  if is-array paths
+    paths |> each (path) ->
+      if !is-undefined(value = $get(path))
+        fn path, value, undefined
+      path = camelize path
+      session-watchers[path] ?= []
+      session-watchers[path].push (value, old-value) -> fn path, value, old-value
+  else
+    if !is-undefined(value = $get(paths))
+      fn value, undefined
+    path = camelize paths
+    session-watchers[path] ?= []
+    session-watchers[path].push fn
+global.$get = (path) ->
+  object-path.get session, (camelize path)
+global.$del = (path) ->
+  old-value = object-path.get session, (camelize path)
+  return if is-undefined old-value
+  object-path.del session, (camelize path)
+  session-storage.set-item \session, JSON.stringify(session)
+  # for fn in (session-watchers[path] or [])
+  #   fn undefined, old-value
+
+# XXX: Provide function to watch undefined
+
 window.$storage = rivulet socket, \storage
-session.logger = (...args) ->
-  if is-object(last args) or is-array(last args)
-    obj = args.pop!
-  args.push JSON.stringify obj
-  info ...args
 $storage.logger = (...args) ->
   if is-object(last args) or is-array(last args)
     obj = args.pop!
-  args.push JSON.stringify obj
+    args.push JSON.stringify obj
   info ...args
 
-if id = session-storage.get-item \id
-  session.set \id, id
-else
-  session.set \noId, true
-# else
-#   session.set \id, \nobody
-session.observe \id, ->
-  if not (session.get \id)
-    return session.set \noId, true
-  # return if (session.get \id) is \nobody
-  session-storage.set-item \id, session.get \id
+$send \id, (session?id or '00000000-0000-0000-0000-000000000000')
 
 window.destroy-session = ->
-  session-storage.remove-item \id
-  session.del \persistent
-  session.del \id
-  for key of session!
-    session.del key
+  for key of session
+    $del key if key is not \route
+  $set \route, ''
+
+$watch \id, ->
+  if it is null
+    destroy-session!
 
 # History
 window.history = require \html5-history-api
@@ -115,37 +165,39 @@ window.go = ->
   if (it == '' or it) and current-route! != it
     info "Routing to: '#it'"
     history.push-state null, null, "/#{it.replace(/\-/g, '/')}"
-# window.route = ->
-#   session.root.set \route, it
-q window .on \load, ->
-  if !(session.get \route) and !(session.get \id)
-    session.set \route, current-route!
 q window .on \popstate, ->
-  session.set \route, current-route!
-session.observe \route, ->
-  go session.get \route
+  $set \route, current-route!
+$watch \route, (route) ->
+  go route
 
 # Disable all form submits
 q document.body .on \submit, \form, false
 
 register-component = (name, component) ->
+  # return if (name not in <[ cfh-root cfh-login cfh-signup cfh-address-input cfh-content cfh-wizard cfh-image-upload cfh-file-upload ]>) and (not /cfh\-inception/.test name) and (not /cfh\-proposal/.test name)
+  info "Registering %c#name", 'color: #B184A1'
   prototype = Object.create HTMLElement.prototype
-  prototype.initialize = ->
-    return if @initialized
-    @initialized = true
-    @local = {}
-    @$on-values = []
+  attribute-queue = []
+  prototype.attached-callback = ->
     @q = q this
+    if parent = (@q.parents() |> find -> it.__olio__)
+      @local = Object.create parent.local
+    else
+      @local = {}
+    @set = (path, value) ->
+      object-path.set @local, (camelize path), value
+    @get = (path)    ->
+      object-path.get @local, (camelize path)
+    @del = (path)    ->
+      object-path.del @local, (camelize path)
     @find = ~> @q.find it
-    @merge = -> session.merge it
-    @revise = -> session it
+    @attr = ~> @q.attr it
     render-state = {}
     @render = ~>
-      info \Rendering, @tag-name
-      locals = q.extend true, @dummy!, session!
-      locals = q.extend true, locals, @local
-      locals = q.extend true, locals, locals.trim
-      html = @view locals
+      info "Rendering #{@tag-name}"
+      data = (extend-new session, @local)
+      html = @view data
+      return if not html.trim!
       html = '<div>' + html + '</div>'
       last-tree = render-state.tree
       render-state.tree = vdom.convert(VNode: vdom.vnode, VText: vdom.vtext)(html)
@@ -155,80 +207,64 @@ register-component = (name, component) ->
           @append-child node.children.0
       else
         vdom.patch this, vdom.diff(last-tree, render-state.tree)
-      @paint session!
-    if @start
-      warn "START no longer merges its return value, update '#{@tag-name}' to use $session.set instead."
-      @start!
-    stream = s.merge (@watch |> map (path) -> (session.observe path).map -> (path): session.get(path))
-    @$on-values.push [ stream, ~>
-      @react session!, it
-      @render!
-    ]
-    stream.on-value (last @$on-values).1
-    @watch = (path, fn) ~>
-      if fn
-        stream = (session.observe path).map -> session.get(path)
-        @$on-values.push [ stream, fn ]
-        stream.on-value (last @$on-values).1
-      else
-        stream = (session.observe path).map -> (path): session.get(path)
-        @$on-values.push [ stream, ~>
-          @react session!, it
-          @render!
-        ]
-        stream.on-value (last @$on-values).1
-    obj-to-pairs @apply! |> each ([k, val]) ~>
-      if not is-array val
-        val = [ val ]
-      for v in val
-        @$on-values.push [ v, ~>
-          if k is \react
-            @react session!, it
-          else
-            session.set (camelize k), it
-        ]
-        v.on-value (last @$on-values).1
-    for key in keys @latch
-      @q.on key, @latch[key] # kids!
-  prototype.attached-callback = ->
-    @initialize!
+    @start!
     @render!
-    @ready session!
-    @paint session!
-  prototype.detached-callback = ->
-    for on-value in @$on-values
-      on-value.0.off-value on-value.1
-  prototype.attribute-changed-callback = (an, o, n) ->
-    return if an is \id
-    @initialize!
-    @trait an, o, n
-    @render!
+    @ready!
+    while attribute-queue.length
+      @q.trigger 'attribute', attribute-queue.shift!
+
+  # prototype.detached-callback = ->
+  prototype.attribute-changed-callback = (name, old-value, new-value) ->
+    if @q
+      @q.trigger 'attribute', [ name, new-value, old-value ]
+    else
+      attribute-queue.push [ name, new-value, old-value ]
 
   prototype <<< do
-    event:           (query, name, transform) -> s.from-child-events this, query, name, transform
-    event-value:     (query, name) -> s.from-child-events this, query, name, -> q it.target .val!
-    value-on-change: (query) -> s.from-child-events this, query, \change, -> q it.target .val!
-    truth-on-click:  (query) -> s.from-child-events this, query, \click, ->
-      return (q event.target .prop \checked) if event.target.type in <[ checkbox radio ]>
-      true
-    action-on-click: (query, action) ->
-      if this[camelize action]
-        s.from-child-events this, query, \click, ~> this[camelize action] session!, it.current-target
+    __olio__: true
+    on: (name, ...args) ->
+      query   = first(args |> filter -> is-string it)
+      options = first(args |> filter -> is-object it) or {}
+      fn      = first(args |> filter -> is-function it)
+      if fn
+        options.call = fn
+      if name is \attribute
+        options.stop-propagation = true
+      fn = (event, ...data) ~>
+        event.prevent-default! if options.prevent-default
+        event.stop-propagation! if options.stop-propagation
+        value = null
+        if options.value
+          value = options.value
+        if options.extract
+          value = switch options.extract
+          | \target   => q(event.current-target)
+          | \value    => q(event.current-target).val!
+          | \truth    => q(event.current-target).prop \checked
+          | otherwise => q(event.current-target).attr options.extract
+        if data.length
+          value = data
+          if options.extract
+            value = object-path.get data.0, (camelize options.extract)
+        value ?= event
+        if options.as
+          value = switch options.as
+          | \number => Number value
+        info name.to-upper-case!, (query or @tag-name.to-lower-case!), options, value
+        options.set-local  and @set options.set-local, value
+        options.set        and $set options.set, value
+        options.call       and (if is-array value then options.call ...value else options.call value)
+        options.send       and $send options.send, value
+        options.send-local and @send options.send-local
+        options.send-path  and $send options.send-path
+        options.render     and @render!
+      if query
+        @q.on name, query, fn
       else
-        s.from-child-events this, query, \click, -> action
-    action-on-event: (query, name, action) ->
-      if this[camelize action]
-        s.from-child-events this, query, name, ~> this[camelize action] session!, it.current-target
-      else
-        s.from-child-events this, query, name, -> action
-    watch: []
-    dummy: -> {}
-    start: null
-    apply: -> {}
-    react: ->
-    paint: ->
+        @q.on name, fn
+    send: (path) ->
+      $send path, @get path
+    start: ->
     ready: ->
-    trait: ->
-    latch: {}
   prototype <<< component
   document.register-element name, prototype: prototype

@@ -8,7 +8,8 @@ require! \rivulet
 require! \world
 require! \gcloud
 require! \ajv
-require! \object-path : \objectpath
+require! \object-walk
+require! \wire
 
 export watch = [ __filename, \olio.ls, \schema, \react, "#__dirname/../lib" ]
 
@@ -26,14 +27,18 @@ export session = ->*
   # --- Validation ---
   read-schema = (schema) ->
     s = require "./schema/session/#schema"
-    s.additional-properties = false
-    s.required = (s.required |> map -> camelize it) if s.required
+    object-walk s, (v, k, o) ->
+      if k is \required
+        o[k] = (v |> map -> camelize it)
+      if k is \type and v is \object
+        o.additional-properties = false
     s
-  validator = ajv all-errors: true
-  schemas = (glob.sync 'schema/session/*.ls') |> map -> fs.path.basename(it).slice 0, -3
+  validator = ajv all-errors: true, v5: true
+  schemas = (glob.sync 'schema/session/**/*.ls') |> map -> /^schema\/session\/(.*)\.ls$/.exec(it).1
   for schema in schemas
+    $info 'Adding validation', color(207, (schema.replace /\//g, '.'))
     try
-      validator.add-schema (read-schema schema), schema
+      validator.add-schema (read-schema schema), (schema.replace /\//g, '.')
     catch e
       $info 'Error reading schema', schema
       throw e
@@ -58,7 +63,7 @@ export session = ->*
       ((world.path-values-from-object command-tree) |> map -> it.path.replace(/\./g, ' ')).join '\n'
     socket.on \shell, ->
       if path = (it.split(' ') |> map -> it.trim!).join '.'
-        if command = objectpath.get command-tree, path
+        if command = $get command-tree, path
           command!
         else
           socket.emit \shell, 'Unknown command.'
@@ -97,66 +102,65 @@ export session = ->*
       info ...args
       pp obj if obj
     $info 'Connection established'
-    session = rivulet {}, socket, \session, validator
+    session-wire = wire socket: socket, channel: \session, validator: validator, logger: $info
+    session-wire.session-id = null
     storage = rivulet {}, socket, \storage
-    session.$logger = $info
-    session.$observe 'end', ->
+    session-wire.observe 'end', ->
       $info 'Disconnecting'
-      session.$socket.disconnect!
-    glob.sync 'react/**/*' |> each ->
+      socket.disconnect!
+    glob.sync 'react/**/*.ls' |> each (path) ->
       module = new Module
       module.paths = [ "#{process.cwd!}/lib", "#{process.cwd!}/node_modules" ]
       module._compile livescript.compile ([
-        "export $local = {}"
-        "$info = -> $local.info ...&"
-        (fs.read-file-sync it .to-string!)
+        (fs.read-file-sync path .to-string!)
       ].join '\n'), { +bare }
-      module.exports.$local.info = $info
       return if not module.exports.session
       keys module.exports.session |> each (key) ->
-        reactor = module.exports.session[key]
-        reactor.bind module.exports
         $info 'Observing', color(206, key)
-        session.$observe key, co.wrap ->*
+        session-wire.observe key, co.wrap ->*
+          $info "Session reaction '#key'", it
+          module = new Module
+          module.paths = [ "#{process.cwd!}/lib", "#{process.cwd!}/node_modules" ]
+          module._compile livescript.compile ([
+            "module.exports.$var = (key, val) -> eval \"$\#key = val\""
+            (fs.read-file-sync path .to-string!)
+          ].join '\n'), { +bare }
           validation = {}
-          for path in (session.$validation-paths |> filter -> //^#{key}//.test it)
-            objectpath.set validation, path, (objectpath.get session.$validation, path)
-          if true #Obj.empty validation
-            $info "Session reaction '#key'", it
-            tx = yield world.transaction!
-            tx.$info = $info
-            try
-              yield reactor tx, session, it
-              yield tx.commit!
-            catch e
-              info e
-              yield tx.rollback!
-          else
-            $info "Session reaction '#key' validation fault:", validation
-    session.$observe 'no-id', co.wrap (id) ->*
-      info \NO-ID-OBSERVED
-      session.persistent = false
-    session.$observe 'id', co.wrap (id) ->*
-      $info 'Session Id', id
+          sends = []
+          tx = yield world.transaction!
+          tx.$info = $info
+          module.exports.$var \info, $info
+          module.exports.$var \world, tx
+          module.exports.$var \send, (path, value) -> sends.push [ path, value ]
+          module.exports.$var \invalidate, session-wire.invalidate
+          try
+            if session-wire.session-id
+              session = yield tx.get session-wire.session-id
+            else
+              session = yield tx.save \session, {}
+              sends.push [ \id, session.id ]
+              info \NEW-SESSION, session
+            module.exports.$var \session, session
+            if session.person
+              module.exports.$var \person, (yield tx.get session.person)
+            yield module.exports.session[key] it
+            yield tx.commit!
+          catch e
+            yield tx.rollback!
+            throw e
+          session-wire.session-id = session.id
+          for s in sends
+            session-wire.send s.0, s.1
+    session-wire.observe 'id', co.wrap (id) ->*
       if id
-        if not session.persistent
-          record = yield world.get id
-          if record
-            $info 'Loading session', record
-            session.persistent = true
-            session <<< record
-          else
-            delete session.id
-    session.$observe 'route', co.wrap (route) ->*
-      if (not session.persistent) and session.route and session.route not in <[ login signup]>
-        session.route = ''
-    session.$observe '', debounce 300, co.wrap ->*
-      return if not session.persistent
-      yield world.save \session, session
-      if shell.session-paths
-        paths = world.path-values-from-object(session.$get!) |> map -> it.path
-        shell.session-paths = unique shell.session-paths ++ paths
-      # $info 'Session saved', session.$get!
+        if record = yield world.get id
+          session-wire.send \id, id
+          session-wire.session-id = id
+        else
+          session-wire.send \id, null
+          session-wire.session-id = null
+      else
+        session.send \route, ''
     storage.$logger = $info
     storage.$observe '', ->
       (keys storage) |> each (key) ->
@@ -175,8 +179,7 @@ export session = ->*
               info error if error
               file.set-metadata content-type: type, (error) ->
                 info error if error
-                session.storage ?= {}
-                session.storage[key] = "#{olio.config.gcloud.bucket}.storage.googleapis.com/#id"
+                session-wire.send "storage.#key", id
 
 export shell = ->*
   require! \readline
