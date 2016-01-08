@@ -101,15 +101,12 @@ global.$set = (path, value, options) ->
     object-path.set session, (camelize path), value
     session-storage.set-item \session, JSON.stringify(session)
     report path, value, old-value if not options?no-report
-
 global.$setq = (path, value, options) ->
   old-value = object-path.get session, (camelize path)
   if is-undefined old-value
     $set path, value, options
-
 global.$push = (path, value, options) ->
   $set "#path.#{$get(path).length}", value, options
-
 global.$sset = (path, value) ->
   $set path, value
   session-wire.send path, value
@@ -137,8 +134,10 @@ global.$del = (path) ->
   return if is-undefined old-value
   object-path.del session, (camelize path)
   session-storage.set-item \session, JSON.stringify(session)
-  for fn in (session-watchers[path] or [])
-    fn undefined, old-value
+  # for fn in (session-watchers[path] or [])
+  #   fn undefined, old-value
+
+# XXX: Provide function to watch undefined
 
 window.$storage = rivulet socket, \storage
 $storage.logger = (...args) ->
@@ -229,6 +228,8 @@ register-component = (name, component) ->
       fn      = first(args |> filter -> is-function it)
       if fn
         options.call = fn
+      if name is \attribute
+        options.stop-propagation = true
       fn = (event, ...data) ~>
         event.prevent-default! if options.prevent-default
         event.stop-propagation! if options.stop-propagation
