@@ -161,6 +161,11 @@ window.destroy-session = ->
     delete session[key]
   session-storage.set-item \session, JSON.stringify(session)
   $send \id, '00000000-0000-0000-0000-000000000000'
+$watch \id, ->
+  if it is null
+    for key in keys session
+      delete session[key]
+
 
 # History
 window.history = require \html5-history-api
@@ -172,7 +177,6 @@ window.go = ->
     history.push-state null, null, "/#{it.replace(/\-/g, '/')}"
 q window .on \popstate, ->
   $set \route, current-route!
-
 
 $send \id, (session?id or '00000000-0000-0000-0000-000000000000')
 
