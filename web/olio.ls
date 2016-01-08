@@ -200,7 +200,7 @@ register-component = (name, component) ->
     @del = (path)    ->
       object-path.del @local, (camelize path)
     @push = (path, value) ->
-      @set "#path.#{$get(path).length}", value
+      @set "#path.#{@get(path).length}", value
     @find = ~> @q.find it
     @attr = ~> @q.attr it
     render-state = {}
