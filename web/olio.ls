@@ -90,10 +90,14 @@ report = (path, value, old-value) ->
     if path
       paths = paths |> map -> "#path.#it"
     for p in paths
-      for fn in (session-watchers[camelize p] or [])
-        fn $get(p), undefined
-  for fn in (session-watchers[camelize path] or [])
-    fn value, old-value
+      info '$on:', p, value, old-value
+      for watcher in (session-watchers[camelize p] or [])
+        watcher.fn $get(p), undefined if watcher.fn
+        watcher.options.render.render! if watcher.options.render
+  info '$on: ', path, value, old-value
+  for watcher in (session-watchers[camelize path] or [])
+    watcher.fn value, old-value if watcher.fn
+    watcher.options.render.render! if watcher.options.render
 
 global.$set = (path, value, options) ->
   old-value = object-path.get session, (camelize path)
@@ -113,31 +117,35 @@ global.$sset = (path, value) ->
 global.$send = (path, value) ->
   value ?= $get path
   session-wire.send path, value
-global.$watch = (paths, fn) ->
+global.$on = (paths, ...args) ->
+  options = first(args |> filter -> is-object it) or {}
+  fn      = first(args |> filter -> is-function it)
   if is-array paths
     paths |> each (path) ->
-      if !is-undefined(value = $get(path))
+      if !is-undefined(value = $get(path)) and fn
         fn path, value, undefined
+        options.render.render! if options.render
       path = camelize path
       session-watchers[path] ?= []
-      session-watchers[path].push (value, old-value) -> fn path, value, old-value
+      session-watchers[path].push fn: (fn and ((value, old-value) -> fn path, value, old-value)), options: options
   else
-    if !is-undefined(value = $get(paths))
+    if !is-undefined(value = $get(paths)) and fn
       fn value, undefined
+      options.render.render! if options.render
     path = camelize paths
     session-watchers[path] ?= []
-    session-watchers[path].push fn
+    session-watchers[path].push fn: fn, options: options
+global.$watch = (...args) ->
+  warn '$watch is deprecated, use $on'
+  $on ...args
 global.$get = (path) ->
   object-path.get session, (camelize path)
-global.$del = (path) ->
+global.$del = (path, options) ->
   old-value = object-path.get session, (camelize path)
   return if is-undefined old-value
   object-path.del session, (camelize path)
   session-storage.set-item \session, JSON.stringify(session)
-  # for fn in (session-watchers[path] or [])
-  #   fn undefined, old-value
-
-# XXX: Provide function to watch undefined
+  report path, undefined, old-value if not options?no-report
 
 window.$storage = rivulet socket, \storage
 $storage.logger = (...args) ->
@@ -149,13 +157,10 @@ $storage.logger = (...args) ->
 $send \id, (session?id or '00000000-0000-0000-0000-000000000000')
 
 window.destroy-session = ->
-  for key of session
-    $del key if key is not \route
-  $set \route, ''
-
-$watch \id, ->
-  if it is null
-    destroy-session!
+  for key in keys session
+    delete session[key]
+  session-storage.set-item \session, JSON.stringify(session)
+  $send \id, '00000000-0000-0000-0000-000000000000'
 
 # History
 window.history = require \html5-history-api
