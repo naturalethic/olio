@@ -33,8 +33,10 @@ module.exports = (options = {}) ->
   wire =
     cache: {}
     send: (path, value) ->
-      logger 'Session sending', path, value if logger
+      if value?$get
+        value = value.$get!
       object-path.set wire.cache, path, value
+      logger 'Session sending', path, value if logger
       socket.emit channel, [ path, value ]
     observe: (paths, fn) ->
       if not is-array paths
