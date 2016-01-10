@@ -45,7 +45,7 @@
     "node-static": "^0.7.7",
     "node-uuid": "^1.4.7",
     "nodemailer": "^1.10.0",
-    "object-path": "github:naturalethic/object-path#list",
+    "object-path": "github:naturalethic/object-path",
     "object-walk": "^0.1.1",
     "optimist": "^0.6.1",
     "prelude-ls": "^1.1.2",
