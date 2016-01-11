@@ -108,6 +108,8 @@ export test = ->*
         , state.timeout-seconds * 1000
         socket.on \disconnect, ->
           clear-timeout state.timeout
+          if invalid = first (messages |> filter -> it.type is \invalid)
+            state.fail = 'Unhandled validation faults'
           if state.fail
             info color(88, state.fail)
             state.all-fails.push path: path, name: (dasherize name), message: state.fail
