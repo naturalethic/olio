@@ -139,7 +139,7 @@ export session = ->*
             else
               session = yield tx.save \session, {}
               sends.push [ \id, session.id ]
-              info \NEW-SESSION, session
+              $info 'New session', session.id
             module.exports.$var \session, session
             if session.person
               module.exports.$var \person, (yield tx.get session.person)
