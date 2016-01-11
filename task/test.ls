@@ -10,12 +10,16 @@ require! \wire
 
 export test = ->*
   state = {}
+  state.all-fails = []
   yield world.reset! unless olio.option.keep
   run-module = (path) ->*
     module = new Module
     module.paths = [ "#{process.cwd!}/lib", "#{process.cwd!}/node_modules", "#__dirname/../node_modules" ]
     source = fs.read-file-sync path, 'utf8'
-    compiled = livescript.compile source, { +bare, -header, map: 'linked', filename: path }
+    compiled = livescript.compile ([
+      "module.exports.$var = (key, val) -> eval \"$\#key = val\""
+      source
+    ].join '\n'), { +bare, -header, map: 'linked', filename: path }
     map-consumer = new source-map.SourceMapConsumer compiled.map.to-string!
     module._compile compiled.code
     run = (name) ->*
@@ -31,16 +35,23 @@ export test = ->*
         session = wire socket: socket, channel: \session
         storage = rivulet {}, socket, \storage
         delete state.fail
-        state.timeout-seconds = 10
+        state.timeout-seconds = 3
         observers = []
-        yield module.exports[name] world, session, (path, fn) -> observers.push path: path, fn: fn
         messages = []
+        module.exports.$var \react, (path, fn) -> observers.push path: path, fn: fn
+        module.exports.$var \world, world
+        module.exports.$var \send, session.send
+        module.exports.$var \timeout, -> state.timeout-seconds = it
+        yield module.exports[name]!
         session.observe-all co.wrap (path, value) ->*
           messages.push path: path, value: value
           yield run-next-observer!
         run-next-observer = ->*
           return if state.running or state.fail
-          return if not (messages.length and observers.length)
+          if empty observers
+            return session.send \end, true
+          if empty messages
+            return
           message = messages.shift!
           observer = observers.shift!
           if message.path != observer.path
@@ -80,6 +91,7 @@ export test = ->*
           clear-timeout state.timeout
           if state.fail
             info color(88, state.fail)
+            state.all-fails.push path: path, name: name, message: state.fail
           else
             info color(118, 'Success')
           run-next!
@@ -102,6 +114,13 @@ export test = ->*
           yield run-module paths.shift!
         else
           yield world.end!
+          if state.all-fails.length
+            info ''
+            info color(125, "Total failures: #{state.all-fails.length}")
+            info color(52, '=' * process.stdout.columns)
+            for fail in state.all-fails
+              info color(125, "#{fail.path}: #{fail.name} - #{fail.message}")
+            info ''
     run-next!
   paths = (require './test/seed.ls') |> map -> "test/#it.ls"
   if olio.task.1
