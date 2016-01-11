@@ -38,8 +38,9 @@ export test = ->*
         state.timeout-seconds = 3
         observers = []
         messages = []
-        module.exports.$var \session, (path, fn) -> observers.push path: path, fn: fn, type: \session
-        module.exports.$var \invalid, (path, fn) -> observers.push path: path, fn: fn, type: \validation
+        local = []
+        module.exports.$var \session, (path, fn) -> observers.push path: path, fn: (fn and fn.bind local), type: \session
+        module.exports.$var \invalid, (path, fn) -> observers.push path: path, fn: (fn and fn.bind local), type: \invalid
         module.exports.$var \world, world
         module.exports.$var \send, session.send
         module.exports.$var \timeout, -> state.timeout-seconds = it
@@ -48,8 +49,9 @@ export test = ->*
           messages.push path: path, value: value, type: \session
           yield run-next-observer!
         session.observe-all-validation co.wrap (path, value) ->*
-          messages.push path: path, value: value, type: \validation
+          messages.push path: path, value: value, type: \invalid
           yield run-next-observer!
+        locals = {}
         run-next-observer = ->*
           return if state.running or state.fail
           if empty observers
@@ -59,14 +61,27 @@ export test = ->*
           message = messages.shift!
           observer = observers.shift!
           if message.path != observer.path or message.type != observer.type
-            state.fail = "Received [#{message.type}:#{message.path}] when the next observed was [#{observer.type}:#{observer.path}]"
+            state.fail = [
+              color 88 'Received '
+              color 216 '['
+              color 214 message.type
+              color 216 ':'
+              color 214 dasherize message.path
+              color 216 ']'
+              color 88 ' when the next observed was '
+              color 216 '['
+              color 214 observer.type
+              color 216 ':'
+              color 214 dasherize observer.path
+              color 216 ']'
+            ].join ''
             session.send \end, true
             return
           state.running = true
           info color(51, observer.path)
           info color(238, '-' * process.stdout.columns)
           try
-            yield observer.fn message.value
+            yield observer.fn message.value if observer.fn
           catch it
             if it.name is \AssertionError
               trace = stack-trace.parse it
@@ -95,7 +110,7 @@ export test = ->*
           clear-timeout state.timeout
           if state.fail
             info color(88, state.fail)
-            state.all-fails.push path: path, name: name, message: state.fail
+            state.all-fails.push path: path, name: (dasherize name), message: state.fail
           else
             info color(118, 'Success')
           run-next!
@@ -120,10 +135,10 @@ export test = ->*
           yield world.end!
           if state.all-fails.length
             info ''
-            info color(125, "Total failures: #{state.all-fails.length}")
+            info color(88, "Total failures: #{state.all-fails.length}")
             info color(52, '=' * process.stdout.columns)
             for fail in state.all-fails
-              info color(125, "#{fail.path}: #{fail.name} - #{fail.message}")
+              info color(124, "#{fail.path}: #{fail.name} - #{fail.message}")
             info ''
     run-next!
   paths = (require './test/seed.ls') |> map -> "test/#it.ls"
