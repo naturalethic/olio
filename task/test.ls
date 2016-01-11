@@ -38,13 +38,17 @@ export test = ->*
         state.timeout-seconds = 3
         observers = []
         messages = []
-        module.exports.$var \react, (path, fn) -> observers.push path: path, fn: fn
+        module.exports.$var \session, (path, fn) -> observers.push path: path, fn: fn, type: \session
+        module.exports.$var \invalid, (path, fn) -> observers.push path: path, fn: fn, type: \validation
         module.exports.$var \world, world
         module.exports.$var \send, session.send
         module.exports.$var \timeout, -> state.timeout-seconds = it
         yield module.exports[name]!
         session.observe-all co.wrap (path, value) ->*
-          messages.push path: path, value: value
+          messages.push path: path, value: value, type: \session
+          yield run-next-observer!
+        session.observe-all-validation co.wrap (path, value) ->*
+          messages.push path: path, value: value, type: \validation
           yield run-next-observer!
         run-next-observer = ->*
           return if state.running or state.fail
@@ -54,8 +58,8 @@ export test = ->*
             return
           message = messages.shift!
           observer = observers.shift!
-          if message.path != observer.path
-            state.fail = "Received '#{message.path}' when the next observed was '#{observer.path}'"
+          if message.path != observer.path or message.type != observer.type
+            state.fail = "Received [#{message.type}:#{message.path}] when the next observed was [#{observer.type}:#{observer.path}]"
             session.send \end, true
             return
           state.running = true
@@ -69,7 +73,7 @@ export test = ->*
               info "#{color(124, it.name)} #{color(88, it.message)}"
               position = map-consumer.original-position-for(line: trace.0.line-number, column: trace.0.column-number)
               try
-                info "#{color(241, position.source)}:#{color(226, position.line.to-string!)}", color(158, source.split('\n')[position.line - 1].trim!)
+                info "#{color(241, position.source)}:#{color(226, (position.line - 1).to-string!)}", color(158, source.split('\n')[position.line - 2].trim!)
               if is-array(it.expected) or is-object(it.expected)
                 info color(220, 'Expected')
                 pp it.expected

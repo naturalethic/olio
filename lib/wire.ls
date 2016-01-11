@@ -8,6 +8,7 @@ module.exports = (options = {}) ->
   logger    = options?logger
   observers = {}
   observers-all = []
+  validation-observers-all = []
   socket.on channel, ([path, value]) ->
     logger 'Session received', path, value if logger
     validation = {}
@@ -30,6 +31,10 @@ module.exports = (options = {}) ->
     else
       logger 'Validation fault', path, value, validation if logger
       socket.emit "#{channel}-validation", [ path, validation ]
+  socket.on "#{channel}-validation", ([path, value]) ->
+    logger 'Validation received', path, value if logger
+    for fn in validation-observers-all
+      fn path, value
   wire =
     cache: {}
     send: (path, value) ->
@@ -47,11 +52,14 @@ module.exports = (options = {}) ->
         observers[path].push fn
     observe-all: (fn) ->
       observers-all.push fn
+    observe-all-validation: (fn) ->
+      validation-observers-all.push fn
     forget: (path, fn) ->
       path = camelize path
       observers[path] = reject (-> it is fn), observers[path]
     invalidate: (path, validation) ->
       obj = {}
       object-path.set(obj, path, validation)
+      logger 'Validation fault', path, obj if logger
       socket.emit "#{channel}-validation", [ path, obj ]
 
