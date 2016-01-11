@@ -19,12 +19,10 @@ export test = ->*
     map-consumer = new source-map.SourceMapConsumer compiled.map.to-string!
     module._compile compiled.code
     run = (name) ->*
-      info name
       return run-next! if name.0 is \$
       info color(239, '=' * process.stdout.columns)
       info color(226, path), color(227, \:), color(214, dasherize name)
       info color(238, '-' * process.stdout.columns)
-      info path
       if /^test\/web/.test path
         agent = nightmare show: true, width: (olio.config.test?web?width or 1000), height: (olio.config.test?web?height or 800), web-preferences: { partition: \nopersist }
         yield module.exports[name] agent
@@ -35,36 +33,45 @@ export test = ->*
         delete state.fail
         state.timeout-seconds = 10
         observers = []
-        yield module.exports[name] world, session, (path, fn) -> observers.push [ path, fn ]
+        yield module.exports[name] world, session, (path, fn) -> observers.push path: path, fn: fn
+        messages = []
         session.observe-all co.wrap (path, value) ->*
-          return if state.fail
-          if observers.0
-            observer = observers.shift!
-            if observer.0 != path
-              state.fail = "Unexpected path '#path' should be '#{observer.0}'"
-              return session.send \end, true
-            info color(51, observer.0)
-            info color(238, '-' * process.stdout.columns)
-            try
-              yield observer.1 value
-            catch it
-              if it.name is \AssertionError
-                trace = stack-trace.parse it
-                info "#{color(124, it.name)} #{color(88, it.message)}"
-                position = map-consumer.original-position-for(line: trace.0.line-number, column: trace.0.column-number)
-                try
-                  info "#{color(241, position.source)}:#{color(226, position.line.to-string!)}", color(158, source.split('\n')[position.line - 1].trim!)
-                if is-array(it.expected) or is-object(it.expected)
-                  info color(220, 'Expected')
-                  pp it.expected
-                  info ''
-                  info color(222, 'Actual')
-                  pp it.actual
-                  info ''
-                state.fail = 'Fail'
-              else
-                state.fail = color(88, it.to-string!)
-              session.send \end, true
+          messages.push path: path, value: value
+          yield run-next-observer!
+        run-next-observer = ->*
+          return if state.running or state.fail
+          return if not (messages.length and observers.length)
+          message = messages.shift!
+          observer = observers.shift!
+          if message.path != observer.path
+            state.fail = "Received '#{message.path}' when the next observed was '#{observer.path}'"
+            session.send \end, true
+            return
+          state.running = true
+          info color(51, observer.path)
+          info color(238, '-' * process.stdout.columns)
+          try
+            yield observer.fn message.value
+          catch it
+            if it.name is \AssertionError
+              trace = stack-trace.parse it
+              info "#{color(124, it.name)} #{color(88, it.message)}"
+              position = map-consumer.original-position-for(line: trace.0.line-number, column: trace.0.column-number)
+              try
+                info "#{color(241, position.source)}:#{color(226, position.line.to-string!)}", color(158, source.split('\n')[position.line - 1].trim!)
+              if is-array(it.expected) or is-object(it.expected)
+                info color(220, 'Expected')
+                pp it.expected
+                info ''
+                info color(222, 'Actual')
+                pp it.actual
+                info ''
+              state.fail = 'Fail'
+            else
+              state.fail = color(88, it.to-string!)
+            session.send \end, true
+          state.running = false
+          yield run-next-observer!
         state.timeout = set-timeout ->
           session.send \end, true
           state.fail = 'Timed out'
