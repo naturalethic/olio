@@ -85,7 +85,7 @@ session-wire.observe-all (path, value) ->
   report path, value, undefined
 
 report-match = (path, search) ->
-  //#{search.replace(/\./g, '\\.').replace(/\*/g, '\\d+')}//.test path
+  //^#{search.replace(/\./g, '\\.').replace(/\*/g, '\\d+')}$//.test path
 
 report = (path, value, old-value) ->
   # XXX: Refactor and perf
