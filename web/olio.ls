@@ -94,13 +94,15 @@ report = (path, value, old-value) ->
     if path
       paths = paths |> map -> "#path.#it"
     for p in paths
-      info '$on:', p, value, old-value
       for watchers in (keys session-watchers |> (filter -> report-match (camelize p), it) |> map -> session-watchers[it])
+        if not empty watchers
+          info '$on:', p, value, old-value
         for watcher in watchers
           watcher.fn $get(p), undefined if watcher.fn
           watcher.options.render?render!
-  info '$on:', path, value, old-value
   for watchers in (keys session-watchers |> (filter -> report-match (camelize path), it) |> map -> session-watchers[it])
+    if not empty watchers
+      info '$on:', path, value, old-value
     for watcher in watchers
       watcher.fn value, old-value if watcher.fn
       watcher.options.render?render!
