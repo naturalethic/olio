@@ -34,8 +34,25 @@ export test = ->*
         socket = socket-io 'http://localhost:8000', force-new: true
         session = wire socket: socket, channel: \session
         storage = rivulet {}, socket, \storage
-        delete state.fail
         state.timeout-seconds = 3
+        state.timeout = set-timeout ->
+          session.send \end, true
+          state.fail = 'Timed out'
+        , state.timeout-seconds * 1000
+        socket.on \disconnect, ->
+          clear-timeout state.timeout
+          if invalid = first (messages |> filter -> it.type is \invalid)
+            state.fail = 'Unhandled validation faults'
+          if state.fail
+            info color(88, state.fail)
+            state.all-fails.push path: path, name: (dasherize name), message: state.fail
+          else if state.unimplemented
+            info color(220, 'Unimplemented')
+          else
+            info color(118, 'Success')
+          delete state.fail
+          delete state.unimplemented
+          run-next!
         observers = []
         messages = []
         local = []
@@ -45,6 +62,9 @@ export test = ->*
         module.exports.$var \send, session.send
         module.exports.$var \timeout, -> state.timeout-seconds = it
         yield module.exports[name]!
+        if empty observers
+          state.unimplemented = true
+          return session.send \end, true
         session.observe-all co.wrap (path, value) ->*
           messages.push path: path, value: value, type: \session
           yield run-next-observer!
@@ -102,20 +122,6 @@ export test = ->*
             session.send \end, true
           state.running = false
           yield run-next-observer!
-        state.timeout = set-timeout ->
-          session.send \end, true
-          state.fail = 'Timed out'
-        , state.timeout-seconds * 1000
-        socket.on \disconnect, ->
-          clear-timeout state.timeout
-          if invalid = first (messages |> filter -> it.type is \invalid)
-            state.fail = 'Unhandled validation faults'
-          if state.fail
-            info color(88, state.fail)
-            state.all-fails.push path: path, name: (dasherize name), message: state.fail
-          else
-            info color(118, 'Success')
-          run-next!
     names = keys module.exports
     run-next = co.wrap ->*
       delete state.fail
