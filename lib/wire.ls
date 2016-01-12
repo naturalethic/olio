@@ -26,7 +26,7 @@ module.exports = (options = {}) ->
     if Obj.empty validation
       for fn in observers-all
         fn path, value
-      for fn in (observers[path] or [])
+      for fn in (observers[camelize path] or [])
         fn value, path
     else
       logger 'Validation fault', path, value, validation if logger
