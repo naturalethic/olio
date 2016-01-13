@@ -130,9 +130,11 @@ global.$push = (path, value, options) ->
 global.$sset = (path, value) ->
   $set path, value
   session-wire.send path, value
-global.$send = (path, value) ->
+global.$send = (path, value, as) ->
   value ?= $get path
-  session-wire.send path, value
+  as ?= path
+  session-wire.send as, value
+
 global.$on = (paths, ...args) ->
   options = first(args |> filter -> is-object it) or {}
   fn      = first(args |> filter -> is-function it)
@@ -179,7 +181,7 @@ window.destroy-session = ->
     delete session[key]
   session-storage.set-item \session, JSON.stringify(session)
   $send \id, '00000000-0000-0000-0000-000000000000'
-$watch \id, ->
+$on \id, ->
   if it is null
     for key in keys session
       delete session[key]
@@ -198,7 +200,7 @@ q window .on \popstate, ->
 
 $send \id, (session?id or '00000000-0000-0000-0000-000000000000')
 
-$watch \route, (route) ->
+$on \route, (route) ->
   go route
 
 # Disable all form submits
@@ -288,15 +290,16 @@ register-component = (name, component) ->
         options.set        and $set options.set, value
         options.call       and (if is-array value then options.call ...value else options.call value)
         options.send       and $send options.send, value
-        options.send-local and @send options.send-local
-        options.send-path  and $send options.send-path
+        options.send-local and @send options.send-local, options.send-as
+        options.send-path  and $send options.send-path, undefined, options.send-as
         options.render     and @render!
       if query
         @q.on name, query, fn
       else
         @q.on name, fn
-    send: (path) ->
-      $send path, @get path
+    send: (path, as) ->
+      as ?= path
+      $send as, @get path
     start: ->
     ready: ->
   prototype <<< component
