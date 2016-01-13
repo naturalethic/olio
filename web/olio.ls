@@ -72,9 +72,6 @@ if config.env
 else
   socket = socket-io!
 
-socket.on \session-validation, ->
-  warn \Validation, it.0, '\n', JSON.stringify(it.1, null, 2)
-
 window.session = JSON.parse(session-storage.get-item(\session) or '{}')
 
 session-wire = wire socket: socket, channel: \session, logger: (...args) ->
@@ -83,6 +80,17 @@ session-watchers = {}
 session-wire.observe-all (path, value) ->
   $set path, value, no-report: true
   report path, value, undefined
+window.validation = {}
+session-wire.observe-all-validation (path, value) ->
+  for key in keys(validation)
+    delete validation[key]
+  validation <<< value
+  $set \validation, validation
+  q '.invalid' .remove-class \invalid
+  for [ path, keyword ] in (object-path.list validation |> (filter -> /keyword$/.test it) |> map -> [ /(.*)\.keyword$/.exec(it).1, object-path.get validation, it ])
+    for el in q "[validate='#path']"
+      q(el).add-class \invalid
+      q "[for='#{el.id}']" .add-class \invalid
 
 report-match = (path, search) ->
   //^#{search.replace(/\./g, '\\.').replace(/\*/g, '\\d+')}$//.test path
@@ -150,6 +158,8 @@ global.$watch = (...args) ->
   $on ...args
 global.$get = (path) ->
   object-path.get session, (camelize path)
+global.$has = (path) ->
+  object-path.has session, (camelize path)
 global.$del = (path, options) ->
   old-value = object-path.get session, (camelize path)
   return if is-undefined old-value
