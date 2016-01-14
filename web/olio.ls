@@ -73,6 +73,7 @@ else
   socket = socket-io!
 
 window.session = JSON.parse(session-storage.get-item(\session) or '{}')
+session-cached-id = delete session.id
 
 session-wire = wire socket: socket, channel: \session, logger: (...args) ->
   info "#{args.0} %c#{args.1} %c#{JSON.stringify args.2, null, 2}", 'color: #D1843C', 'color: #D23A63'
@@ -88,9 +89,10 @@ session-wire.observe-all-validation (path, value) ->
   $set \validation, validation
   q '.invalid' .remove-class \invalid
   for [ path, keyword ] in (object-path.list validation |> (filter -> /keyword$/.test it) |> map -> [ /(.*)\.keyword$/.exec(it).1, object-path.get validation, it ])
-    for el in q "[validate='#path']"
+    for el in q "[set='#path']"
       q(el).add-class \invalid
-      q "[for='#{el.id}']" .add-class \invalid
+      el.find 'input' .add-class \invalid
+      el.find 'label' .add-class \invalid
 
 report-match = (path, search) ->
   //^#{search.replace(/\./g, '\\.').replace(/\*/g, '\\d+')}$//.test path
@@ -181,11 +183,11 @@ window.destroy-session = ->
     delete session[key]
   session-storage.set-item \session, JSON.stringify(session)
   $send \id, '00000000-0000-0000-0000-000000000000'
-$on \id, ->
-  if it is null
-    for key in keys session
-      delete session[key]
 
+# $on \id, ->
+#   if it is null
+#     for key in keys session
+#       delete session[key] if key is not \route
 
 # History
 window.history = require \html5-history-api
@@ -198,7 +200,7 @@ window.go = ->
 q window .on \popstate, ->
   $set \route, current-route!
 
-$send \id, (session?id or '00000000-0000-0000-0000-000000000000')
+$send \id, (session-cached-id or '00000000-0000-0000-0000-000000000000')
 
 $on \route, (route) ->
   go route
@@ -233,8 +235,11 @@ register-component = (name, component) ->
     @attr = ~> @q.attr it
     render-state = {}
     @render = ~>
+      return if not @view
       info "Rendering #{@tag-name}"
       data = (extend-new session, @local)
+      data.uuid = -> data._lastuuid = uuid!
+      data.lastuuid = -> data._lastuuid
       html = @view data
       return if not html.trim!
       html = '<div>' + html + '</div>'
@@ -246,6 +251,7 @@ register-component = (name, component) ->
           @append-child node.children.0
       else
         vdom.patch this, vdom.diff(last-tree, render-state.tree)
+      @find 'form' .attr \novalidate, ''
     @start!
     @render!
     @ready!

@@ -133,13 +133,16 @@ export session = ->*
           module.exports.$var \world, tx
           module.exports.$var \send, (path, value) -> sends.push [ path, value ]
           module.exports.$var \invalidate, session-wire.invalidate
+          if key is \id
+            session-wire.session-id = it
           try
             if session-wire.session-id
               session = yield tx.get session-wire.session-id
-            else
-              session = yield tx.save \session, {}
-              sends.push [ \id, session.id ]
+            if not session
+              session = yield tx.save \session
               $info 'New session', session.id
+              session-wire.session-id = session.id
+            session.ip = socket.handshake.address
             module.exports.$var \session, session
             if session.person
               module.exports.$var \person, (yield tx.get session.person)
@@ -151,16 +154,6 @@ export session = ->*
           session-wire.session-id = session.id
           for s in sends
             session-wire.send s.0, s.1
-    session-wire.observe 'id', co.wrap (id) ->*
-      if id
-        if record = yield world.get id
-          session-wire.send \id, id
-          session-wire.session-id = id
-        else
-          session-wire.send \id, null
-          session-wire.session-id = null
-      else
-        session.send \route, ''
     storage.$logger = $info
     storage.$observe '', ->
       (keys storage) |> each (key) ->
