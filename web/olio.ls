@@ -219,6 +219,10 @@ register-component = (name, component) ->
       @local = {}
     @set = (path, value) ->
       object-path.set @local, (camelize path), value
+    @setq = (path, value) ->
+      old-value = object-path.get @local, (camelize path)
+      if is-undefined old-value
+        @set path, value
     @get = (path)    ->
       object-path.get @local, (camelize path)
     @del = (path)    ->
