@@ -231,6 +231,7 @@ register-component = (name, component) ->
     @render = ~>
       return if not @view
       info "Rendering #{@tag-name}"
+      @original-content = @innerHTML
       data = (extend-new session, @local)
       data.uuid = -> data._lastuuid = uuid!
       data.lastuuid = -> data._lastuuid
@@ -240,6 +241,7 @@ register-component = (name, component) ->
       last-tree = render-state.tree
       render-state.tree = vdom.convert(VNode: vdom.vnode, VText: vdom.vtext)(html)
       if not last-tree
+        @innerHTML = ''
         node = vdom.create-element(render-state.tree)
         while node.children.length
           @append-child node.children.0
@@ -248,7 +250,7 @@ register-component = (name, component) ->
       @find 'form' .attr \novalidate, ''
     @start!
     @render!
-    @ready!
+    @q.trigger \ready, this
     while attribute-queue.length
       @q.trigger 'attribute', attribute-queue.shift!
 
