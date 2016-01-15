@@ -73,6 +73,7 @@ else
   socket = socket-io!
 
 window.session = JSON.parse(session-storage.get-item(\session) or '{}')
+session-cached-id = delete session.id
 
 session-wire = wire socket: socket, channel: \session, logger: (...args) ->
   info "#{args.0} %c#{args.1} %c#{JSON.stringify args.2, null, 2}", 'color: #D1843C', 'color: #D23A63'
@@ -176,11 +177,6 @@ window.destroy-session = ->
     delete session[key]
   session-storage.set-item \session, JSON.stringify(session)
   $send \id, '00000000-0000-0000-0000-000000000000'
-$on \id, ->
-  if it is null
-    for key in keys session
-      delete session[key]
-
 
 # History
 window.history = require \html5-history-api
@@ -193,7 +189,7 @@ window.go = ->
 q window .on \popstate, ->
   $set \route, current-route!
 
-$send \id, (session?id or '00000000-0000-0000-0000-000000000000')
+$send \id, (session-cached-id or '00000000-0000-0000-0000-000000000000')
 
 $on \route, (route) ->
   go route
@@ -228,8 +224,11 @@ register-component = (name, component) ->
     @attr = ~> @q.attr it
     render-state = {}
     @render = ~>
+      return if not @view
       info "Rendering #{@tag-name}"
       data = (extend-new session, @local)
+      data.uuid = -> data._lastuuid = uuid!
+      data.lastuuid = -> data._lastuuid
       html = @view data
       return if not html.trim!
       html = '<div>' + html + '</div>'
@@ -241,6 +240,7 @@ register-component = (name, component) ->
           @append-child node.children.0
       else
         vdom.patch this, vdom.diff(last-tree, render-state.tree)
+      @find 'form' .attr \novalidate, ''
     @start!
     @render!
     @ready!
