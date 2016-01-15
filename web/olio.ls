@@ -172,11 +172,13 @@ $storage.logger = (...args) ->
     args.push JSON.stringify obj
   info ...args
 
-window.destroy-session = ->
-  for key in keys session
-    delete session[key]
+window.destroy-session = (new-id) ->
+  window.session = {}
   session-storage.set-item \session, JSON.stringify(session)
-  $send \id, '00000000-0000-0000-0000-000000000000'
+  if new-id
+    session.id = new-id
+  else
+    $send \id, '00000000-0000-0000-0000-000000000000'
 
 # History
 window.history = require \html5-history-api
@@ -190,6 +192,9 @@ q window .on \popstate, ->
   $set \route, current-route!
 
 $send \id, (session-cached-id or '00000000-0000-0000-0000-000000000000')
+$on \id, ->
+  if it != session-cached-id
+    destroy-session it
 
 $on \route, (route) ->
   go route
