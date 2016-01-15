@@ -17,6 +17,8 @@ window <<< do
   is-undefined: -> typeof! it is \Undefined
   clone: require 'clone'
 
+Array::contains = -> @index-of(it) >= 0
+
 window.uuid = require('uuid').v4
 
 global.debounce = ->
@@ -55,14 +57,6 @@ global.extend-new = (...args) ->
 require 'webcomponents.js/CustomElements'
 window.jade = require 'jade/runtime'
 
-vdom =
-  convert:        require 'html-to-vdom'
-  vnode:          require 'virtual-dom/vnode/vnode'
-  vtext:          require 'virtual-dom/vnode/vtext'
-  diff:           require 'virtual-dom/diff'
-  patch:          require 'virtual-dom/patch'
-  create-element: require 'virtual-dom/create-element'
-
 # Session
 require! 'socket.io-client': socket-io
 require! \rivulet
@@ -93,6 +87,9 @@ session-wire.observe-all-validation (path, value) ->
       q(el).add-class \invalid
       el.find 'input' .add-class \invalid
       el.find 'label' .add-class \invalid
+    for el in q "[validation-text='#path']"
+      q(el).add-class \invalid
+      q(el).text object-path.get validation, "#path.message"
 
 report-match = (path, search) ->
   //^#{search.replace(/\./g, '\\.').replace(/\*/g, '\\d+')}$//.test path
@@ -208,6 +205,8 @@ $on \route, (route) ->
 # Disable all form submits
 q document.body .on \submit, \form, false
 
+upgrade-dom = debounce 100, -> component-handler.upgrade-dom!
+
 register-component = (name, component) ->
   # return if (name not in <[ cfh-root cfh-login cfh-signup cfh-address-input cfh-content cfh-wizard cfh-image-upload cfh-file-upload ]>) and (not /cfh\-inception/.test name) and (not /cfh\-proposal/.test name)
   info "Registering %c#name", 'color: #B184A1'
@@ -236,25 +235,18 @@ register-component = (name, component) ->
     render-state = {}
     @render = ~>
       return if not @view
+      @original-content = @innerHTML.trim!
       info "Rendering #{@tag-name}"
       data = (extend-new session, @local)
       data.uuid = -> data._lastuuid = uuid!
       data.lastuuid = -> data._lastuuid
       html = @view data
-      return if not html.trim!
-      html = '<div>' + html + '</div>'
-      last-tree = render-state.tree
-      render-state.tree = vdom.convert(VNode: vdom.vnode, VText: vdom.vtext)(html)
-      if not last-tree
-        node = vdom.create-element(render-state.tree)
-        while node.children.length
-          @append-child node.children.0
-      else
-        vdom.patch this, vdom.diff(last-tree, render-state.tree)
+      @innerHTML = html
+      upgrade-dom!
       @find 'form' .attr \novalidate, ''
     @start!
     @render!
-    @ready!
+    @q.trigger \ready, this
     while attribute-queue.length
       @q.trigger 'attribute', attribute-queue.shift!
 
@@ -289,6 +281,7 @@ register-component = (name, component) ->
           | otherwise => q(event.current-target).attr options.extract
         if data.length
           value = data
+          value = data.0 if data.length == 1
           if options.extract
             value = object-path.get data.0, (camelize options.extract)
         value ?= event
