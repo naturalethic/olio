@@ -285,6 +285,7 @@ register-component = (name, component) ->
           | otherwise => q(event.current-target).attr options.extract
         if data.length
           value = data
+          value = data.0 if data.length == 1
           if options.extract
             value = object-path.get data.0, (camelize options.extract)
         value ?= event
