@@ -86,6 +86,7 @@ stitch = (paths) ->
       fs.write-file-sync "tmp/component/#name.styl", style.join '\n'
   catch e
     info e.stack
+    node-notifier.notify title: 'Olio Error', message: e.message
   fs.write-file-sync 'tmp/components.json', JSON.stringify(components)
   script = [livescript.compile([
     "window.config = #{JSON.stringify olio.config.web};"
@@ -129,13 +130,16 @@ setup-bundler = ->*
   }
   bundler = watchify b
   bundle = ->
-    $info \Browserifying, 'public/index.js'
-    bundler.bundle (err, buf) ->
-      return info err if err
-      fs.write-file-sync 'public/index.js', buf
-      info color(123, "--- Done in #{(Date.now! - bundler.time) / 1000} seconds ---")
-      node-notifier.notify title: \Olio, message: "Site Rebuilt: #{(Date.now! - bundler.time) / 1000}s"
-      process.exit 0 if olio.option.exit
+    try
+      $info \Browserifying, 'public/index.js'
+      bundler.bundle (err, buf) ->
+        return info err if err
+        fs.write-file-sync 'public/index.js', buf
+        info color(123, "--- Done in #{(Date.now! - bundler.time) / 1000} seconds ---")
+        node-notifier.notify title: \Olio, message: "Site Rebuilt: #{(Date.now! - bundler.time) / 1000}s"
+        process.exit 0 if olio.option.exit
+    catch e
+      node-notifier.notify title: 'Olio Error', message: e.message
   bundler.on \update, bundle
   bundler.build = ->
     paths = unique bundler.build.paths
@@ -149,6 +153,7 @@ setup-bundler = ->*
       stitch paths
     catch e
       info e.stack
+      node-notifier.notify title: 'Olio Error', message: e.message
     bundle! if not bundler._bundled
   bundler.build.paths = []
   bundler
