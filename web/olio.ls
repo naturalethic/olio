@@ -95,25 +95,20 @@ session-wire.observe-all-validation (path, value) ->
 report-match = (path, search) ->
   //^#{search.replace(/\./g, '\\.').replace(/\*/g, '\\d+')}$//.test path
 
-report = (path, value, old-value) ->
-  # XXX: Refactor and perf
-  if is-object(value) or is-array(value)
-    paths = (object-path.list value)
-    if path
-      paths = paths |> map -> "#path.#it"
-    for p in paths
-      for watchers in (keys session-watchers |> (filter -> report-match (camelize p), it) |> map -> session-watchers[it])
-        if not empty watchers
-          info '$on:', p, value, old-value
-        for watcher in watchers
-          watcher.fn $get(p), undefined if watcher.fn
-          watcher.options.render?render!
+report-impl = (path, value, old-value) ->
   for watchers in (keys session-watchers |> (filter -> report-match (camelize path), it) |> map -> session-watchers[it])
     if not empty watchers
       info '$on:', path, value, old-value
     for watcher in watchers
       watcher.fn value, old-value if watcher.fn
       watcher.options.render?render!
+
+report = (path, value, old-value) ->
+  report-impl path, value, old-value
+  if is-object(value) or is-array(value)
+    for child-path in (object-path.list value)
+      child-path = "#path.#child-path" if path
+      report-impl child-path, $get(child-path), undefined
 
 global.$set = (path, value, options) ->
   old-value = object-path.get session, (camelize path)
