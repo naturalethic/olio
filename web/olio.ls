@@ -89,9 +89,14 @@ session-wire.observe-all-validation (path, value) ->
   $set \validation, validation
   q '.invalid' .remove-class \invalid
   for [ path, keyword ] in (object-path.list validation |> (filter -> /keyword$/.test it) |> map -> [ /(.*)\.keyword$/.exec(it).1, object-path.get validation, it ])
-    for el in q "[validate='#path']"
+    for el in q "[set='#path']"
       q(el).add-class \invalid
-      q "[for='#{el.id}']" .add-class \invalid
+      el.find 'input' .add-class \invalid
+      el.find 'label' .add-class \invalid
+    for el in q "[validation-text='#path']"
+      q(el).add-class \invalid
+      q(el).text object-path.get validation, "#path.message"
+
 
 report-match = (path, search) ->
   //^#{search.replace(/\./g, '\\.').replace(/\*/g, '\\d+')}$//.test path
