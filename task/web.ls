@@ -41,58 +41,61 @@ stitch = (paths) ->
   fs.write-file-sync('tmp/rivulet.js', livescript.compile fs.read-file-sync("#__dirname/../web/rivulet.ls").to-string!)
   fs.write-file-sync('tmp/wire.js', livescript.compile fs.read-file-sync("#__dirname/../lib/wire.ls").to-string!)
   if paths.length
-    components = JSON.parse(fs.read-file-sync 'tmp/components.json', 'utf8')
+    cached-components = JSON.parse(fs.read-file-sync 'tmp/components.json', 'utf8')
   else
-    components = {}
+    cached-components = {}
   try
     for it in glob.sync 'web/**/*.ls'
       continue if paths.length and it not in paths
-      name = it.replace(/\//g, '-').substring(4, it.length - 3)
-      $info \Writing, "component/#name"
+      filename = it.replace(/\//g, '-').substring(4, it.length - 3)
       syntax = esprima.parse livescript.compile(fs.read-file-sync(it).to-string!)
-      component = {}
+      components = {}
+      $info \Writing, "component/#{filename}"
       esprima-walk.walk-add-parent syntax, ->
         if it.type is \MemberExpression and it.object?name == \out$
-          component <<< name: dasherize it.property.name
-        if component.name and it.type is \ObjectExpression and it.parent.left?name and (dasherize it.parent.left.name) == component.name
-          component.object = it
-      style = []
-      if component.name == \index
+          name = dasherize it.property.name
+          components[name] = name: name
+        if it.type is \ObjectExpression and it.parent.left?name and components[name = (dasherize it.parent.left.name)]
+          components[name].object = it
+      for component in values components
+        style = []
+        if component.name == \index
+          if prop = find (-> it.key.name == \style), component.object.properties
+            style.unshift(prop.value.value.trim!)
+            fs.write-file-sync "tmp/component/#{component.name}.styl", style.join '\n'
+          if prop = find (-> it.key.name == \view), component.object.properties
+            $info \Writing, 'public/index.html'
+            fs.write-file-sync \public/index.html, jade.render(prop.value.value, pretty: true)
+          continue
+        cached-components[component.name] = filename
+        style.push component.name
+        style.push '  display: block'
         if prop = find (-> it.key.name == \style), component.object.properties
-          style.unshift(prop.value.value.trim!)
-          fs.write-file-sync "tmp/component/#name.styl", style.join '\n'
+          component.object.properties.splice (component.object.properties.index-of prop), 1
+          style.push(indent-source null, prop.value.value.trim!) if prop.value.value.trim!
+        style.push ''
         if prop = find (-> it.key.name == \view), component.object.properties
-          $info \Writing, 'public/index.html'
-          fs.write-file-sync \public/index.html, jade.render(prop.value.value, pretty: true)
-        continue
-      components[component.name] = name
-      style.push component.name
-      style.push '  display: block'
-      if prop = find (-> it.key.name == \style), component.object.properties
-        component.object.properties.splice (component.object.properties.index-of prop), 1
-        style.push(indent-source null, prop.value.value.trim!) if prop.value.value.trim!
-      style.push ''
-      if prop = find (-> it.key.name == \view), component.object.properties
-        view = esprima.parse jade.compile-client(prop.value.value)
-        prop.value =
-          type: 'FunctionExpression'
-          id: null
-          params: [ { type: 'Identifier', name: 'locals' } ]
-          defaults: []
-          body: { type: 'BlockStatement', body: view.body.0.body.body }
-          generator: false
-          expression: false
-      fs.write-file-sync "tmp/component/#name.js", escodegen.generate syntax, format: { indent: { style: '  ' } }
-      fs.write-file-sync "tmp/component/#name.styl", style.join '\n'
+          view = esprima.parse jade.compile-client(prop.value.value)
+          prop.value =
+            type: 'FunctionExpression'
+            id: null
+            params: [ { type: 'Identifier', name: 'locals' } ]
+            defaults: []
+            body: { type: 'BlockStatement', body: view.body.0.body.body }
+            generator: false
+            expression: false
+        fs.write-file-sync "tmp/component/#{component.name}.styl", style.join '\n'
+      fs.write-file-sync "tmp/component/#{filename}.js", escodegen.generate syntax, format: { indent: { style: '  ' } }
+
   catch e
     info e.stack
     node-notifier.notify title: 'Olio Error', message: e.message
-  fs.write-file-sync 'tmp/components.json', JSON.stringify(components)
+  fs.write-file-sync 'tmp/components.json', JSON.stringify(cached-components)
   script = [livescript.compile([
     "window.config = #{JSON.stringify olio.config.web};"
     fs.read-file-sync("#__dirname/../web/olio.ls").to-string!
   ].join('\n'), { +bare, -header })]
-  for n, p of components
+  for n, p of cached-components
     script.push "registerComponent('#{n}', require('./component/#{p}').#{camelize n});"
   $info \Writing, 'tmp/index.js'
   # XXX: chop out livescript utilities from this compile output
