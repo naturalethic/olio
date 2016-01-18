@@ -56,12 +56,12 @@ require 'webcomponents.js/CustomElements'
 window.jade = require 'jade/runtime'
 
 vdom =
-  convert:        require 'html-to-vdom'
   vnode:          require 'virtual-dom/vnode/vnode'
   vtext:          require 'virtual-dom/vnode/vtext'
   diff:           require 'virtual-dom/diff'
   patch:          require 'virtual-dom/patch'
   create-element: require 'virtual-dom/create-element'
+  convert:        require 'html-to-vdom'
 
 # Session
 require! 'socket.io-client': socket-io
@@ -208,7 +208,6 @@ $on \route, (route) ->
 q document.body .on \submit, \form, false
 
 register-component = (name, component) ->
-  # return if (name not in <[ cfh-root cfh-login cfh-signup cfh-address-input cfh-content cfh-wizard cfh-image-upload cfh-file-upload ]>) and (not /cfh\-inception/.test name) and (not /cfh\-proposal/.test name)
   info "Registering %c#name", 'color: #B184A1'
   prototype = Object.create HTMLElement.prototype
   attribute-queue = []

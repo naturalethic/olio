@@ -31,7 +31,7 @@
     "gcloud": "^0.26.1",
     "glob": "^6.0.1",
     "harmony-reflect": "^1.4.2",
-    "html-to-vdom": "^0.7.0",
+    "html-to-vdom": "github:naturalethic/html-to-vdom#unconverted-attributes",
     "html5-history-api": "^4.2.4",
     "jade": "^1.11.0",
     "jquery": "^2.1.4",
