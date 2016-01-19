@@ -254,9 +254,10 @@ register-component = (name, component) ->
       @find 'form' .attr \novalidate, ''
     @start!
     @render!
-    @q.trigger \ready, this
+    @ready!
     while attribute-queue.length
       @q.trigger 'attribute', attribute-queue.shift!
+    @q.trigger q.Event \component
 
   # prototype.detached-callback = ->
   prototype.attribute-changed-callback = (name, old-value, new-value) ->
