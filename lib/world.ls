@@ -6,8 +6,8 @@ require! \object-path : objectpath
 
 olio.config.world          ?= {}
 olio.config.world.host     ?= \127.0.0.1
-olio.config.world.user     ?= \root
-olio.config.world.database ?= \cfh
+olio.config.world.user     ?= (olio.option.world-user or \root)
+olio.config.world.database ?= (olio.option.world-database or \cfh)
 
 pool = mysql.create-pool olio.config.world
 
