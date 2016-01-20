@@ -79,48 +79,76 @@ advance-join = (joins) ->
   joins.push String.from-char-code((last joins).char-code-at(0) + 1)
   last joins
 
-query-builder = (tx, select, where, joins, values) ->
+query-builder = (tx, kind) ->
+  select-clause = [ "SELECT a.id" ]
+  select-values = [ ]
+  from-clause   = [ "  FROM document a" ]
+  from-values   = [ ]
+  where-clause  = [ " WHERE a.kind = ?" ]
+  where-values  = [ kind ]
+  kinds         = [ kind ]
+  joins         = [ 'a' ]
   do
-    and: (obj) ->
-      for path, value of obj
+    get: (...paths) ->
+      for path in paths
         a = last joins
         b = advance-join joins
-        select.push "JOIN document #b ON (#a.id = #b.id)"
+        select-clause.push "#b.value #path"
+        from-clause.push "  JOIN document #b ON (#a.id = #b.id AND #b.path = ?)"
+        from-values.push path
+      this
+    and: (obj) ->
+      for path, value of obj
         op = '='
         if m = /^([\>\<\=]+)(.*)/.exec value
           op = m.1
           value = m.2
-        where.push "AND #b.path = ? AND #b.search #op ?"
-        values.push path
-        values.push value
+        a = last joins
+        b = advance-join joins
+        from-clause.push "  JOIN document #b ON (#a.id = #b.id AND #b.path = ? AND #b.search #op ?)"
+        from-values.push path
+        from-values.push value
       this
     not: ->
     or:  ->
-    join: ->
+    join: (kind) ->
+      a = last joins
+      b = advance-join joins
+      from-clause.push "  JOIN document #b ON (#a.id = #b.id AND #b.path = ?)"
+      from-values.push kind
+      a = last joins
+      b = advance-join joins
+      from-clause.push "  JOIN document #b ON (#a.search = #b.id)"
+      kinds.push kind
+      this
     statement: ->
-      "#{select.join '\n'}\n#{where.join '\n'}\nGROUP BY a.id"
+      "#{select-clause.join ', '}\n#{from-clause.join '\n'}\n#{where-clause.join '\n'}\nGROUP BY a.id"
     inspect: ->
       s = @statement!
-      v = clone values
+      v = select-values ++ from-values ++ where-values
       while val = v.shift!
         s = s.replace /\?/, "'#val'"
       s
     exec: ->*
-      selection = []
+      values = select-values ++ from-values ++ where-values
       if tx
-        ids = (yield tx.query @statement!, values) |> map -> it.id
+        records = yield tx.query @statement!, values
       else
         tx = yield transaction!
         tx.$info = $info
         try
-          ids = (yield tx.query @statement!, values) |> map -> it.id
+          records = yield tx.query @statement!, values
           yield tx.commit!
         catch e
           info e
           yield tx.rollback!
-      for id in ids
-        selection.push yield tx.get id
-      selection
+      if select-clause.length == 1
+        selection = []
+        for id in (records |> map -> it.id)
+          selection.push yield tx.get id
+        selection
+      else
+        records
 
 export transaction = ->*
   connection = yield pool.get-connection!
@@ -175,7 +203,7 @@ export transaction = ->*
     select-one: (kind, path, value) ->*
       first yield tx.select kind, path, value, 1
     build: (kind) ->
-      query-builder tx, [ "SELECT a.id FROM document a" ], [ "WHERE a.kind = ?" ], [ 'a' ], [ kind ]
+      query-builder tx, kind
     cursor: (kind, data) ->
       data = JSON.parse data if is-string data
       data = data.$get! if data.$get
@@ -199,7 +227,7 @@ export transaction = ->*
     val
 
 export build = (kind) ->
-  query-builder null, [ "SELECT a.id FROM document a" ], [ "WHERE a.kind = ?" ], [ 'a' ], [ kind ]
+  query-builder null, kind
 
 export end = ->*
   yield pool.end!
