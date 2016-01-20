@@ -1,3 +1,6 @@
+export auth = ->*
+  exec "gcloud auth activate-service-account account-1@copsforhire.copsforhire.com.iam.gserviceaccount.com --key-file gcloud.json"
+
 export build = ->*
   if olio.task.length < 4
     return info "Usage: #{olio.task.0} #{olio.task.1} <env> <product>"
