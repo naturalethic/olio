@@ -75,6 +75,53 @@ persist-delete-path-value = (connection, kind, old-doc, new-doc, path) ->*
   for pv in path-values
     yield connection.query "DELETE FROM document WHERE id = ? and path = ?", [ new-doc.id, pv.path ]
 
+advance-join = (joins) ->
+  joins.push String.from-char-code((last joins).char-code-at(0) + 1)
+  last joins
+
+query-builder = (tx, select, where, joins, values) ->
+  do
+    and: (obj) ->
+      for path, value of obj
+        a = last joins
+        b = advance-join joins
+        select.push "JOIN document #b ON (#a.id = #b.id)"
+        op = '='
+        if m = /^([\>\<\=]+)(.*)/.exec value
+          op = m.1
+          value = m.2
+        where.push "AND #b.path = ? AND #b.search #op ?"
+        values.push path
+        values.push value
+      this
+    not: ->
+    or:  ->
+    join: ->
+    statement: ->
+      "#{select.join '\n'}\n#{where.join '\n'}\nGROUP BY a.id"
+    inspect: ->
+      s = @statement!
+      v = clone values
+      while val = v.shift!
+        s = s.replace /\?/, "'#val'"
+      s
+    exec: ->*
+      selection = []
+      if tx
+        ids = (yield tx.query @statement!, values) |> map -> it.id
+      else
+        tx = yield transaction!
+        tx.$info = $info
+        try
+          ids = (yield tx.query @statement!, values) |> map -> it.id
+          yield tx.commit!
+        catch e
+          info e
+          yield tx.rollback!
+      for id in ids
+        selection.push yield tx.get id
+      selection
+
 export transaction = ->*
   connection = yield pool.get-connection!
   yield connection.begin-transaction!
@@ -111,11 +158,9 @@ export transaction = ->*
         yield connection.rollback!
         throw e
       finally
-        yield tx.query 'unlock tables'
         connection.release!
     rollback: ->*
       yield connection.rollback!
-      yield tx.query 'unlock tables'
       connection.release!
     get: (id) ->*
       path-values = yield connection.query "SELECT kind, path, value FROM document WHERE id = ?", [ id ]
@@ -129,6 +174,8 @@ export transaction = ->*
       selection
     select-one: (kind, path, value) ->*
       first yield tx.select kind, path, value, 1
+    build: (kind) ->
+      query-builder tx, [ "SELECT a.id FROM document a" ], [ "WHERE a.kind = ?" ], [ 'a' ], [ kind ]
     cursor: (kind, data) ->
       data = JSON.parse data if is-string data
       data = data.$get! if data.$get
@@ -137,63 +184,22 @@ export transaction = ->*
         save-queue[kind] ?= []
         save-queue[kind].push cursor if cursor not in save-queue[kind]
       cursor
-  # yield tx.query 'lock tables document write'
   tx
 
-export select = ->*
-  tx = yield transaction!
-  tx.$info = $info
-  try
-    val = yield tx.select ...&
-    yield tx.commit!
-  catch e
-    info e
-    yield tx.rollback!
-  val
+<[ select select-one query get save ]> |> each (api) ->
+  module.exports[api] = ->*
+    tx = yield transaction!
+    tx.$info = $info
+    try
+      val = yield tx[api] ...&
+      yield tx.commit!
+    catch e
+      info e
+      yield tx.rollback!
+    val
 
-export select-one = ->*
-  tx = yield transaction!
-  tx.$info = $info
-  try
-    val = yield tx.select-one ...&
-    yield tx.commit!
-  catch e
-    info e
-    yield tx.rollback!
-  val
-
-export query = ->*
-  tx = yield transaction!
-  tx.$info = $info
-  try
-    val = yield tx.query ...&
-    yield tx.commit!
-  catch e
-    info e
-    yield tx.rollback!
-  val
-
-export get = ->*
-  tx = yield transaction!
-  tx.$info = $info
-  try
-    val = yield tx.get ...&
-    yield tx.commit!
-  catch e
-    info e
-    yield tx.rollback!
-  val
-
-export save = ->*
-  tx = yield transaction!
-  tx.$info = $info
-  try
-    val = yield tx.save ...&
-    yield tx.commit!
-  catch e
-    info e
-    yield tx.rollback!
-  val
+export build = (kind) ->
+  query-builder null, [ "SELECT a.id FROM document a" ], [ "WHERE a.kind = ?" ], [ 'a' ], [ kind ]
 
 export end = ->*
   yield pool.end!
