@@ -1,5 +1,6 @@
 export auth = ->*
   exec "gcloud auth activate-service-account account-1@copsforhire.copsforhire.com.iam.gserviceaccount.com --key-file gcloud.json"
+  exec "gcloud docker -a"
 
 export build = ->*
   if olio.task.length < 4
