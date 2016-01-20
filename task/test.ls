@@ -157,7 +157,7 @@ export test = ->*
             info """
               <?xml version="1.0" encoding="UTF-8"?>
               <testsuites>
-                <testsuite name="All" tests="#{state.tests.length}" errors="0" failures="#fail-count" time="#{((last state.tests).end - (first state.tests).start) / 1000}" timestamp="#{(first state.tests).start.toISOString!}" />
+                <testsuite name="All" tests="#{state.tests.length}" errors="0" failures="#fail-count" time="#{((last state.tests).end - (first state.tests).start) / 1000}" timestamp="#{(first state.tests).start.toISOString!}">
             """
           for test in state.tests
             if olio.option.xml
