@@ -122,7 +122,7 @@ setup-bundler = ->*
   #   * require.resolve 'mithril'
   b = browserify <[ ./tmp/index.js ]>, {
     paths: [
-      fs.realpath-sync "#__dirname/../node_modules"
+      ((fs.exists-sync("#__dirname/../node_modules") and fs.realpath-sync "#__dirname/../node_modules") or fs.realpath-sync "#__dirname/../..")
       fs.realpath-sync "#__dirname/../web"
       fs.realpath-sync "tmp"
     ]
