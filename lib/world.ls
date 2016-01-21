@@ -48,7 +48,6 @@ export path-values-from-object = (object, path = '') ->
   path-values
 
 persist-create-path-value = (connection, kind, old-doc, new-doc, path, value) ->*
-  # info kind, old-doc, new-doc, path, value
   return if is-undefined value
   if is-object(value) or is-array(value)
     path-values = path-values-from-object value, path
@@ -86,14 +85,16 @@ query-builder = (tx, kind) ->
   from-values   = [ ]
   where-clause  = [ " WHERE a.kind = ?" ]
   where-values  = [ kind ]
-  kinds         = [ kind ]
+  kinds         = [ ]
   joins         = [ 'a' ]
   do
     get: (...paths) ->
       for path in paths
         a = last joins
         b = advance-join joins
-        select-clause.push "#b.value #path"
+        kind-string = kinds.join \_
+        full-path = (kind-string and "#{kind-string}_#path") or path
+        select-clause.push "#b.value #full-path"
         from-clause.push "  JOIN document #b ON (#a.id = #b.id AND #b.path = ?)"
         from-values.push path
       this
@@ -148,6 +149,10 @@ query-builder = (tx, kind) ->
           selection.push yield tx.get id
         selection
       else
+        for record in records
+          for key of record
+            if /_/.test key
+              objectpath.set record, key.replace(/_/, \.), (delete record[key])
         records
 
 export transaction = ->*
