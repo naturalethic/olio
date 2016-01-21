@@ -151,8 +151,8 @@ query-builder = (tx, kind) ->
       else
         for record in records
           for key of record
-            if /_/.test key
-              objectpath.set record, key.replace(/_/, \.), (delete record[key])
+            continue if key is \id
+            objectpath.set record, key.replace(/_/, \.), JSON.parse(delete record[key])
         records
 
 export transaction = ->*
