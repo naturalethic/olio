@@ -7,6 +7,7 @@ require! \object-path : objectpath
 olio.config.world          ?= {}
 olio.config.world.host     ?= \127.0.0.1
 olio.config.world.user     ?= (olio.option.world-user or \root)
+olio.config.world.password ?= ''
 olio.config.world.database ?= (olio.option.world-database or \cfh)
 
 pool = mysql.create-pool olio.config.world
@@ -220,11 +221,11 @@ export transaction = ->*
   tx
 
 <[ select select-one query get save ]> |> each (api) ->
-  module.exports[api] = ->*
+  module.exports[camelize api] = ->*
     tx = yield transaction!
     tx.$info = $info
     try
-      val = yield tx[api] ...&
+      val = yield tx[camelize api] ...&
       yield tx.commit!
     catch e
       info e
@@ -238,14 +239,14 @@ export end = ->*
   yield pool.end!
 
 export reset = ->*
-  connection = yield mysql.create-connection olio.config.world{host, user}
+  connection = yield mysql.create-connection olio.config.world
   if first((yield connection.query 'show databases') |> filter -> it.Database is olio.config.world.database)
     info "Dropping database '#{olio.config.world.database}'"
     yield connection.query "drop database if exists #{olio.config.world.database}"
   info "Creating database '#{olio.config.world.database}'"
   yield connection.query "create database #{olio.config.world.database}"
   connection.end!
-  connection = yield mysql.create-connection olio.config.world{host, user, database}
+  connection = yield mysql.create-connection olio.config.world
   info "Creating table 'document'"
   yield connection.query """
     create table document (
