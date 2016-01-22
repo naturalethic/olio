@@ -18,9 +18,9 @@ module.exports = (options = {}) ->
         for error in validator.errors
           prop = path + error.data-path
           if error.keyword is \required
-            prop = "#prop.#{dasherize error.params.missing-property}"
+            prop = "#prop.#{error.params.missing-property}"
           if error.keyword is \additionalProperties
-            prop = "#prop.#{dasherize error.params.additional-property}"
+            prop = "#prop.#{error.params.additional-property}"
           if not $get validation, prop
             $set validation, prop, error{keyword, message}
     if Obj.empty validation
