@@ -22,7 +22,7 @@ module.exports = (options = {}) ->
           if error.keyword is \additionalProperties
             prop = "#prop.#{error.params.additional-property}"
           if not $get validation, prop
-            $set validation, prop, error{keyword, message}
+            $set validation, prop, error{keyword, params, message}
     if Obj.empty validation
       for fn in observers-all
         fn path, value

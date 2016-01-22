@@ -47,6 +47,9 @@ stitch = (paths) ->
   try
     for it in glob.sync 'web/**/*.ls'
       continue if paths.length and it not in paths
+      if /^web\/lib/.test it
+        fs.write-file-sync "tmp/#{it.substring(4, it.length - 3)}.js", livescript.compile(fs.read-file-sync it, 'utf8')
+        continue
       filename = it.replace(/\//g, '-').substring(4, it.length - 3)
       syntax = esprima.parse livescript.compile(fs.read-file-sync(it).to-string!)
       components = {}
@@ -163,6 +166,7 @@ setup-bundler = ->*
 
 export web = ->*
   exec "mkdir -p tmp/component"
+  exec "mkdir -p tmp/lib"
   exec "mkdir -p public"
   bundler = yield setup-bundler!
   build = debounce 300, bundler.build

@@ -81,22 +81,23 @@ session-watchers = {}
 session-wire.observe-all (path, value) ->
   $set path, value, no-report: true
   report path, value, undefined
-window.validation = {}
+window.validation = require('./lib/validation')
+validation.tree = {}
 session-wire.observe-all-validation (path, value) ->
-  for key in keys(validation)
-    delete validation[key]
-  validation <<< value
-  $set \validation, validation
+  for key in keys(validation.tree)
+    delete validation.tree[key]
+  validation.tree <<< value
+  $set \validation, validation.tree
   q '.invalid' .remove-class \invalid
-  for [ path, keyword ] in (object-path.list validation |> (filter -> /keyword$/.test it) |> map -> [ /(.*)\.keyword$/.exec(it).1, object-path.get validation, it ])
+  for [ path, keyword ] in (object-path.list validation.tree |> (filter -> /keyword$/.test it) |> map -> [ /(.*)\.keyword$/.exec(it).1, object-path.get validation.tree, it ])
+    object-path.set validation.tree, "#path.message", validation.message object-path.get validation.tree, path
     for el in q "[set='#{dasherize path}']"
       q(el).add-class \invalid
       el.find 'input' .add-class \invalid
       el.find 'label' .add-class \invalid
     for el in q "[validation-text='#{dasherize path}']"
       q(el).add-class \invalid
-      q(el).text object-path.get validation, "#path.message"
-
+      q(el).text object-path.get validation.tree, "#path.message"
 
 report-match = (path, search) ->
   //^#{search.replace(/\./g, '\\.').replace(/\*/g, '\\d+')}$//.test path
