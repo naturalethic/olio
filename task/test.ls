@@ -38,10 +38,15 @@ export test = ->*
         yield module.exports[name] agent
       else
         state.tests.push(state.test = { start: new Date, path: path, name: (dasherize name) })
-        socket = socket-io 'http://localhost:8000', force-new: true
+        host = 'localhost'
+        port = 8000
+        if olio.config.web?env
+          host = "session.#{olio.config.web.env}.copsforhire.com"
+          port = 80
+        socket = socket-io "http://#host:#port", force-new: true
         session = wire socket: socket, channel: \session
         storage = rivulet {}, socket, \storage
-        state.timeout-seconds = 3
+        state.timeout-seconds = 10
         state.timeout = set-timeout ->
           session.send \end, true
           state.fail = 'Timed out'
