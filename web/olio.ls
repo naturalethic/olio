@@ -90,7 +90,7 @@ session-wire.observe-all-validation (path, value) ->
   $set \validation, validation.tree
   q '.invalid' .remove-class \invalid
   for [ path, keyword ] in (object-path.list validation.tree |> (filter -> /keyword$/.test it) |> map -> [ /(.*)\.keyword$/.exec(it).1, object-path.get validation.tree, it ])
-    object-path.set validation.tree, "#path.message", validation.message object-path.get validation.tree, path
+    object-path.set validation.tree, "#path.message", validation.message ((object-path.get validation.tree, path) <<< path: path)
     for el in q "[set='#{dasherize path}']"
       q(el).add-class \invalid
       el.find 'input' .add-class \invalid
