@@ -108,7 +108,7 @@ export session = ->*
     session-wire.observe 'end', ->
       $info 'Disconnecting'
       socket.disconnect!
-    glob.sync 'react/**/*.ls' |> each (path) ->
+    glob.sync 'react/session/**/*.ls' |> each (path) ->
       module = new Module
       module.paths = [ "#{process.cwd!}/lib", "#{process.cwd!}/node_modules" ]
       module._compile livescript.compile ([
