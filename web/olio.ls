@@ -157,6 +157,7 @@ global.$on = (paths, ...args) ->
     path = camelize paths
     session-watchers[path] ?= []
     session-watchers[path].push fn: fn, options: options
+
 global.$watch = (...args) ->
   warn '$watch is deprecated, use $on'
   $on ...args
@@ -260,7 +261,13 @@ register-component = (name, component) ->
       @q.trigger 'attribute', attribute-queue.shift!
     @q.trigger q.Event \component
 
-  # prototype.detached-callback = ->
+  prototype.detached-callback = ->
+    for path, watchers of session-watchers
+      for watcher in watchers.slice!
+        if watcher.options?clean == this
+          log 'Removing watcher for', path
+          watchers.splice (watchers.index-of watcher), 1
+
   prototype.attribute-changed-callback = (name, old-value, new-value) ->
     if @q
       @q.trigger 'attribute', [ name, new-value, old-value ]
