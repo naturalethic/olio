@@ -43,15 +43,16 @@ export test = ->*
         if olio.config.web?env
           host = "session.#{olio.config.web.env}.copsforhire.com"
           port = 80
-        socket = socket-io "http://#host:#port", force-new: true
+        socket = socket-io "http://#host:#port", multiplex: false, reconnection: false
         session = wire socket: socket, channel: \session
         storage = rivulet {}, socket, \storage
         state.timeout-seconds = 10
         state.timeout = set-timeout ->
-          session.send \end, true
+          disconnect!
           state.fail = 'Timed out'
         , state.timeout-seconds * 1000
-        socket.on \disconnect, ->
+        disconnect = ->
+          socket.close!
           clear-timeout state.timeout
           if invalid = first (messages |> filter -> it.type is \invalid)
             state.fail = 'Unhandled validation faults'
@@ -77,7 +78,7 @@ export test = ->*
         yield module.exports[name]!
         if empty observers
           state.unimplemented = true
-          return session.send \end, true
+          return disconnect!
         session.observe-all co.wrap (path, value) ->*
           messages.push path: path, value: value, type: \session
           yield run-next-observer!
@@ -86,9 +87,10 @@ export test = ->*
           yield run-next-observer!
         locals = {}
         run-next-observer = ->*
+          return if socket.disconnected
           return if state.running or state.fail
           if empty observers
-            return session.send \end, true
+            return disconnect!
           if empty messages
             return
           message = messages.shift!
@@ -108,8 +110,7 @@ export test = ->*
               color 214 dasherize observer.path
               color 216 ']'
             ].join ''
-            session.send \end, true
-            return
+            return disconnect!
           state.running = true
           $info color(51, observer.path)
           $info color(238, '-' * process.stdout.columns)
@@ -132,7 +133,7 @@ export test = ->*
               state.fail = 'Fail'
             else
               state.fail = color(88, it.to-string!)
-            session.send \end, true
+            disconnect!
           state.running = false
           yield run-next-observer!
     names = keys module.exports

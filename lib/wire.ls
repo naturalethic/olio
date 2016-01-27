@@ -36,6 +36,7 @@ module.exports = (options = {}) ->
     for fn in validation-observers-all
       fn path, value
   wire =
+    socket: socket
     cache: {}
     send: (path, value) ->
       if value?$get
