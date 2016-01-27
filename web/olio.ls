@@ -198,7 +198,11 @@ window.go = ->
 q window .on \popstate, ->
   $set \route, current-route!
 
-$send \id, (session-cached-id or '00000000-0000-0000-0000-000000000000')
+establish-session = ->
+  $send \id, (session-cached-id or '00000000-0000-0000-0000-000000000000')
+
+socket.on \connect, establish-session
+
 $on \id, ->
   if it != session-cached-id
     destroy-session it
