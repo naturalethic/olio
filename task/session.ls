@@ -29,13 +29,22 @@ $info = create-logging-function \info
 # Loads the source and compiles a module manually, so as to be able have multiple copies
 # of it with different environments, allowing each session reaction to operate within its
 # own transaction.
-create-dynamic-module = (path) ->
-  module = new Module
+create-dynamic-module = (path, vars = []) ->
+  source = """
+    export $var = (key, val) ->
+      throw \"Undeclared dynamic variable '\#key'\" if key not in <[ #{vars.join (' ')}]>
+      eval \"$\#key = val\"
+    #{fs.read-file-sync path, 'utf8'}
+    """
+  source = livescript.compile source, { +bare, -header }
+  if vars.length
+    source = """
+      var #{(vars |> map -> '$' + it).join ', '};
+      #source
+    """
+  module = new Module uuid!
   module.paths = [ "#{process.cwd!}/lib", "#{process.cwd!}/node_modules" ]
-  module._compile livescript.compile ([
-    "module.exports.$var = (key, val) -> eval \"$\#key = val\""
-    (fs.read-file-sync path, \utf8)
-  ].join '\n'), { +bare }
+  module._compile source
   module.exports
 
 read-schema = (schema) ->
@@ -116,26 +125,6 @@ create-session-agent = (socket, validator, promote) ->
   socket.wire.info = create-logging-function \info, socket
   socket.wire.promote = promote
   socket.wire.info 'Connection established'
-  # session-wire.session-id = null
-  # promotion-modules = []
-  # socket.on \disconnect, ->
-  #   delete session-wires[session-wire.session-id]
-  # session-wire.promote = (kind, doc) ->*
-  #   info \2, session-wire.session-id
-  #   for m in promotion-modules
-  #     if m.exports[kind]
-  #       yield m.exports[kind] doc
-  # glob.sync 'react/world/**/*.ls' |> each (path) ->
-  #   module = new Module
-  #   module.paths = [ "#{process.cwd!}/lib", "#{process.cwd!}/node_modules" ]
-  #   module._compile livescript.compile ([
-  #     "module.exports.$var = (key, val) -> eval \"$\#key = val\""
-  #     (fs.read-file-sync path .to-string!)
-  #   ].join '\n'), { +bare }
-  #   module.exports.$var \info, $info
-  #   module.exports.$var \world, world
-  #   module.exports.$var \send, session-wire.send
-  #   promotion-modules.push module
   glob.sync 'react/session/**/*.ls' |> each (path) ->
     return if not session-reactors = (create-dynamic-module path).session
     for property of session-reactors
@@ -143,7 +132,7 @@ create-session-agent = (socket, validator, promote) ->
   socket.wire.world-observers = glob.sync 'react/world/**/*.ls' |> map -> create-world-observer socket.wire, it
 
 create-world-observer = (wire, path) ->
-  module = create-dynamic-module path
+  module = create-dynamic-module path, <[ info world send session person ]>
   module.$var \info, $info
   module.$var \world, world
   module.$var \send, wire.send
@@ -152,7 +141,7 @@ create-world-observer = (wire, path) ->
 create-session-observer = (wire, path, property) ->
   wire.observe property, co.wrap ->*
     wire.info "Session reaction #{color 95, path}:#{color(32, property)}", it
-    module = create-dynamic-module path
+    module = create-dynamic-module path, <[ info world send invalidate session person ]>
     sends = []
     tx = yield world.transaction!
     tx.$info = wire.info
@@ -163,21 +152,17 @@ create-session-observer = (wire, path, property) ->
     module.$var \invalidate, wire.invalidate
     try
       if property is \id
-      # delete wires[wire.session-id]
         wire.session-id = it
       session = yield load-or-create-session tx, wire.session-id
       if session.id != wire.session-id
         wire.session-id = session.id
         if property != \id
           sends.push [ \id, session.id ]
-      # for m in promotion-modules
-      #   m.exports.$var \session, session
-      # if socket.connected
-      #   wires[wire.session-id] = wire
       session.ip = wire.socket.handshake.address
       module.$var \session, session
       if session.person
         module.$var \person, (yield tx.get session.person)
+      tx.$session = session.id
       yield module.session[property] it
       yield tx.commit!
     catch e
@@ -190,25 +175,25 @@ export session = ->*
   validator = create-validator!
   shell = create-shell-server!
   server = create-session-server!
-
-  # session-wires = {}
-  promote = (kind, doc) ->
-    info \PROMOTE, kind, doc
-    for socket in server.sockets.sockets
-      for wo in socket.wire.world-observers
-        for kind, fn of wo
-          continue if kind.0 is \$
-          co fn doc
-
-    # for wire in values session-wires
-    #   info wire.session-id
-    #   # continue if wire == session-wire
-    #   yield wire.promote kind, doc
-
+  promotion-queue = []
+  promote = -> promotion-queue.push it
+  set-interval ->
+    return if !promotion-queue.length
+    items = promotion-queue.slice!
+    promotion-queue.length = 0
+    items |> each (item) ->
+      server.sockets.sockets |> each (socket) ->
+        return if !socket.wire.session-id or socket.wire.session-id == item.session
+        socket.wire.world-observers |> each (observer) ->
+          co ->*
+            if socket.wire.session-id and session = yield world.get socket.wire.session-id
+              observer.$var \session, session
+              if session.person and person = yield world.get session.person
+                observer.$var \person, person
+            yield observer[item.kind] item.doc if observer[item.kind]
+  , 200
   server.on \connection, (socket) ->
     create-session-agent socket, validator, promote
-    # info server.sockets.sockets.0.wire
-
 
 create-shell-server = ->
   port = olio.config.session?shell?port or 8001

@@ -181,7 +181,7 @@ export transaction = ->*
         | \replace  => yield persist-update-path-value connection, kind, old-doc, new-doc, path, change.value
         | \remove   => yield persist-delete-path-value connection, kind, old-doc, new-doc, path
         | otherwise => throw "Unhandled op: #{change.op}"
-      tx.$promote kind, new-doc if kind != \session and tx.$promote and !empty(diff |> filter -> it.path != \id)
+      tx.$promote session: tx.$session, kind: kind, doc: new-doc if kind != \session and tx.$promote and !empty(diff |> filter -> it.path != \id)
       tx.cursor kind, new-doc
     commit: ->*
       try
