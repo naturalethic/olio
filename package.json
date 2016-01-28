@@ -34,7 +34,7 @@
     "html-to-vdom": "github:naturalethic/html-to-vdom#unconverted-attributes",
     "html5-history-api": "^4.2.4",
     "jade": "^1.11.0",
-    "jquery": "^2.1.4",
+    "jquery": "^3.0.0-beta1",
     "jstransformer-stylus": "^1.0.0",
     "kefir": "^3.2.0",
     "later": "^1.2.0",

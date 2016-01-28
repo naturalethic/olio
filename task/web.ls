@@ -12,14 +12,6 @@ require! \escodegen
 
 export watch = [ __filename, \olio.ls, "#__dirname/../web", "#__dirname/../lib" ]
 
-compile-snippet = ->
-  it = livescript.compile (camelize it), { +bare, -header } .slice 0, -1
-  if m = /^function [a-zA-Z]+\$\(/m.exec it
-    it = it.substr 0, m.index
-  it = it.replace /\n/g, '' .trim!
-  it = it.slice 0, -1 if it[it.length - 1] == \;
-  it
-
 indent-source = (preamble, source, indent = 2) ->
   if preamble
     "#preamble\n#{' ' * indent}#{source.split('\n').join('\n' + ' ' * indent)}"
@@ -38,8 +30,6 @@ prep = ->
     exec "rsync -maz web/vendor/ public/vendor"
 
 stitch = (paths) ->
-  fs.write-file-sync('tmp/rivulet.js', livescript.compile fs.read-file-sync("#__dirname/../web/rivulet.ls").to-string!)
-  fs.write-file-sync('tmp/wire.js', livescript.compile fs.read-file-sync("#__dirname/../lib/wire.ls").to-string!)
   if paths.length
     cached-components = JSON.parse(fs.read-file-sync 'tmp/components.json', 'utf8')
   else
@@ -170,7 +160,7 @@ export web = ->*
   exec "mkdir -p public"
   bundler = yield setup-bundler!
   build = debounce 300, bundler.build
-  watcher.watch <[ validate.ls olio.ls host.ls web ]>, persistent: true, ignore-initial: true .on 'all', (event, path) ->
+  watcher.watch <[ olio.ls web ]>, persistent: true, ignore-initial: true .on 'all', (event, path) ->
     info "Change detected in '#path'..."
     bundler.build.paths.push path
     build!
