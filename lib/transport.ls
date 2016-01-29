@@ -36,7 +36,7 @@ transport =
     person = yield world.get notification.recipient
     return if transport.whitelist and person.emails.0.email.replace(/\+[^\@]+/, '') not in transport.whitelist
     return if not fs.exists-sync (path = "notification/#{notification.name}.mail")
-    html = jade.render-file path, notification.data.$get!
+    html = jade.render-file path, (notification.data?$get! or {})
     subject = (fs.read-file-sync path).to-string!split(/\n/).0.substr(4)
     yield transport.instance.send-async do
       from:     transport.sender-email
