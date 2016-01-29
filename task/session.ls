@@ -109,7 +109,7 @@ create-storage-agent = (socket) ->
             info error if error
             file.set-metadata content-type: type, (error) ->
               info error if error
-              session-wire.send "storage.#key", id
+              socket.wire.send "storage.#key", id
 
 load-or-create-session = (tx, id) ->*
   if id and session = yield tx.get id
