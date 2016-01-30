@@ -244,6 +244,7 @@ register-component = (name, component) ->
       info "Rendering #{@tag-name}"
       @original-content = @innerHTML
       data = (extend-new session, @local)
+      data.content = @original-content
       data.uuid = -> data._lastuuid = uuid!
       data.lastuuid = -> data._lastuuid
       html = @view data
