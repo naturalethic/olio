@@ -106,9 +106,10 @@ report-impl = (path, value, old-value) ->
   for watchers in (keys session-watchers |> (filter -> report-match (camelize path), it) |> map -> session-watchers[it])
     if not empty watchers
       info '$on:', path, value, old-value
+    # XXX: why are watchers turning into undefined, see splice in detached callback
     for watcher in watchers
-      watcher.fn value, old-value if watcher.fn
-      watcher.options.render?render!
+      watcher.fn value, old-value if watcher?fn
+      watcher?options.render?render!
 
 report = (path, value, old-value) ->
   report-impl path, value, old-value
