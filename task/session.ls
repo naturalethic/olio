@@ -75,7 +75,6 @@ create-session-server = ->
     options.cert = fs.read-file-sync olio.config.session.cert, 'utf8'
   else
     http = require 'http'
-  info options
   if olio.config.session.static
     $info 'Serving static files'
     file = new node-static.Server './public'
