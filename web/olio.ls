@@ -68,7 +68,7 @@ require! 'socket.io-client': socket-io
 require! \rivulet
 require! \wire
 if config.env
-  if config.env.ssl
+  if config.ssl
     socket = socket-io "https://session.#{config.env}.copsforhire.com"
   else
     socket = socket-io "http://session.#{config.env}.copsforhire.com"

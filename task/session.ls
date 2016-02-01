@@ -68,17 +68,19 @@ create-validator = ->
   validator
 
 create-session-server = ->
-  options = {}
   if olio.config.session.ssl
-    http = require 'https'
-    options.key = fs.read-file-sync olio.config.session.key, 'utf8'
-    options.cert = fs.read-file-sync olio.config.session.cert, 'utf8'
+    options =
+      key: fs.read-file-sync olio.config.session.key, 'utf8'
+      cert: fs.read-file-sync olio.config.session.cert, 'utf8'
+    create-server = ->
+      (require 'https').create-server options, it
   else
-    http = require 'http'
+    create-server = ->
+      (require 'http').create-server it
   if olio.config.session.static
     $info 'Serving static files'
     file = new node-static.Server './public'
-    server = http.create-server options, (request, response) ->
+    server = create-server (request, response) ->
       if not fs.exists-sync "./public#{request.url}"
         $info "Unknown url '#{request.url}', sending index"
         request.url = '/'
@@ -86,7 +88,7 @@ create-session-server = ->
         file.serve request, response
       .resume!
   else
-    server = http.create-server options, (request, response) ->
+    server = create-server (request, response) ->
       request.add-listener \end, ->
         response.end 'Session'
       .resume!
