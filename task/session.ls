@@ -1,6 +1,5 @@
 Module = (require \module).Module
 require! \node-static
-require! \http
 require! 'socket.io': socket-io
 require! 'socket.io-client': socket-io-client
 require! \co
@@ -69,10 +68,18 @@ create-validator = ->
   validator
 
 create-session-server = ->
+  options = {}
+  if olio.config.session.ssl
+    http = require 'https'
+    options.key = fs.read-file-sync olio.config.session.key, 'utf8'
+    options.cert = fs.read-file-sync olio.config.session.cert, 'utf8'
+  else
+    http = require 'http'
+  info options
   if olio.config.session.static
     $info 'Serving static files'
     file = new node-static.Server './public'
-    server = http.create-server (request, response) ->
+    server = http.create-server options, (request, response) ->
       if not fs.exists-sync "./public#{request.url}"
         $info "Unknown url '#{request.url}', sending index"
         request.url = '/'
@@ -80,7 +87,7 @@ create-session-server = ->
         file.serve request, response
       .resume!
   else
-    server = http.create-server (request, response) ->
+    server = http.create-server options, (request, response) ->
       request.add-listener \end, ->
         response.end 'Session'
       .resume!
