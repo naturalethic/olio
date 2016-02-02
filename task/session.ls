@@ -204,7 +204,7 @@ export session = ->*
     create-session-agent socket, validator, promote
 
 create-shell-server = ->
-  port = olio.config.session?shell?port or 8001
+  port = olio.config.session.shell
   $info 'Starting session shell server on port', color(78, port)
   shell = socket-io port
   shell.on \connection, (socket) ->
