@@ -67,13 +67,7 @@ vdom =
 require! 'socket.io-client': socket-io
 require! \rivulet
 require! \wire
-if config.env
-  if config.ssl
-    socket = socket-io "https://#{config.env}-session.copsforhire.com"
-  else
-    socket = socket-io "http://#{config.env}-session.copsforhire.com"
-else
-  socket = socket-io!
+socket = socket-io!
 
 window.session = JSON.parse(session-storage.get-item(\session) or '{}')
 session-cached-id = delete session.id

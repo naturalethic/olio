@@ -2,6 +2,7 @@ Module = (require \module).Module
 require! \node-static
 require! 'socket.io': socket-io
 require! 'socket.io-client': socket-io-client
+require! 'rabbit.js' : rabbit
 require! \co
 require! \rivulet
 require! \world
@@ -92,7 +93,14 @@ create-session-server = ->
       request.add-listener \end, ->
         response.end 'Session'
       .resume!
-  port = olio.option.port or olio.config.session?port or 8000
+  if port = olio.config.session.ssl
+    $info 'Starting redirect server on port', color(78, olio.config.session.port)
+    (require 'http').create-server (request, response) ->
+      response.write-head 302, Location: "https://#{request.headers.host.split(':').0}:#{port}"
+      response.end!
+    .listen olio.config.session.port, '0.0.0.0'
+  else
+    port = olio.option.port or olio.config.session?port or 8000
   $info 'Starting session server on port', color(78, port)
   server.listen port, '0.0.0.0'
   socket-io server
@@ -179,12 +187,30 @@ create-session-observer = (wire, path, property) ->
     for s in sends
       wire.send s.0, s.1
 
+create-rabbit-agent = (socket) ->*
+  new Promise (resolve, reject) ->
+    context = rabbit.create-context "amqp://#{olio.config.rabbit.host}"
+    context.on \ready, ->
+      agent =
+        pub: context.socket \PUB
+        sub: context.socket \SUB
+      agent.pub.connect \world
+      agent.sub.connect \world
+      agent.sub.set-encoding \utf8
+      resolve agent
+
 export session = ->*
   validator = create-validator!
-  shell = create-shell-server!
+  shell = create-shell-server! if olio.config.session.shell
   server = create-session-server!
   promotion-queue = []
-  promote = -> promotion-queue.push it
+  if olio.config.rabbit.enabled
+    rabbit = yield create-rabbit-agent!
+    rabbit.sub.on \data, ->
+      promotion-queue.push JSON.parse it
+    promote = -> rabbit.pub.write (JSON.stringify it), \utf8
+  else
+    promote = -> promotion-queue.push it
   set-interval ->
     return if !promotion-queue.length
     items = promotion-queue.slice!
