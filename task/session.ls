@@ -69,7 +69,7 @@ create-validator = ->
   validator
 
 create-session-server = ->
-  if olio.config.session.ssl
+  if olio.config.session.ssl and not olio.options.disable-ssl
     options =
       key: fs.read-file-sync olio.config.session.key, 'utf8'
       cert: fs.read-file-sync olio.config.session.cert, 'utf8'
