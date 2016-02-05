@@ -5,10 +5,10 @@ require! \fast-json-patch : \patch
 require! \object-path : objectpath
 
 olio.config.world          ?= {}
-olio.config.world.host     ?= \127.0.0.1
-olio.config.world.user     ?= (olio.option.world-user or \root)
-olio.config.world.password ?= ''
-olio.config.world.database ?= (olio.option.world-database or \cfh)
+olio.config.world.host     = (olio.option.world-host or olio.config.world.host or \127.0.0.1)
+olio.config.world.user     = (olio.option.world-user or olio.config.world.user or \root)
+olio.config.world.password = (olio.option.world-password or olio.config.world.password or '')
+olio.config.world.database = (olio.option.world-database or olio.config.world.database or \cfh)
 
 pool = mysql.create-pool olio.config.world
 
