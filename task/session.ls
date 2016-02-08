@@ -80,7 +80,7 @@ create-session-server = ->
       (require 'http').create-server it
   if olio.config.session.static
     $info 'Serving static files'
-    file = new node-static.Server './public'
+    file = new node-static.Server './public', cache: 1
     server = create-server (request, response) ->
       if not fs.exists-sync "./public#{request.url}"
         $info "Unknown url '#{request.url}', sending index"
