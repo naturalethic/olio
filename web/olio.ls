@@ -185,7 +185,6 @@ window.destroy-session = (new-id) ->
     session.id = new-id
   else
     $send \id, '00000000-0000-0000-0000-000000000000'
-  $set \route, ''
 
 # History
 window.history = require \html5-history-api

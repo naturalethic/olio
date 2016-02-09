@@ -47,6 +47,7 @@ tick = (ticker, config) ->*
       yield tickers[ticker] tx, config
       yield tx.commit!
     catch e
+      info e
       yield tx.rollback!
   catch e
     info e
@@ -64,4 +65,5 @@ tickers =
          AND str_to_date(search, '%Y-%m-%dT%H:%i:%S') < now()
     """) |> map -> it.id
     for id in ids
+      $info \Dispatching, id
       yield transport.dispatch world, (yield world.get id)

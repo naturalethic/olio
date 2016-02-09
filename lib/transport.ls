@@ -52,6 +52,7 @@ transport =
           to:      dump.identifier.replace('@', "+#{notification.id}@")
           subject: "#{subject} | #{person.name} #{person.surname} <#{person.emails.0.email}>"
           html:    html
+    info "Notification sent to #{person.emails.0.email}"
   sms: (world, notification) ->*
     return if not transport = olio.config.transport.sms
     return if not transport.instance
@@ -72,3 +73,4 @@ transport =
           to:      dump.identifier.replace('@', "+#{notification.id}@")
           subject: "SMS Sent | #{person.name} #{person.surname} <#{person.phones.0.phone}>"
           html:    text
+    info "Notification sent to #{person.phones.0.phone}"
