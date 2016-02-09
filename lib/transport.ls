@@ -56,6 +56,8 @@ transport =
     return if not transport = olio.config.transport.sms
     return if not transport.instance
     person = yield world.get notification.recipient
+    return if not person.phones?length
+    return if not person.phones.0.verified and notification.name is not \verify-phone
     return if transport.whitelist and person.phones.0.phone not in transport.whitelist
     return if not fs.exists-sync (path = "notification/#{notification.name}.sms")
     text = jade.render-file path, notification.data.$get!
