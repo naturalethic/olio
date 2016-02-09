@@ -138,6 +138,7 @@ global.$send = (path, value, as) ->
 global.$on = (paths, ...args) ->
   options = first(args |> filter -> is-object it) or {}
   fn      = first(args |> filter -> is-function it)
+  warn "$on called without clean: this" if not options.clean
   if is-array paths
     paths |> each (path) ->
       if !is-undefined(value = $get(path)) and fn
@@ -184,6 +185,7 @@ window.destroy-session = (new-id) ->
     session.id = new-id
   else
     $send \id, '00000000-0000-0000-0000-000000000000'
+  $set \route, ''
 
 # History
 window.history = require \html5-history-api
