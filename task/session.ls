@@ -210,12 +210,13 @@ export session = ->*
       promotion-queue.push JSON.parse it
     promote = -> rabbit.pub.write (JSON.stringify it), \utf8
   else
-    promote = -> promotion-queue.push it
+    # XXX: Stringifying here because somehow arrays were being turned into objects when received by the interval
+    promote = -> promotion-queue.push JSON.stringify(it)
   set-interval ->
     return if !promotion-queue.length
     items = promotion-queue.slice!
     promotion-queue.length = 0
-    items |> each (item) ->
+    items |> (map -> JSON.parse it) |> each (item) ->
       (values server.sockets.connected) |> each (socket) ->
         return if !socket.wire.session-id # or socket.wire.session-id == item.session
         socket.wire.world-observers |> each (observer) ->
