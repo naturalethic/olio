@@ -40,7 +40,7 @@ tick = (ticker, config) ->*
   if olio.config.sentinel.allow-background-reset
     yield ensure-world-record!
   try
-    $info \Tick, color(220, ticker)
+    # $info \Tick, color(220, ticker)
     tx = yield world.transaction!
     tx.$info = $info
     try
