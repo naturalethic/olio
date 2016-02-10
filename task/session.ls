@@ -217,7 +217,7 @@ export session = ->*
     promotion-queue.length = 0
     items |> each (item) ->
       (values server.sockets.connected) |> each (socket) ->
-        return if !socket.wire.session-id or socket.wire.session-id == item.session
+        return if !socket.wire.session-id # or socket.wire.session-id == item.session
         socket.wire.world-observers |> each (observer) ->
           co ->*
             if socket.wire.session-id and session = yield world.get socket.wire.session-id
