@@ -94,23 +94,9 @@ export test = ->*
           if empty messages
             return
           message = messages.shift!
+          if message.path != observers.0.path or message.type != observers.0.type
+            return
           observer = observers.shift!
-          if message.path != observer.path or message.type != observer.type
-            state.fail = [
-              color 88 'Received '
-              color 216 '['
-              color 214 message.type
-              color 216 ':'
-              color 214 dasherize message.path
-              color 216 ']'
-              color 88 ' when the next observed was '
-              color 216 '['
-              color 214 observer.type
-              color 216 ':'
-              color 214 dasherize observer.path
-              color 216 ']'
-            ].join ''
-            return disconnect!
           state.running = true
           $info color(51, observer.path)
           $info color(238, '-' * process.stdout.columns)
