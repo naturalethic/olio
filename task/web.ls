@@ -96,6 +96,7 @@ stitch = (paths) ->
   fs.write-file-sync 'tmp/components.json', JSON.stringify(cached-components)
   script = [livescript.compile([
     "window.config = #{JSON.stringify olio.config.web};"
+    "window.config.hostname = '#{require('os').hostname!}'"
     fs.read-file-sync("#__dirname/../web/olio.ls").to-string!
   ].join('\n'), { +bare, -header })]
   for n, p of cached-components
