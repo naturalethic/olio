@@ -10,6 +10,7 @@ require! \gcloud
 require! \ajv
 require! \object-walk
 require! \wire
+require! \os
 
 export watch = [ __filename, \olio.ls, \schema, \react, "#__dirname/../lib" ]
 
@@ -141,6 +142,7 @@ create-session-agent = (socket, validator, promote) ->
   socket.wire.info = create-logging-function \info, socket
   socket.wire.promote = promote
   socket.wire.info 'Connection established'
+  socket.wire.send \hostname, os.hostname!
   glob.sync 'react/session/**/*.ls' |> each (path) ->
     return if not session-reactors = (create-dynamic-module path).session
     for property of session-reactors
