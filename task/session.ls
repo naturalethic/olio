@@ -30,9 +30,9 @@ create-logging-function = (name, socket) ->
     console[name] ...args
     if obj
       if olio.config.log?compact
-        pp obj
-      else
         console[name] JSON.stringify(obj)
+      else
+        pp obj
 
 $info = create-logging-function \info
 
