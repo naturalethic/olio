@@ -138,7 +138,9 @@ global.$send = (path, value, as) ->
 global.$on = (paths, ...args) ->
   options = first(args |> filter -> is-object it) or {}
   fn      = first(args |> filter -> is-function it)
-  warn "$on called without clean: this" if not options.clean
+  if !options.clean and !options.supress-warning
+    warn "$on called without clean: this"
+    console.trace!
   if is-array paths
     paths |> each (path) ->
       if !is-undefined(value = $get(path)) and fn
@@ -211,12 +213,11 @@ socket.on \disconnect, ->
   log \DISCONNECTED!
   $set \connected, false
 
-$on \id, ->
+$on \id, supress-warning: true, ->
   if it != session-cached-id
     destroy-session it
 
-$on \route, (route) ->
-  go route
+$on \route, supress-warning: true, go
 
 # Disable all form submits
 q document.body .on \submit, \form, false
