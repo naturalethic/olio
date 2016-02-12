@@ -27,12 +27,15 @@ create-logging-function = (name, socket) ->
     args.unshift "#{color(22, name.to-upper-case!)} #{color(81, date.0)}#{color(239, 'T')}#{color(81, date.1)} #{color(226, ip)} #{color(39, id)}"
     if is-object(last args) or is-array(last args)
       obj = args.pop!
-    console[name] ...args
     if obj
       if olio.config.log?compact
-        console[name] JSON.stringify(obj)
+        args.push JSON.stringify(obj)
+        console[name] ...args
       else
+        console[name] ...args
         pp obj
+    else
+      console[name] ...args
 
 $info = create-logging-function \info
 
