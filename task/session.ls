@@ -197,6 +197,10 @@ create-session-observer = (wire, path, property) ->
       yield tx.commit!
     catch e
       yield tx.rollback!
+      if e.stack
+        wire.send \error, e.stack
+      else
+        wire.send e
       throw e
     for s in sends
       wire.send s.0, s.1

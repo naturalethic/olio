@@ -201,12 +201,15 @@ socket.on \connect, ->
   return if session.id
   log \CONNECTED!
   $send \id, (session-cached-id or '00000000-0000-0000-0000-000000000000')
+  $set \connected, true
 socket.on \reconnect, ->
   log \RECONNECTED!
   session-cached-id := session.id
   $send \id, session.id
+  $set \connected, true
 socket.on \disconnect, ->
   log \DISCONNECTED!
+  $set \connected, false
 
 $on \id, ->
   if it != session-cached-id
