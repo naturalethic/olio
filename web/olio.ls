@@ -67,7 +67,8 @@ vdom =
 require! 'socket.io-client': socket-io
 require! \rivulet
 require! \wire
-socket = socket-io transports: <[ websocket ]>
+# socket = socket-io transports: <[ websocket ]>
+socket = socket-io!
 
 window.session = JSON.parse(session-storage.get-item(\session) or '{}')
 session-cached-id = delete session.id
