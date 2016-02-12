@@ -19,11 +19,20 @@ create-logging-function = (name, socket) ->
     date = (new Date).toISOString!split \T
     if is-string(args.0)
       args.0 = color(198, args.0)
-    args.unshift "#{color(81, date.0)}#{color(239, 'T')}#{color(81, date.1)} #{color(226, (socket?handshake?address or '0.0.0.0'))} #{color(22, 'INFO')}"
+    id = (socket?wire?session-id or '    ').substring 0, 4
+    ip = '      '
+    if address = socket?request.connection.remote-address
+      ip = new Buffer(address.split('.') |> map parse-int).to-string(\base64).substring 0, 6
+    # ip = ((socket?request.connection.remote-address or '') + (' ' * 15)).substring 0, 15
+    args.unshift "#{color(22, name.to-upper-case!)} #{color(81, date.0)}#{color(239, 'T')}#{color(81, date.1)} #{color(226, ip)} #{color(39, id)}"
     if is-object(last args) or is-array(last args)
       obj = args.pop!
     console[name] ...args
-    pp obj if obj
+    if obj
+      if olio.config.log?compact
+        pp obj
+      else
+        console[name] JSON.stringify(obj)
 
 $info = create-logging-function \info
 
@@ -138,7 +147,7 @@ load-or-create-session = (tx, id) ->*
 
 create-session-agent = (socket, validator, promote) ->
   create-storage-agent socket
-  socket.wire = wire socket: socket, channel: \session, validator: validator, logger: $info
+  socket.wire = wire socket: socket, channel: \session, validator: validator, logger: (create-logging-function \info, socket)
   socket.wire.info = create-logging-function \info, socket
   socket.wire.promote = promote
   socket.wire.info 'Connection established'
