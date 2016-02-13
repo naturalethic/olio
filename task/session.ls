@@ -228,8 +228,9 @@ export session = ->*
       promotion-queue.push JSON.parse it
     promote = -> rabbit.pub.write (JSON.stringify it), \utf8
   else
-    # XXX: Stringifying here because somehow arrays were being turned into objects when received by the interval
-    promote = -> promotion-queue.push JSON.stringify(it)
+    promote = ->
+      $info \ADDINGPROMOTE, JSON.stringify(it), it
+      promotion-queue.push JSON.stringify(it)
   set-interval ->
     return if !promotion-queue.length
     items = promotion-queue.slice!
