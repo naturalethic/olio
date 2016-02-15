@@ -224,13 +224,10 @@ export session = ->*
   promotion-queue = []
   if olio.config.rabbit.enabled
     rabbit = yield create-rabbit-agent!
-    rabbit.sub.on \data, ->
-      promotion-queue.push JSON.parse it
+    rabbit.sub.on \data, -> promotion-queue.push it
     promote = -> rabbit.pub.write (JSON.stringify it), \utf8
   else
-    promote = ->
-      $info \ADDINGPROMOTE, JSON.stringify(it), it
-      promotion-queue.push JSON.stringify(it)
+    promote = -> promotion-queue.push JSON.stringify(it)
   set-interval ->
     return if !promotion-queue.length
     try
