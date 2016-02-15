@@ -237,17 +237,29 @@ export session = ->*
       items = promotion-queue.slice!
       promotion-queue.length = 0
       items |> (map -> JSON.parse it) |> each (item) ->
-        (values server.sockets.connected) |> each (socket) ->
-          return if !socket.wire.session-id # or socket.wire.session-id == item.session
-          socket.wire.world-observers |> each (observer) ->
-            co ->*
-              if socket.wire.session-id and session = yield world.get socket.wire.session-id
-                observer.$var \session, session
-                if session.person and person = yield world.get session.person
-                  observer.$var \person, person
-              yield observer[item.kind] item.doc if observer[item.kind]
+        try
+          (values server.sockets.connected) |> each (socket) ->
+            try
+              return if !socket.wire.session-id # or socket.wire.session-id == item.session
+              socket.wire.world-observers |> each (observer) ->
+                co ->*
+                  try
+                    if socket.wire.session-id and session = yield world.get socket.wire.session-id
+                      observer.$var \session, session
+                      if session.person and person = yield world.get session.person
+                        observer.$var \person, person
+                    yield observer[item.kind] item.doc if observer[item.kind]
+                  catch e
+                    $info 'Promotion failure (4)'
+                    info e
+            catch e
+              $info 'Promotion failure (3)'
+              info e
+        catch e
+          $info 'Promotion failure (2)'
+          info e
     catch e
-      $info 'Promotion failure'
+      $info 'Promotion failure (1)'
       info e
   , 200
   server.on \connection, (socket) ->
