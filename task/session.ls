@@ -229,6 +229,7 @@ export session = ->*
     promote = -> rabbit.pub.write (JSON.stringify it), \utf8
   else
     promote = ->
+      return
       $info \ADDINGPROMOTE, JSON.stringify(it), it
       promotion-queue.push JSON.stringify(it)
   set-interval ->
