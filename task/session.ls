@@ -229,23 +229,26 @@ export session = ->*
     promote = -> rabbit.pub.write (JSON.stringify it), \utf8
   else
     promote = ->
-      return
       $info \ADDINGPROMOTE, JSON.stringify(it), it
       promotion-queue.push JSON.stringify(it)
   set-interval ->
     return if !promotion-queue.length
-    items = promotion-queue.slice!
-    promotion-queue.length = 0
-    items |> (map -> JSON.parse it) |> each (item) ->
-      (values server.sockets.connected) |> each (socket) ->
-        return if !socket.wire.session-id # or socket.wire.session-id == item.session
-        socket.wire.world-observers |> each (observer) ->
-          co ->*
-            if socket.wire.session-id and session = yield world.get socket.wire.session-id
-              observer.$var \session, session
-              if session.person and person = yield world.get session.person
-                observer.$var \person, person
-            yield observer[item.kind] item.doc if observer[item.kind]
+    try
+      items = promotion-queue.slice!
+      promotion-queue.length = 0
+      items |> (map -> JSON.parse it) |> each (item) ->
+        (values server.sockets.connected) |> each (socket) ->
+          return if !socket.wire.session-id # or socket.wire.session-id == item.session
+          socket.wire.world-observers |> each (observer) ->
+            co ->*
+              if socket.wire.session-id and session = yield world.get socket.wire.session-id
+                observer.$var \session, session
+                if session.person and person = yield world.get session.person
+                  observer.$var \person, person
+              yield observer[item.kind] item.doc if observer[item.kind]
+    catch e
+      $info 'Promotion failure'
+      info e
   , 200
   server.on \connection, (socket) ->
     create-session-agent socket, validator, promote
