@@ -1,12 +1,6 @@
 # Olio
-### Olio is a collection of tools for building web applications.
+### Olio ~~is~~ was a collection of tools for building web applications.
 
-This package only provides the task runner.  In order to get the most out of Olio, you'll want to install some of these modules:
+Olio is replaced by http://github.com/naturalethic/mix as it was becoming too domain specific.
 
-- https://github.com/naturalethic/olio-api
-- https://github.com/naturalethic/olio-angular
-- https://github.com/naturalethic/olio-arango
-- https://github.com/naturalethic/olio-sendgrid
-- https://github.com/naturalethic/olio-slack
-
-A tutorial for Olio shall be forthcoming.
+It is retained here for posterity.
